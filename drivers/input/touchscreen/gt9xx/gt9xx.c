@@ -22,9 +22,7 @@
 #include "gt9xx.h"
 #include <linux/proximity_status.h>
 
-#if GTP_ICS_SLOT_REPORT
-	#include <linux/input/mt.h>
-#endif
+#include <linux/input/mt.h>
 
 static const char *goodix_ts_name = "goodix-ts";
 static const char *goodix_input_phys = "input/ts";
@@ -392,22 +390,12 @@ static void gtp_touch_down(struct goodix_ts_data* ts,s32 id,s32 x,s32 y,s32 w)
 	GTP_SWAP(x, y);
 #endif
 
-#if GTP_ICS_SLOT_REPORT
 	input_mt_slot(ts->input_dev, id);
-	input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID, id);
+	input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, true);
 	input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
 	input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
 	input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, w);
 	input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, w);
-#else
-	input_report_key(ts->input_dev, BTN_TOUCH, 1);
-	input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
-	input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
-	input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, w);
-	input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, w);
-	input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID, id);
-	input_mt_sync(ts->input_dev);
-#endif
 
 	GTP_DEBUG("ID:%d, X:%d, Y:%d, W:%d", id, x, y, w);
 }
@@ -422,13 +410,9 @@ Output:
 *********************************************************/
 static void gtp_touch_up(struct goodix_ts_data* ts, s32 id)
 {
-#if GTP_ICS_SLOT_REPORT
 	input_mt_slot(ts->input_dev, id);
-	input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID, -1);
+	input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, false);
 	GTP_DEBUG("Touch id[%2d] release!", id);
-#else
-	input_report_key(ts->input_dev, BTN_TOUCH, 0);
-#endif
 }
 
 #if GTP_WITH_PEN
@@ -754,8 +738,6 @@ static void goodix_ts_work_func(struct work_struct *work)
 
 	//GTP_DEBUG("pre_touch:%02x, finger:%02x.", pre_touch, finger);
 
-#if GTP_ICS_SLOT_REPORT
-
 #if GTP_WITH_PEN
 	if (pre_pen && (touch_num == 0))
 	{
@@ -829,68 +811,7 @@ static void goodix_ts_work_func(struct work_struct *work)
 			}
 		}
 	}
-#else
-
-	if (touch_num)
-	{
-		for (i = 0; i < touch_num; i++)
-		{
-			coor_data = &point_data[i * 8 + 3];
-
-			id = coor_data[0] & 0x0F;
-			input_x  = coor_data[1] | (coor_data[2] << 8);
-			input_y  = coor_data[3] | (coor_data[4] << 8);
-			input_w  = coor_data[5] | (coor_data[6] << 8);
-		
-		#if GTP_WITH_PEN
-			id = coor_data[0];
-			if (id & 0x80)
-			{
-				GTP_DEBUG("Pen touch DOWN!");
-				gtp_pen_down(input_x, input_y, input_w, 0);
-				pre_pen = 1;
-				pen_active = 1;
-				break;
-			}
-			else
-		#endif
-			{
-				gtp_touch_down(ts, id, input_x, input_y, input_w);
-			}
-		}
-	}
-	else if (pre_touch)
-	{
-	#if GTP_WITH_PEN
-		if (pre_pen == 1)
-		{
-			GTP_DEBUG("Pen touch UP!");
-			gtp_pen_up(0);
-			pre_pen = 0;
-			pen_active = 1;
-		}
-		else
-	#endif
-		{
-			GTP_DEBUG("Touch Release!");
-			gtp_touch_up(ts, 0);
-		}
-	}
-
-	pre_touch = touch_num;
-#endif
-
-#if GTP_WITH_PEN
-	if (pen_active)
-	{
-		pen_active = 0;
-		input_sync(ts->pen_dev);
-	}
-	else
-#endif
-	{
-		input_sync(ts->input_dev);
-	}
+	input_sync(ts->input_dev);
 
 exit_work_func:
 	if(!ts->gtp_rawdiff_mode)
@@ -1576,13 +1497,12 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 		return -ENOMEM;
 	}
 
-	ts->input_dev->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) ;
-#if GTP_ICS_SLOT_REPORT
-	input_mt_init_slots(ts->input_dev, 16, 0);     // in case of "out of memory"
-#else
-	ts->input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
-#endif
+	ts->input_dev->evbit[0] =
+		BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
+	set_bit(BTN_TOOL_FINGER, ts->input_dev->keybit);
 	__set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
+	/* in case of "out of memory" */
+	input_mt_init_slots(ts->input_dev, 10, 0);
 
 #if GTP_HAVE_TOUCH_KEY
 	for (index = 0; index < GTP_MAX_KEY_NUM; index++)
@@ -2040,7 +1960,6 @@ static void goodix_ts_suspend(struct goodix_ts_data *ts)
 	for (i = 0; i < GTP_MAX_TOUCH; i++)
 		gtp_touch_up(ts, i);
 
-	input_report_key(ts->input_dev, BTN_TOUCH, 0);
 	input_sync(ts->input_dev);
 
 	ret = gtp_enter_sleep(ts);

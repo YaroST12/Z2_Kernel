@@ -198,4 +198,6 @@ source "drivers/bif/Kconfig"
 
 source "drivers/fingerprint/goodix/Kconfig"
 
+source "drivers/android/Kconfig"
+
 endmenu

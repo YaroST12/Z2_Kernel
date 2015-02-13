@@ -4896,7 +4896,10 @@ long __sched io_schedule_timeout(long timeout)
 	long ret;
 
 	current->in_iowait = 1;
-	blk_schedule_flush_plug(current);
+	if (old_iowait)
+		blk_schedule_flush_plug(current);
+	else
+		blk_flush_plug(current);
 
 	delayacct_blkio_start();
 	rq = raw_rq();
@@ -4908,6 +4911,7 @@ long __sched io_schedule_timeout(long timeout)
 
 	return ret;
 }
+EXPORT_SYMBOL(io_schedule_timeout);
 
 /**
  * sys_sched_get_priority_max - return maximum RT priority.

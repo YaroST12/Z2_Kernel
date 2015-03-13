@@ -451,6 +451,7 @@ out:
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(blk_mq_register_disk);
 
 void blk_mq_sysfs_unregister(struct request_queue *q)
 {

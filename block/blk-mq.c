@@ -1973,7 +1973,7 @@ struct request_queue *blk_mq_init_queue(struct blk_mq_tag_set *set)
 		goto err_mq_usage;
 
 	setup_timer(&q->timeout, blk_mq_rq_timer, (unsigned long) q);
-	blk_queue_rq_timeout(q, 30000);
+	blk_queue_rq_timeout(q, set->timeout ? set->timeout : 30000);
 
 	q->nr_queues = nr_cpu_ids;
 	q->nr_hw_queues = set->nr_hw_queues;
@@ -1998,9 +1998,6 @@ struct request_queue *blk_mq_init_queue(struct blk_mq_tag_set *set)
 		blk_queue_make_request(q, blk_mq_make_request);
 	else
 		blk_queue_make_request(q, blk_sq_make_request);
-
-	if (set->timeout)
-		blk_queue_rq_timeout(q, set->timeout);
 
 	/*
 	 * Do this after blk_queue_make_request() overrides it...

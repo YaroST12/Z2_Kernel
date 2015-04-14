@@ -839,7 +839,7 @@ static int perf_mux_hrtimer_restart(struct perf_cpu_context *cpuctx)
 	}
 	raw_spin_unlock_irqrestore(&cpuctx->hrtimer_lock, flags);
 
-	return 0;
+	hrtimer_start(hr, cpuctx->hrtimer_interval, HRTIMER_MODE_REL_PINNED);
 }
 
 void perf_pmu_disable(struct pmu *pmu)

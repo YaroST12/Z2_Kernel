@@ -214,9 +214,6 @@ static void do_input_boost(struct work_struct *work)
 	for_each_possible_cpu(i) {
 		i_sync_info = &per_cpu(sync_info, i);
 
-		if (cpu_rq(i)->nr_running <= 1)
-			continue;
-
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST

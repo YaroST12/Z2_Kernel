@@ -1714,6 +1714,10 @@ static void _dm_request(struct request_queue *q, struct bio *bio)
 	part_stat_add(cpu, &dm_disk(md)->part0, sectors[rw], bio_sectors(bio));
 	part_stat_unlock();
 
+	blk_queue_split(q, &bio, q->bio_split);
+
+	generic_start_io_acct(rw, bio_sectors(bio), &dm_disk(md)->part0);
+
 	/* if we're suspended, we have to queue this io for later */
 	if (unlikely(test_bit(DMF_BLOCK_IO_FOR_SUSPEND, &md->flags))) {
 		dm_put_live_table(md, srcu_idx);

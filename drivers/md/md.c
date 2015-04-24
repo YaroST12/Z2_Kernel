@@ -250,6 +250,8 @@ static void md_make_request(struct request_queue *q, struct bio *bio)
 	int cpu;
 	unsigned int sectors;
 
+	blk_queue_split(q, &bio, q->bio_split);
+
 	if (mddev == NULL || mddev->pers == NULL
 	    || !mddev->ready) {
 		bio_io_error(bio);

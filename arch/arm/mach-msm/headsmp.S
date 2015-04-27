@@ -8,11 +8,8 @@
  * published by the Free Software Foundation.
  */
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 	.arm
-
-__CPUINIT
 
 /*
  * MSM specific entry point for secondary CPUs.  This provides

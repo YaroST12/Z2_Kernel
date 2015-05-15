@@ -1298,6 +1298,8 @@ extern void trigger_load_balance(struct rq *rq);
 extern void idle_enter_fair(struct rq *this_rq);
 extern void idle_exit_fair(struct rq *this_rq);
 
+extern void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_mask);
+
 #else
 
 static inline void idle_enter_fair(struct rq *rq) { }

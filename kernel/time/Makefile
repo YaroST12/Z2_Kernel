@@ -14,20 +14,4 @@ obj-$(CONFIG_TICK_ONESHOT)			+= tick-sched.o
 obj-$(CONFIG_DEBUG_FS)				+= timekeeping_debug.o
 obj-$(CONFIG_TEST_UDELAY)			+= udelay_test.o
 
-$(obj)/time.o: $(obj)/timeconst.h
-
-quiet_cmd_hzfile = HZFILE  $@
-      cmd_hzfile = echo "hz=$(CONFIG_HZ)" > $@
-
-targets += hz.bc
-$(obj)/hz.bc: $(objtree)/include/config/hz.h FORCE
-	$(call if_changed,hzfile)
-
-quiet_cmd_bc  = BC      $@
-      cmd_bc  = bc -q $(filter-out FORCE,$^) > $@
-
-targets += timeconst.h
-$(obj)/timeconst.h: $(obj)/hz.bc $(src)/timeconst.bc FORCE
-	$(call if_changed,bc)
-
-ccflags-y += -Idrivers/cpuidle
+$(obj)/time.o: $(objtree)/include/config/

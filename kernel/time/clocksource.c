@@ -707,7 +707,7 @@ static void clocksource_select(bool force)
 
 static void clocksource_select_fallback(void)
 {
-	return __clocksource_select(true, false);
+	__clocksource_select(true, false);
 }
 
 #else /* !CONFIG_ARCH_USES_GETTIMEOFFSET */
@@ -822,6 +822,7 @@ void __clocksource_updatefreq_scale(struct clocksource *cs, u32 scale, u32 freq)
 	cs->max_idle_ns = clocksource_max_deferment(cs);
 }
 EXPORT_SYMBOL_GPL(__clocksource_updatefreq_scale);
+
 
 /**
  * __clocksource_register_scale - Used to install new clocksources

@@ -453,7 +453,7 @@ static void bt_tags_for_each(struct blk_mq_tags *tags,
 		for (bit = find_first_bit(&bm->word, bm->depth);
 		     bit < bm->depth;
 		     bit = find_next_bit(&bm->word, bm->depth, bit + 1)) {
-			rq = blk_mq_tag_to_rq(tags, off + bit);
+			rq = tags->rqs[off + bit];
 			fn(rq, data, reserved);
 		}
 

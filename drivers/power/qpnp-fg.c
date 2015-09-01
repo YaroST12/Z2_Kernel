@@ -2025,6 +2025,14 @@ static void fg_handle_battery_insertion(struct fg_chip *chip)
 		&chip->update_sram_data, msecs_to_jiffies(0));
 }
 
+static int soc_to_setpoint(int soc)
+{
+	if (soc == 0)
+		return 1;
+	else
+		return DIV_ROUND_CLOSEST(soc * 255, 100);
+}
+
 static void batt_to_setpoint_adc(int vbatt_mv, u8 *data)
 {
 	int val;

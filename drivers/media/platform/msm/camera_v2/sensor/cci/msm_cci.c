@@ -2057,10 +2057,6 @@ static int msm_cci_probe(struct platform_device *pdev)
 	}
 	new_cci_dev->irq = platform_get_resource_byname(pdev,
 					IORESOURCE_IRQ, "cci");
-	CDBG("%s line %d cci irq start %d end %d\n", __func__,
-		__LINE__,
-		(int) new_cci_dev->irq->start,
-		(int) new_cci_dev->irq->end);
 	if (!new_cci_dev->irq) {
 		pr_err("%s: no irq resource?\n", __func__);
 		rc = -ENODEV;
@@ -2073,7 +2069,10 @@ static int msm_cci_probe(struct platform_device *pdev)
 		rc = -EBUSY;
 		goto cci_no_resource;
 	}
-
+	CDBG("%s line %d cci irq start %d end %d\n", __func__,
+		__LINE__,
+		(int) new_cci_dev->irq->start,
+		(int) new_cci_dev->irq->end);
 	new_cci_dev->base = ioremap(new_cci_dev->mem->start,
 		resource_size(new_cci_dev->mem));
 	if (!new_cci_dev->base) {

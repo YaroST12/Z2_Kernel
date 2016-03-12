@@ -71,7 +71,7 @@ static void freeze_enter(void)
 	cpuidle_resume();
 
 	/* Push all the CPUs into the idle loop. */
-	wake_up_all_idle_cpus();
+	wake_up_idle_cpus(cpu_online_mask);
 	pr_debug("PM: suspend-to-idle\n");
 	/* Make the current CPU wait so it can enter the idle loop too. */
 	wait_event(suspend_freeze_wait_head,

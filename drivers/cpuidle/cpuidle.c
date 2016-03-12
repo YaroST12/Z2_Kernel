@@ -232,7 +232,7 @@ void cpuidle_uninstall_idle_handler(void)
 {
 	if (enabled_devices) {
 		initialized = 0;
-		wake_up_all_idle_cpus();
+		wake_up_idle_cpus(cpu_online_mask);
 	}
 
 	/*
@@ -553,7 +553,7 @@ EXPORT_SYMBOL_GPL(cpuidle_register);
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
-	wake_up_all_idle_cpus();
+	wake_up_idle_cpus((struct cpumask *)v);
 	return NOTIFY_OK;
 }
 

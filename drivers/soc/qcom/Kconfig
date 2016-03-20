@@ -832,6 +832,9 @@ config QCOM_SMCINVOKE
 	  Enable SMCInvoke driver which supports capability based secure
 	  communication between QSEE and HLOS.
 
+config STATE_NOTIFIER
+        bool "State Notifier"
+
 source "drivers/soc/qcom/memshare/Kconfig"
 
 endif # ARCH_MSM

@@ -102,3 +102,4 @@ obj-$(CONFIG_MSM_RTB) += msm_rtb-hotplug.o
 obj-$(CONFIG_MSM_REMOTEQDSS) += remoteqdss.o
 obj-$(CONFIG_QCOM_SMCINVOKE) += smcinvoke.o
 obj-y += shenqi_nv.o
+obj-$(CONFIG_STATE_NOTIFIER)		+= state_notifier.o

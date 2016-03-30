@@ -7956,7 +7956,7 @@ static int smbchg_probe(struct platform_device *pdev)
 	int rc;
 	struct smbchg_chip *chip;
 	struct power_supply *typec_psy = NULL;
-	struct qpnp_vadc_chip *vadc_dev, *vchg_vadc_dev;
+	struct qpnp_vadc_chip *vadc_dev = NULL, *vchg_vadc_dev = NULL;
 	const char *typec_psy_name;
 	struct power_supply_config usb_psy_cfg = {};
 	struct power_supply_config batt_psy_cfg = {};

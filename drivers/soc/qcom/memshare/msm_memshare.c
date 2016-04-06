@@ -300,6 +300,7 @@ static int modem_notifier_cb(struct notifier_block *this, unsigned long code,
 
 	mutex_lock(&memsh_drv->mem_share);
 
+	mutex_lock(&memsh_drv->mem_share);
 	switch (code) {
 
 	case SUBSYS_BEFORE_SHUTDOWN:

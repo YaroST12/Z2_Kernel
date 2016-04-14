@@ -350,7 +350,10 @@ enum msm_vfe_axi_stream_update_type {
 	UPDATE_STREAM_REMOVE_BUFQ,
 	UPDATE_STREAM_SW_FRAME_DROP,
 	UPDATE_STREAM_REQUEST_FRAMES_VER2,
+<<<<<<< HEAD
 	UPDATE_STREAM_OFFLINE_AXI_CONFIG,
+=======
+>>>>>>> e322a9b... msm: camera: isp: Create union for update command payload
 };
 #define UPDATE_STREAM_REQUEST_FRAMES_VER2 UPDATE_STREAM_REQUEST_FRAMES_VER2
 
@@ -876,9 +879,12 @@ enum msm_isp_ioctl_cmd_code {
 	MSM_ISP_SET_DUAL_HW_MASTER_SLAVE,
 	MSM_ISP_MAP_BUF_START_FE,
 	MSM_ISP_UNMAP_BUF,
+<<<<<<< HEAD
 	MSM_ISP_FETCH_ENG_MULTI_PASS_START,
 	MSM_ISP_MAP_BUF_START_MULTI_PASS_FE,
 	MSM_ISP_AHB_CLK_CFG,
+=======
+>>>>>>> e322a9b... msm: camera: isp: Create union for update command payload
 };
 
 #define VIDIOC_MSM_VFE_REG_CFG \
@@ -980,6 +986,7 @@ enum msm_isp_ioctl_cmd_code {
 #define VIDIOC_MSM_ISP_UNMAP_BUF \
 	_IOWR('V', MSM_ISP_UNMAP_BUF, \
 		struct msm_isp_unmap_buf_req)
+<<<<<<< HEAD
 
 #define VIDIOC_MSM_ISP_FETCH_ENG_MULTI_PASS_START \
 	_IOWR('V', MSM_ISP_FETCH_ENG_MULTI_PASS_START, \
@@ -988,6 +995,8 @@ enum msm_isp_ioctl_cmd_code {
 #define VIDIOC_MSM_ISP_MAP_BUF_START_MULTI_PASS_FE \
 	_IOWR('V', MSM_ISP_MAP_BUF_START_MULTI_PASS_FE, \
 		struct msm_vfe_fetch_eng_multi_pass_start)
+=======
+>>>>>>> e322a9b... msm: camera: isp: Create union for update command payload
 
 #define VIDIOC_MSM_ISP_AHB_CLK_CFG \
 	_IOWR('V', MSM_ISP_AHB_CLK_CFG, struct msm_isp_ahb_clk_cfg)

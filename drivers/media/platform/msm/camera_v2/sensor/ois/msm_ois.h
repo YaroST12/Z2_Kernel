@@ -41,6 +41,12 @@ struct msm_ois_vreg {
 	int num_vreg;
 };
 
+struct msm_ois_board_info {
+	char ois_name[MAX_OIS_NAME_SIZE];
+	uint32_t i2c_slaveaddr;
+	struct msm_ois_opcode opcode;
+};
+
 struct msm_ois_ctrl_t {
 	struct i2c_driver *i2c_driver;
 	struct platform_driver *pdriver;
@@ -58,6 +64,10 @@ struct msm_ois_ctrl_t {
 	uint32_t subdev_id;
 	enum msm_ois_state_t ois_state;
 	struct msm_ois_vreg vreg_cfg;
+	struct msm_camera_gpio_conf *gconf;
+	struct msm_pinctrl_info pinctrl_info;
+	uint8_t cam_pinctrl_status;
+	struct msm_ois_board_info *oboard_info;
 };
 
 #endif

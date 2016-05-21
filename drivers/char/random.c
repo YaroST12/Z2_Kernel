@@ -261,6 +261,7 @@
 #include <linux/irq.h>
 #include <linux/syscalls.h>
 #include <linux/completion.h>
+#include <linux/uuid.h>
 #include <crypto/chacha20.h>
 
 #include <asm/processor.h>

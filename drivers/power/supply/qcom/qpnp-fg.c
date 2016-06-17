@@ -4962,8 +4962,12 @@ wait:
 							fg_batt_type);
 	if (IS_ERR_OR_NULL(profile_node)) {
 		rc = PTR_ERR(profile_node);
-		pr_err("couldn't find profile handle %d\n", rc);
-		goto no_profile;
+		if (rc == -EPROBE_DEFER) {
+			goto reschedule;
+		} else {
+			pr_err("couldn't find profile handle rc=%d\n", rc);
+			goto no_profile;
+		}
 	}
 
 #ifdef SUPPORT_BATT_ID_RECHECK

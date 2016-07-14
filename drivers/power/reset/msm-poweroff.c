@@ -343,7 +343,10 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x77665501, restart_reason);
 		}
 	}
-
+	else {
+		pr_notice("%s: cmd is NULL, set to reboot mode\n", __func__);
+		__raw_writel(0x77665501, restart_reason);
+	}
 	flush_cache_all();
 
 	/*outer_flush_all is not supported by 64bit kernel*/

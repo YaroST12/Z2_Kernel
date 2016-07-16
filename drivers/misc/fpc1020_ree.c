@@ -32,6 +32,8 @@
 
 #define FPC1020_TOUCH_DEV_NAME  "fpc1020tp"
 
+#define KEY_FINGERPRINT 0x2ee
+
 #define FPC1020_RESET_LOW_US 1000
 #define FPC1020_RESET_HIGH1_US 100
 #define FPC1020_RESET_HIGH2_US 1250
@@ -263,8 +265,12 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	} 
 	if (fpc1020->screen_on != 1) {
+		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
+		input_sync(fpc1020->input_dev);
 		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(100));
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
+		input_sync(fpc1020->input_dev);
 		return IRQ_HANDLED;
 	}
 	/* More IRQ_HANDLEDs to the god of... Wait, what? Ah, GCC7 warns about it, OK*/
@@ -336,10 +342,12 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	set_bit(KEY_LEFT, fpc1020->input_dev->keybit);
 	set_bit(KEY_RIGHT, fpc1020->input_dev->keybit);
 	set_bit(KEY_NAVI_LONG, fpc1020->input_dev->keybit);
+	set_bit(KEY_FINGERPRINT, fpc1020->input_dev->keybit);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LEFT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_RIGHT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_BACK);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LONG);
+	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_FINGERPRINT);
 
 	/* Register the input device */
 	retval = input_register_device(fpc1020->input_dev);

@@ -49,6 +49,8 @@
 
 #include <asm/uaccess.h>
 
+#include "../printk_interface.h"
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/printk.h>
 #include <linux/le_rkm.h>
@@ -1644,6 +1646,10 @@ asmlinkage int vprintk_emit(int facility, int level,
 	/* cpu currently holding logbuf_lock in this function */
 	static volatile unsigned int logbuf_cpu = UINT_MAX;
 
+	// if printk mode is disabled, terminate instantly
+	if (printk_mode == 0)
+			return 0;
+
 	if (level == SCHED_MESSAGE_LOGLEVEL) {
 		level = -1;
 		in_sched = true;
@@ -1807,6 +1813,10 @@ EXPORT_SYMBOL(vprintk_emit);
 
 asmlinkage int vprintk(const char *fmt, va_list args)
 {
+	// if printk mode is disabled, terminate instantly
+	if (printk_mode == 0)
+			return 0;
+
 	return vprintk_emit(0, -1, NULL, 0, fmt, args);
 }
 EXPORT_SYMBOL(vprintk);
@@ -1817,6 +1827,10 @@ asmlinkage int printk_emit(int facility, int level,
 {
 	va_list args;
 	int r;
+
+	// if printk mode is disabled, terminate instantly
+	if (printk_mode == 0)
+			return 0;
 
 	va_start(args, fmt);
 	r = vprintk_emit(facility, level, dict, dictlen, fmt, args);
@@ -1852,6 +1866,10 @@ asmlinkage __visible int printk(const char *fmt, ...)
 	va_list args;
 	int r;
 
+	// if printk mode is disabled, terminate instantly
+	if (printk_mode == 0)
+		return 0;
+
 #ifdef CONFIG_KGDB_KDB
 	if (unlikely(kdb_trap_printk)) {
 		va_start(args, fmt);
@@ -1860,6 +1878,7 @@ asmlinkage __visible int printk(const char *fmt, ...)
 		return r;
 	}
 #endif
+
 	va_start(args, fmt);
 	r = vprintk_emit(0, -1, NULL, 0, fmt, args);
 	va_end(args);

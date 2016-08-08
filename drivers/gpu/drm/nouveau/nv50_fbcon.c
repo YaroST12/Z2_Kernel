@@ -125,7 +125,11 @@ nv50_fbcon_imageblit(struct fb_info *info, const struct fb_image *image)
 	OUT_RING(chan, 0);
 	OUT_RING(chan, image->dy);
 
+<<<<<<< HEAD
 	dwords = ALIGN(ALIGN(image->width, 8) * image->height, 32) >> 5;
+=======
+	dwords = ALIGN(image->width * image->height, 32) >> 5;
+>>>>>>> 1750b45... drm: backport drm changes from 4.4 kernel to 3.18.
 	while (dwords) {
 		int push = dwords > 2047 ? 2047 : dwords;
 
@@ -181,12 +185,12 @@ nv50_fbcon_accel_init(struct fb_info *info)
 		return -EINVAL;
 	}
 
-	ret = nvif_object_init(chan->object, NULL, 0x502d, 0x502d, NULL, 0,
+	ret = nvif_object_init(&chan->user, 0x502d, 0x502d, NULL, 0,
 			       &nfbdev->twod);
 	if (ret)
 		return ret;
 
-	ret = RING_SPACE(chan, 59);
+	ret = RING_SPACE(chan, 58);
 	if (ret) {
 		nouveau_fbcon_gpu_lockup(info);
 		return ret;
@@ -250,6 +254,7 @@ nv50_fbcon_accel_init(struct fb_info *info)
 	OUT_RING(chan, info->var.yres_virtual);
 	OUT_RING(chan, upper_32_bits(fb->vma.offset));
 	OUT_RING(chan, lower_32_bits(fb->vma.offset));
+	FIRE_RING(chan);
 
 	return 0;
 }

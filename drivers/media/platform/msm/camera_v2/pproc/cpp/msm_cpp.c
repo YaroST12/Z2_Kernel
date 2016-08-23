@@ -2677,24 +2677,24 @@ static int msm_cpp_validate_input(unsigned int cmd, void *arg,
 	struct msm_camera_v4l2_ioctl_t **ioctl_ptr)
 {
 	switch (cmd) {
-	case MSM_SD_SHUTDOWN:
-	case MSM_SD_NOTIFY_FREEZE:
-	case MSM_SD_UNNOTIFY_FREEZE:
-		break;
-	default: {
-		if (ioctl_ptr == NULL) {
-			pr_err("Wrong ioctl_ptr for cmd %u\n", cmd);
-			return -EINVAL;
-		}
+		case MSM_SD_SHUTDOWN:
+		case MSM_SD_NOTIFY_FREEZE:
+		case MSM_SD_UNNOTIFY_FREEZE:
+			break;
+		default: {
+			if (ioctl_ptr == NULL) {
+				pr_err("Wrong ioctl_ptr for cmd %u\n", cmd);
+				return -EINVAL;
+			}
 
-		*ioctl_ptr = arg;
-		if ((*ioctl_ptr == NULL) ||
-			((*ioctl_ptr)->ioctl_ptr == NULL)) {
-			pr_err("Error invalid ioctl argument cmd %u", cmd);
-			return -EINVAL;
+			*ioctl_ptr = arg;
+			if ((*ioctl_ptr == NULL) ||
+				(*ioctl_ptr)->ioctl_ptr == NULL) {
+				pr_err("Error invalid ioctl argument cmd %u", cmd);
+				return -EINVAL;
+			}
+			break;
 		}
-		break;
-	}
 	}
 	return 0;
 }

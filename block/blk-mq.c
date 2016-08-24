@@ -893,8 +893,7 @@ void blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx, bool async)
 		put_cpu();
 	}
 
-	kblockd_schedule_delayed_work_on(blk_mq_hctx_next_cpu(hctx),
-			&hctx->run_work, 0);
+	kblockd_schedule_work_on(blk_mq_hctx_next_cpu(hctx), &hctx->run_work);
 }
 
 void blk_mq_run_hw_queues(struct request_queue *q, bool async)
@@ -915,7 +914,7 @@ EXPORT_SYMBOL(blk_mq_run_hw_queues);
 
 void blk_mq_stop_hw_queue(struct blk_mq_hw_ctx *hctx)
 {
-	cancel_delayed_work(&hctx->run_work);
+	cancel_work(&hctx->run_work);
 	cancel_delayed_work(&hctx->delay_work);
 	set_bit(BLK_MQ_S_STOPPED, &hctx->state);
 }
@@ -968,7 +967,7 @@ static void blk_mq_run_work_fn(struct work_struct *work)
 {
 	struct blk_mq_hw_ctx *hctx;
 
-	hctx = container_of(work, struct blk_mq_hw_ctx, run_work.work);
+	hctx = container_of(work, struct blk_mq_hw_ctx, run_work);
 
 	__blk_mq_run_hw_queue(hctx);
 }
@@ -1658,7 +1657,7 @@ static int blk_mq_init_hctx(struct request_queue *q,
 	if (node == NUMA_NO_NODE)
 		node = hctx->numa_node = set->numa_node;
 
-	INIT_DELAYED_WORK(&hctx->run_work, blk_mq_run_work_fn);
+	INIT_WORK(&hctx->run_work, blk_mq_run_work_fn);
 	INIT_DELAYED_WORK(&hctx->delay_work, blk_mq_delay_work_fn);
 	spin_lock_init(&hctx->lock);
 	INIT_LIST_HEAD(&hctx->dispatch);

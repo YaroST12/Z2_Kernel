@@ -23,6 +23,7 @@
 #include <linux/export.h>
 #include <linux/hid.h>
 #include <linux/module.h>
+#include <linux/freezer.h>
 #include <linux/uio.h>
 #include <linux/ipc_logging.h>
 #include <asm/unaligned.h>
@@ -847,7 +848,7 @@ retry:
 		 */
 		smp_mb__before_atomic();
 		if (!atomic_read(&epfile->error)) {
-			ret = wait_event_interruptible(epfile->wait,
+			ret = wait_event_freezable(epfile->wait,
 					(ep = epfile->ep));
 			if (ret < 0)
 				goto error;

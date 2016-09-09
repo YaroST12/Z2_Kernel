@@ -449,6 +449,7 @@ struct fg_chip {
 	struct fg_wakeup_source	update_sram_wakeup_source;
 	bool			fg_restarting;
 	bool			profile_loaded;
+	bool			soc_reporting_ready;
 	bool			use_otp_profile;
 	bool			battery_missing;
 	bool			power_supply_registered;
@@ -2709,7 +2710,7 @@ static int fg_power_get_property(struct power_supply *psy,
 		val->intval = !!chip->bcl_lpm_disabled;
 		break;
 	case POWER_SUPPLY_PROP_SOC_REPORTING_READY:
-		val->intval = !!chip->profile_loaded;
+		val->intval = !!chip->soc_reporting_ready;
 		break;
 	default:
 		return -EINVAL;
@@ -3905,6 +3906,7 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *_chip)
 	if (batt_missing) {
 		chip->battery_missing = true;
 		chip->profile_loaded = false;
+		chip->soc_reporting_ready = false;
 		chip->batt_type = default_batt_type;
 		mutex_lock(&chip->cyc_ctr.lock);
 		if (fg_debug_mask & FG_IRQS)
@@ -5037,6 +5039,7 @@ done:
 		chip->batt_type = batt_type_str;
 	chip->first_profile_loaded = true;
 	chip->profile_loaded = true;
+	chip->soc_reporting_ready = true;
 	chip->battery_missing = is_battery_missing(chip);
 	update_chg_iterm(chip);
 	update_cc_cv_setpoint(chip);
@@ -5054,6 +5057,7 @@ done:
 		fg_data[FG_DATA_VOLTAGE].value);
 	return rc;
 no_profile:
+	chip->soc_reporting_ready = true;
 	if (chip->charging_disabled) {
 		rc = set_prop_enable_charging(chip, true);
 		if (rc)

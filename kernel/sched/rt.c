@@ -1385,6 +1385,19 @@ static void yield_task_rt(struct rq *rq)
 #ifdef CONFIG_SMP
 static int find_lowest_rq(struct task_struct *task);
 
+/*
+ * Return whether the task on the given cpu is currently non-preemptible
+ * while handling a softirq or is likely to block preemptions soon because
+ * it is a ksoftirq thread.
+ */
+bool
+task_may_not_preempt(struct task_struct *task, int cpu)
+{
+	struct task_struct *cpu_ksoftirqd = per_cpu(ksoftirqd, cpu);
+	return (task_thread_info(task)->preempt_count & SOFTIRQ_MASK) ||
+	       task == cpu_ksoftirqd;
+}
+
 static int
 select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags)
 {

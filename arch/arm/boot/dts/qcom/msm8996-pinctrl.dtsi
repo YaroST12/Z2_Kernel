@@ -904,6 +904,19 @@
 					bias-pull-down;
 				};
 			};
+
+			i2c_12_bitbang: i2c_12_bitbang {
+				mux {
+					pins = "gpio87", "gpio88";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio87", "gpio88";
+					drive-strength = <8>;
+					bias-disable;
+				};
+			};
 		};
 
 #if defined CONFIG_PRODUCT_Z2_ROW || defined CONFIG_PRODUCT_Z2_X

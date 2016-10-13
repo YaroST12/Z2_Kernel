@@ -5036,6 +5036,20 @@ struct energy_env {
 		/* Estimated energy variation wrt EAS_CPU_PRV */
 		int	nrg_delta;
 
+#ifdef CONFIG_SCHED_TUNE
+
+		/* Estimated SG utilization */
+		unsigned long sg_util;
+
+		/* SchedTune's performance Index */
+		int	speedup_idx;
+		int	delay_idx;
+		int	perf_idx;
+
+		/* Estimated performance variation wrt EAS_CPU_PRV */
+		int	prf_delta;
+
+#endif
 	} cpu[EAS_CPU_CNT];
 
 	/*
@@ -5321,6 +5335,14 @@ static void calc_sg_energy(struct energy_env *eenv)
 
 		total_energy = busy_energy + idle_energy;
 		eenv->cpu[cpu_idx].energy += total_energy;
+#ifdef CONFIG_SCHED_TUNE
+		/* Keep track of SG's utilization */
+		if (sg->group_weight == 1 &&
+		    cpumask_test_cpu(eenv->cpu[cpu_idx].cpu_id,
+				     sched_group_cpus(sg))) {
+			eenv->cpu[cpu_idx].sg_util = sg_util;
+		}
+#endif
 	}
 }
 
@@ -5401,6 +5423,78 @@ static inline bool cpu_in_sg(struct sched_group *sg, int cpu)
 	return cpu != -1 && cpumask_test_cpu(cpu, sched_group_cpus(sg));
 }
 
+static inline void
+compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
+{
+#ifdef CONFIG_SCHED_TUNE
+	unsigned long task_util = eenv->util_delta;
+	unsigned long sg_util;
+	unsigned long index;
+#endif
+
+	eenv->cpu[next_cpu].nrg_delta =
+		eenv->cpu[next_cpu].energy - eenv->cpu[prev_cpu].energy;
+
+#ifdef CONFIG_SCHED_TUNE
+
+	/* No need to evaluate performance variations for non boosted tasks */
+	if (!schedtune_task_boost(eenv->p))
+		return;
+
+	/*
+	 * SpeedUp Index
+	 *
+	 *   SPI := cpu_capacity - task_util
+	 *
+	 * which estimate how sooner a task will complete when running
+	 * on an higher OPP wrt the minimum required.
+	 */
+	eenv->cpu[prev_cpu].speedup_idx = (int)eenv->cpu[prev_cpu].cap
+					- task_util;
+	eenv->cpu[next_cpu].speedup_idx = (int)eenv->cpu[next_cpu].cap
+					- task_util;
+
+	/*
+	 * Delay Index
+	 *
+	 *   DLI := 1024 * (cpu_util - task_util) / cpu_util
+	 *
+	 * which represents the "fraction" of CPU bandwidth consumed by other
+	 * tasks in the worst case, i.e. assuming all other tasks runs before.
+	 *
+	 * NOTE: in the above formula we assume that "cpu_util" includes
+	 *       already the task utilization.
+	 */
+	sg_util = eenv->cpu[prev_cpu].sg_util;
+	index = (abs(sg_util - task_util) << SCHED_CAPACITY_SHIFT) / sg_util;
+	eenv->cpu[prev_cpu].delay_idx = (sg_util >= task_util)
+		? index : -index;
+
+	sg_util = eenv->cpu[next_cpu].sg_util;
+	index = (abs(sg_util - task_util) << SCHED_CAPACITY_SHIFT) / sg_util;
+	eenv->cpu[next_cpu].delay_idx = (sg_util >= task_util)
+		? index : -index;
+
+	/*
+	 * Performance Index
+	 *
+	 *   PI := SPI - DLI
+	 *
+	 * which represents the maximum speedup we can get considering all the
+	 * delay factors.
+	 */
+	eenv->cpu[prev_cpu].perf_idx = eenv->cpu[prev_cpu].speedup_idx
+				     - eenv->cpu[prev_cpu].delay_idx;
+	eenv->cpu[next_cpu].perf_idx = eenv->cpu[next_cpu].speedup_idx
+				     - eenv->cpu[next_cpu].delay_idx;
+
+	/* Performance and Energy variations */
+	eenv->cpu[next_cpu].prf_delta =
+		eenv->cpu[next_cpu].perf_idx - eenv->cpu[prev_cpu].perf_idx;
+
+#endif
+}
+
 /*
  * select_energy_cpu_idx(): estimate the energy impact of changing the
  * utilization distribution.
@@ -5478,9 +5572,7 @@ static inline int select_energy_cpu_idx(struct energy_env *eenv)
 		if (eenv->cpu[cpu_idx].cpu_id < 0)
 			continue;
 		/* Compute energy delta wrt EAS_CPU_PRV */
-		eenv->cpu[cpu_idx].nrg_delta =
-			eenv->cpu[cpu_idx].energy -
-			eenv->cpu[EAS_CPU_PRV].energy;
+		compute_delta(eenv, EAS_CPU_PRV, cpu_idx);
 		/* filter energy variations within the dead-zone margin */
 		if (abs(eenv->cpu[cpu_idx].nrg_delta) < margin)
 			eenv->cpu[cpu_idx].nrg_delta = 0;

@@ -169,6 +169,9 @@ int fb_copy_cmap(const struct fb_cmap *from, struct fb_cmap *to)
 	if ((int)(to->start) < 0)
 		return -EINVAL;
 
+	if ((int)(to->start) < 0)
+		return -EINVAL;
+
 	if (to->start > from->start)
 		fromoff = to->start - from->start;
 	else

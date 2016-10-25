@@ -264,6 +264,9 @@ static DECLARE_WORK(ipa3_post_init_work, ipa3_post_init_wq);
 static struct ipa3_plat_drv_res ipa3_res = {0, };
 struct msm_bus_scale_pdata *ipa3_bus_scale_table;
 
+static void ipa3_fw_load(struct work_struct *__unused);
+static DECLARE_WORK(ipa3_fw_load_work, ipa3_fw_load);
+
 static struct clk *ipa3_clk;
 
 struct ipa3_context *ipa3_ctx;
@@ -4456,7 +4459,6 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 			  size_t count, loff_t *ppos)
 {
 	unsigned long missing;
-	int result = -EINVAL;
 
 	char dbg_buff[16] = { 0 };
 
@@ -4484,25 +4486,34 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 	if (ipa3_ctx->transport_prototype != IPA_TRANSPORT_TYPE_GSI)
 		return count;
 
+	queue_work(ipa3_ctx->transport_power_mgmt_wq,
+		&ipa3_fw_load_work);
+
+	return count;
+}
+
+static void ipa3_fw_load(struct work_struct *__unused)
+{
+	int result = -EINVAL;
+
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
 
-	if (ipa3_is_msm_device() || (ipa3_ctx->ipa_hw_type >= IPA_HW_v3_5))
+	if (ipa3_is_msm_device())
 		result = ipa3_pil_load_ipa_fws();
 	else
 		result = ipa3_manual_load_ipa_fws();
+	/* No IPAv3.x chipsets that don't support FW loading */
 
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 
 	if (result) {
-		IPAERR("IPA FW loading process has failed\n");
-		return result;
+		IPAERR("FW loading process has failed\n");
+		return;
+	} else {
+		IPADBG("IPA FW loaded successfully\n");
+		queue_work(ipa3_ctx->transport_power_mgmt_wq,
+			&ipa3_post_init_work);
 	}
-
-	queue_work(ipa3_ctx->transport_power_mgmt_wq,
-		&ipa3_post_init_work);
-	IPADBG("IPA FW loaded successfully\n");
-
-	return count;
 }
 
 static int ipa3_tz_unlock_reg(struct ipa3_context *ipa3_ctx)

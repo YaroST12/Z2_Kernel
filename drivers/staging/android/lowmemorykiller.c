@@ -186,6 +186,11 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 					other_file);
 		}
 	} else if (atomic_read(&shift_adj)) {
+		other_file = global_page_state(NR_FILE_PAGES) + zcache_pages() -
+			global_page_state(NR_SHMEM) -
+			total_swapcache_pages();
+		other_free = global_page_state(NR_FREE_PAGES);
+
 		/*
 		 * shift_adj would have been set by a previous invocation
 		 * of notifier, which is not followed by a lowmem_shrink yet.

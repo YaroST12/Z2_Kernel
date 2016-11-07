@@ -40,6 +40,7 @@ static struct workqueue_struct *mem_share_svc_workqueue;
 static uint64_t bootup_request;
 static bool ramdump_event;
 static void *memshare_ramdump_dev[MAX_CLIENTS];
+static struct device *memshare_dev[MAX_CLIENTS];
 
 /* Memshare Driver Structure */
 struct memshare_driver {
@@ -132,9 +133,14 @@ static int mem_share_configure_ramdump(void)
 
 	clnt = ((!num_clients) ? "GPS" : ((num_clients == 1) ? "FTM" : "DIAG"));
 	snprintf(client_name, 18, "memshare_%s", clnt);
-
-	memshare_ramdump_dev[num_clients] = create_ramdump_device(client_name,
-								NULL);
+	if (memshare_dev[num_clients]) {
+		memshare_ramdump_dev[num_clients] =
+			create_ramdump_device(client_name,
+				memshare_dev[num_clients]);
+	} else {
+		pr_err("memshare:%s: invalid memshare device\n", __func__);
+		return -ENODEV;
+	}
 	if (IS_ERR_OR_NULL(memshare_ramdump_dev[num_clients])) {
 		pr_err("memshare: %s: Unable to create memshare ramdump device.\n",
 				__func__);
@@ -947,6 +953,8 @@ static int memshare_child_probe(struct platform_device *pdev)
 	 *  call for creating ramdump dev handlers for
 	 *  memshare clients
 	 */
+
+	memshare_dev[num_clients] = &pdev->dev;
 
 	if (!memblock[num_clients].file_created) {
 		rc = mem_share_configure_ramdump();

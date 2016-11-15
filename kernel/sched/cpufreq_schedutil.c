@@ -26,7 +26,6 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define LATENCY_MULTIPLIER			(1000)
 #define SUGOV_KTHREAD_PRIORITY	50
 
 struct sugov_tunables {
@@ -749,7 +748,6 @@ static int sugov_exit(struct cpufreq_policy *policy)
 		sugov_tunables_free(tunables);
 
 	mutex_unlock(&global_tunables_lock);
-	
 	sugov_kthread_stop(sg_policy);
 	sugov_policy_free(sg_policy);
 

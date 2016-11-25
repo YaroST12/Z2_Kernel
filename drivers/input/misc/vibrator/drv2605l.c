@@ -52,6 +52,7 @@
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/regulator/consumer.h>
+#include <linux/qpnp/qpnp-haptic.h>
 
 #define SKIP_AUTOCAL 0
 
@@ -268,6 +269,7 @@ static int vibrator_get_time(struct timed_output_dev *dev)
 static void vibrator_enable( struct timed_output_dev *dev, int value)
 {
 	struct drv2605l_data *haptics = container_of(dev, struct drv2605l_data, to_dev);
+	bool disabled = is_haptics_disabled();
 
 	//printk(KERN_DEBUG"%s:Enter\n", __FUNCTION__);
 	haptics->should_stop = YES;
@@ -278,7 +280,7 @@ static void vibrator_enable( struct timed_output_dev *dev, int value)
 
 	drv2605l_stop(haptics);
 //	printk(KERN_DEBUG"%s:value:%d\n", __FUNCTION__, value);
-	if (value > 0) {
+	if (value > 0&& !disabled) {
 		wake_lock(&haptics->wk_lock);
 
 		drv2605l_change_mode(haptics, WORK_VIBRATOR, DEV_READY);

@@ -5817,10 +5817,7 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 		return most_spare_sg;
 
 skip_spare:
-	if (!idlest ||
-	    (min_runnable_load > (this_runnable_load + imbalance)) ||
-	    ((this_runnable_load < (min_runnable_load + imbalance)) &&
-			(100*this_avg_load < imbalance_scale*min_avg_load)))
+	if (!idlest || 100*this_load < imbalance*min_load)
 		return NULL;
 	return idlest;
 }

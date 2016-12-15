@@ -880,6 +880,7 @@ enum msm_isp_ioctl_cmd_code {
 	MSM_ISP_FETCH_ENG_MULTI_PASS_START,
 	MSM_ISP_MAP_BUF_START_MULTI_PASS_FE,
 	MSM_ISP_AHB_CLK_CFG,
+	MSM_ISP_CFG_HW_STATE,
 };
 
 #define VIDIOC_MSM_VFE_REG_CFG \
@@ -996,4 +997,7 @@ enum msm_isp_ioctl_cmd_code {
 #define VIDIOC_MSM_ISP_CFG_HW_STATE \
 	_IOWR('V', MSM_ISP_CFG_HW_STATE, \
 		struct msm_vfe_axi_stream_cfg_cmd)
+
+#define VIDIOC_MSM_ISP_AHB_CLK_CFG \
+	_IOWR('V', MSM_ISP_AHB_CLK_CFG, struct msm_isp_ahb_clk_cfg)
 #endif /* __MSMB_ISP__ */

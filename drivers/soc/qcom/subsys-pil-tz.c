@@ -881,7 +881,7 @@ static irqreturn_t subsys_err_fatal_intr_handler (int irq, void *dev_id)
 							d->subsys_desc.name);
 		return IRQ_HANDLED;
 	}
-	subsys_set_crash_status(d->subsys, true);
+	subsys_set_crash_status(d->subsys, CRASH_STATUS_ERR_FATAL);
 	log_failure_reason(d);
 	subsystem_restart_dev(d->subsys);
 
@@ -900,7 +900,7 @@ static irqreturn_t subsys_wdog_bite_irq_handler(int irq, void *dev_id)
 			!gpio_get_value(d->subsys_desc.err_fatal_gpio))
 		panic("%s: System ramdump requested. Triggering device restart!\n",
 							__func__);
-	subsys_set_crash_status(d->subsys, true);
+	subsys_set_crash_status(d->subsys, CRASH_STATUS_WDOG_BITE);
 	log_failure_reason(d);
 	subsystem_restart_dev(d->subsys);
 
@@ -933,10 +933,8 @@ static irqreturn_t subsys_generic_handler(int irq, void *dev_id)
 
 	if (status_val & BIT(d->bits_arr[WDOG_BITE])) {
 		pr_err("wdog bite received from %s!\n", d->subsys_desc.name);
-		clear_val = __raw_readl(d->irq_clear);
-		__raw_writel(clear_val | BIT(d->bits_arr[CLR_WDOG_BITE]),
-							d->irq_clear);
-		subsys_set_crash_status(d->subsys, true);
+		__raw_writel(BIT(d->bits_arr[ERR_READY]), d->irq_clear);
+		subsys_set_crash_status(d->subsys, CRASH_STATUS_WDOG_BITE);
 		log_failure_reason(d);
 		subsystem_restart_dev(d->subsys);
 	} else if (status_val & BIT(d->bits_arr[ERR_READY])) {

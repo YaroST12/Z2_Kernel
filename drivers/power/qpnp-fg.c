@@ -2021,7 +2021,8 @@ static void fg_handle_battery_insertion(struct fg_chip *chip)
 	queue_delayed_work(system_power_efficient_wq,
 		&chip->batt_profile_init, 0);
 	cancel_delayed_work(&chip->update_sram_data);
-	schedule_delayed_work(&chip->update_sram_data, msecs_to_jiffies(0));
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->update_sram_data, msecs_to_jiffies(0));
 }
 
 static void batt_to_setpoint_adc(int vbatt_mv, u8 *data)

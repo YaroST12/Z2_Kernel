@@ -3948,6 +3948,7 @@ energy-costs {
 	clock-names = "core_clk";
 	clocks = <&clock_mmss clk_camss_cpp_clk>;
 	parent-supply = <&gdsc_camss_top>;
+	qcom,support-hw-trigger;
 	status = "ok";
 };
 

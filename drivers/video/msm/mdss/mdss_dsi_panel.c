@@ -22,6 +22,7 @@
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 #include <linux/string.h>
+#include <linux/display_state.h>
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
@@ -44,6 +45,12 @@ struct panel_effect_data lcd_data;
 
 int is_show_lcd_param = 0;
 extern struct msm_fb_data_type *mfd_priv;
+
+bool display_on = true;
+bool is_display_on()
+{
+	return display_on;
+}
 
 #ifdef ESD_FOR_LCD
 extern struct timer_list te_timer;
@@ -959,6 +966,8 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		return -EINVAL;
 	}
 
+	display_on = true;
+
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -1062,6 +1071,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		mdss_dba_utils_video_off(pinfo->dba_data);
 		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
 	}
+
+	display_on = false;
 
 end:
 	pr_debug("%s:-\n", __func__);

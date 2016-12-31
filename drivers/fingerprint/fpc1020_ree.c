@@ -53,6 +53,7 @@ struct fpc1020_data {
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
 	int screen_on;
+	int proximity_state; /* 0:far 1:near */
 };
 
 /* From drivers/input/keyboard/gpio_keys.c */
@@ -72,6 +73,18 @@ static ssize_t irq_get(struct device *device,
 	int irq = gpio_get_value(fpc1020->irq_gpio);
 
 	return scnprintf(buffer, PAGE_SIZE, "%i\n", irq);
+}
+
+static void config_irq(struct fpc1020_data *fpc1020, bool enabled)
+{
+	if (enabled != fpc1020->irq_enabled) {
+		if (enabled)
+			enable_irq(gpio_to_irq(fpc1020->irq_gpio));
+		else
+			disable_irq(gpio_to_irq(fpc1020->irq_gpio));
+
+		fpc1020->irq_enabled = enabled;
+	}
 }
 
 static ssize_t irq_set(struct device *device,
@@ -137,9 +150,30 @@ static ssize_t set_key(struct device *device,
 
 static DEVICE_ATTR(key, S_IRUSR | S_IWUSR, get_key, set_key);
 
+static ssize_t proximity_state_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
+	int rc, val;
+	rc = kstrtoint(buf, 10, &val);
+	if (rc)
+		return -EINVAL;
+
+	fpc1020->proximity_state = !!val;
+	if (!fpc1020->screen_on) {
+		if (fpc1020->proximity_state)
+			config_irq(fpc1020, false);
+		else
+			config_irq(fpc1020, true);
+	}
+	return count;
+}
+static DEVICE_ATTR(proximity_state, S_IWUSR, NULL, proximity_state_set);
+
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
+	&dev_attr_proximity_state.attr,
 	NULL
 };
 

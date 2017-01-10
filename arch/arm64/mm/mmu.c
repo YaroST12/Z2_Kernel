@@ -30,6 +30,7 @@
 #include <linux/cma.h>
 #include <linux/slab.h>
 #include <linux/stop_machine.h>
+#include <linux/mm.h>
 
 #include <asm/cputype.h>
 #include <asm/fixmap.h>
@@ -553,8 +554,7 @@ void __init fixup_executable(void)
 
 		create_mapping(aligned_start, __phys_to_virt(aligned_start),
 				__pa(_stext) - aligned_start,
-				PAGE_KERNEL, false);
-	}
+				PAGE_KERNEL, false);	}
 
 	if (!IS_ALIGNED((unsigned long)__init_end, SECTION_SIZE)) {
 		unsigned long aligned_end = round_up(__pa(__init_end),
@@ -569,7 +569,7 @@ void __init fixup_executable(void)
 #ifdef CONFIG_DEBUG_RODATA
 void mark_rodata_ro(void)
 {
-	create_mapping_late(__pa(_stext), (unsigned long)_stext,
+	create_mapping_late(__pa_symbol(_stext), (unsigned long)_stext,
 				(unsigned long)__init_begin - (unsigned long)_stext,
 				PAGE_KERNEL_EXEC | PTE_RDONLY);
 }
@@ -577,7 +577,7 @@ void mark_rodata_ro(void)
 
 void fixup_init(void)
 {
-	create_mapping_late(__pa(__init_begin), (unsigned long)__init_begin,
+	create_mapping_late(__pa_symbol(__init_begin), (unsigned long)__init_begin,
 			(unsigned long)__init_end - (unsigned long)__init_begin,
 			PAGE_KERNEL);
 }
@@ -724,6 +724,12 @@ static inline pte_t * fixmap_pte(unsigned long addr)
 	return pte_offset_kernel(pmd, addr);
 }
 
+/*
+ * The p*d_populate functions call virt_to_phys implicitly so they can't be used
+ * directly on kernel symbols (bm_p*d). This function is called too early to use
+ * lm_alias so __p*d_populate functions must be used to populate with the
+ * physical address from __pa_symbol.
+ */
 void __init early_fixmap_init(void)
 {
 	pgd_t *pgd;
@@ -736,7 +742,7 @@ void __init early_fixmap_init(void)
 	pud = pud_offset(pgd, addr);
 	pud_populate(&init_mm, pud, bm_pmd);
 	pmd = pmd_offset(pud, addr);
-	pmd_populate_kernel(&init_mm, pmd, bm_pte);
+	__pmd_populate(pmd, __pa_symbol(bm_pte), PMD_TYPE_TABLE);
 
 	/*
 	 * The boot-ioremap range spans multiple pmds, for which

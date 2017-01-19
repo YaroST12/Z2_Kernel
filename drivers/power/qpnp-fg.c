@@ -1605,7 +1605,8 @@ static int __fg_interleaved_mem_write(struct fg_chip *chip, u8 *val,
 
 		rc = fg_check_iacs_ready(chip);
 		if (rc) {
-			pr_debug("IACS_RDY failed rc=%d\n", rc);
+			pr_err("IACS_RDY failed post write to address %x offset %d rc=%d\n",
+				address, offset, rc);
 			return rc;
 		}
 
@@ -1651,7 +1652,8 @@ static int __fg_interleaved_mem_read(struct fg_chip *chip, u8 *val, u16 address,
 
 		rc = fg_check_iacs_ready(chip);
 		if (rc) {
-			pr_debug("IACS_RDY failed rc=%d\n", rc);
+			pr_err("IACS_RDY failed post read for address %x offset %d rc=%d\n",
+				address, offset, rc);
 			return rc;
 		}
 
@@ -1734,7 +1736,8 @@ static int fg_interleaved_mem_config(struct fg_chip *chip, u8 *val,
 
 	rc = fg_check_iacs_ready(chip);
 	if (rc) {
-		pr_debug("IACS_RDY failed rc=%d\n", rc);
+		pr_err("IACS_RDY failed before setting address: %x offset: %d rc=%d\n",
+			address, offset, rc);
 		return rc;
 	}
 
@@ -1747,7 +1750,8 @@ static int fg_interleaved_mem_config(struct fg_chip *chip, u8 *val,
 
 	rc = fg_check_iacs_ready(chip);
 	if (rc)
-		pr_debug("IACS_RDY failed rc=%d\n", rc);
+		pr_err("IACS_RDY failed after setting address: %x offset: %d rc=%d\n",
+			address, offset, rc);
 
 	return rc;
 }
@@ -1758,7 +1762,7 @@ static int fg_interleaved_mem_config(struct fg_chip *chip, u8 *val,
 static int fg_interleaved_mem_read(struct fg_chip *chip, u8 *val, u16 address,
 						int len, int offset)
 {
-	int rc = 0, orig_address = address;
+	int rc = 0, ret, orig_address = address;
 	u8 start_beat_count, end_beat_count, count = 0;
 	bool retry = false;
 
@@ -1839,9 +1843,14 @@ retry:
 	}
 out:
 	/* Release IMA access */
-	rc = fg_masked_write(chip, MEM_INTF_CFG(chip), IMA_REQ_ACCESS, 0, 1);
-	if (rc)
-		pr_err("failed to reset IMA access bit rc = %d\n", rc);
+	ret = fg_masked_write(chip, MEM_INTF_CFG(chip), IMA_REQ_ACCESS, 0, 1);
+	if (ret)
+		pr_err("failed to reset IMA access bit ret = %d\n", ret);
+
+	if (rc) {
+		mutex_unlock(&chip->rw_lock);
+		goto exit;
+	}
 
 	if (retry) {
 		retry = false;
@@ -1857,7 +1866,7 @@ exit:
 static int fg_interleaved_mem_write(struct fg_chip *chip, u8 *val, u16 address,
 							int len, int offset)
 {
-	int rc = 0, orig_address = address;
+	int rc = 0, ret, orig_address = address;
 	u8 count = 0;
 
 	if (chip->fg_shutdown)
@@ -1902,9 +1911,9 @@ retry:
 
 out:
 	/* Release IMA access */
-	rc = fg_masked_write(chip, MEM_INTF_CFG(chip), IMA_REQ_ACCESS, 0, 1);
-	if (rc)
-		pr_err("failed to reset IMA access bit rc = %d\n", rc);
+	ret = fg_masked_write(chip, MEM_INTF_CFG(chip), IMA_REQ_ACCESS, 0, 1);
+	if (ret)
+		pr_err("failed to reset IMA access bit ret = %d\n", ret);
 
 	mutex_unlock(&chip->rw_lock);
 	fg_relax(&chip->memif_wakeup_source);

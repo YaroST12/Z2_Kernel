@@ -3672,6 +3672,8 @@ retry:
 		}
 
 		if (cfqq) {
+			/* cfq_init_cfqq() assumes cfqq->ioprio_class is initialized. */
+			cfqq->ioprio_class = IOPRIO_CLASS_NONE;
 			cfq_init_cfqq(cfqd, cfqq, current->pid, is_sync);
 			cfq_init_prio_data(cfqq, cic);
 			cfq_link_cfqq_cfqg(cfqq, cfqg);

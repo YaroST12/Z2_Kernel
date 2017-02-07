@@ -332,12 +332,13 @@ static int acpi_find_gpio(struct acpi_resource *ares, void *data)
  * Note: if the GPIO resource has multiple entries in the pin list, this
  * function only returns the first.
  */
-struct gpio_desc *acpi_get_gpiod_by_index(struct device *dev, int index,
-					  struct acpi_gpio_info *info)
+struct gpio_desc *acpi_get_gpiod_by_index(struct device *dev, int index)
 {
 	struct acpi_gpio_lookup lookup;
 	struct list_head resource_list;
 	struct acpi_device *adev;
+	struct acpi_gpio_info info = {0, 0};
+
 	acpi_handle handle;
 	int ret;
 

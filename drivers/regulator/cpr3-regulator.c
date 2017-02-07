@@ -2907,7 +2907,8 @@ static int _cpr3_regulator_update_ctrl_state(struct cpr3_controller *ctrl)
 	struct cpr4_sdelta *sdelta;
 	bool valid = false;
 	bool thread_valid;
-	int i, j, rc, new_volt, vdd_volt, dynamic_floor_volt, last_corner_volt = 0;
+	int i = 0, j = 0, rc = 0, new_volt = 0, vdd_volt = 0,
+				dynamic_floor_volt = 0, last_corner_volt = 0;
 	u32 reg_last_measurement = 0, sdelta_size;
 	int *sdelta_table, *boost_table;
 

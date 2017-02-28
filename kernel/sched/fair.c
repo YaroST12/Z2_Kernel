@@ -6031,9 +6031,10 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			 * so prev_cpu will receive a negative bias due to the double
 			 * accounting. However, the blocked utilization may be zero.
 			 */
+
 			wake_util = cpu_util_wake(i, p);
 			new_util = wake_util + task_util(p);
-
+			
 			/*
 			 * Ensure minimum capacity to grant the required boost.
 			 * The target CPU can be already at a capacity level higher

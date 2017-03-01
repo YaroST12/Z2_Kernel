@@ -719,11 +719,7 @@ static struct intel_iommu *device_to_iommu(struct device *dev, u8 *bus, u8 *devf
 				 * which we used for the IOMMU lookup. Strictly speaking
 				 * we could do this for all PCI devices; we only need to
 				 * get the BDF# from the scope table for ACPI matches. */
-<<<<<<< HEAD
 				if (pdev && pdev->is_virtfn)
-=======
-				if (pdev->is_virtfn)
->>>>>>> 0147caff4f3276150faae0fb215187c04adfa7e2
 					goto got_pdev;
 
 				*bus = drhd->devices[i].bus;

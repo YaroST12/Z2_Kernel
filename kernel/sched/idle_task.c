@@ -29,6 +29,10 @@ pick_next_task_idle(struct rq *rq, struct task_struct *prev)
 	put_prev_task(rq, prev);
 
 	schedstat_inc(rq, sched_goidle);
+	
+	/* kick cpufreq (see the comment in kernel/sched/sched.h). */
+	cpufreq_update_this_cpu(rq, SCHED_CPUFREQ_IDLE);
+
 	return rq->idle;
 }
 

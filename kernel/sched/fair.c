@@ -9554,9 +9554,8 @@ static inline bool nohz_kick_needed(struct rq *rq)
 	if (time_before(now, nohz.next_balance))
 		return false;
 
-	if (rq->nr_running >= 2 &&
-	    (!energy_aware() || cpu_overutilized(cpu)))
-		return true;
+	if (energy_aware())
+		return rq->nr_running >= 2 && cpu_overutilized(cpu);
 
 	/* Do idle load balance if there have misfit task */
 	if (energy_aware())

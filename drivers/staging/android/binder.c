@@ -2127,6 +2127,7 @@ static void binder_transaction(struct binder_proc *proc,
 			ret = binder_translate_binder(fp, t, thread);
 			if (ret < 0) {
 				return_error = BR_FAILED_REPLY;
+				return_error_param = ret;
 				return_error_line = __LINE__;
 				goto err_translate_failed;
 			}
@@ -2139,6 +2140,7 @@ static void binder_transaction(struct binder_proc *proc,
 			ret = binder_translate_handle(fp, t, thread);
 			if (ret < 0) {
 				return_error = BR_FAILED_REPLY;
+				return_error_param = ret;
 				return_error_line = __LINE__;
 				goto err_translate_failed;
 			}
@@ -2151,6 +2153,7 @@ static void binder_transaction(struct binder_proc *proc,
 
 			if (target_fd < 0) {
 				return_error = BR_FAILED_REPLY;
+				return_error_param = target_fd;
 				return_error_line = __LINE__;
 				goto err_translate_failed;
 			}
@@ -2185,6 +2188,7 @@ static void binder_transaction(struct binder_proc *proc,
 							in_reply_to);
 			if (ret < 0) {
 				return_error = BR_FAILED_REPLY;
+				return_error_param = ret;
 				return_error_line = __LINE__;
 				goto err_translate_failed;
 			}
@@ -2225,6 +2229,7 @@ static void binder_transaction(struct binder_proc *proc,
 						  last_fixup_min_off);
 			if (ret < 0) {
 				return_error = BR_FAILED_REPLY;
+				return_error_param = ret;
 				return_error_line = __LINE__;
 				goto err_translate_failed;
 			}
@@ -2235,6 +2240,7 @@ static void binder_transaction(struct binder_proc *proc,
 			binder_user_error("%d:%d got transaction with invalid object type, %x\n",
 				proc->pid, thread->pid, hdr->type);
 			return_error = BR_FAILED_REPLY;
+			return_error_param = hdr->type;
 			return_error_line = __LINE__;
 			goto err_bad_object_type;
 		}

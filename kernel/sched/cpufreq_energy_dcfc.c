@@ -35,16 +35,16 @@ unsigned long boosted_cpu_util(int cpu);
 /* Frequency cap for target_load1 in KHz */
 #define LOAD1_CAP					1228800
 /* Frequency cap for target_load2 in KHz */
-#define LOAD2_CAP					1401600
-#define TARGET_LOAD_1				32
-#define TARGET_LOAD_2				73
+#define LOAD2_CAP					1478400
+#define TARGET_LOAD_1				25
+#define TARGET_LOAD_2				50
 
 /* Frequency cap for target_load1 in KHz */
 #define LOAD1_CAP_BIGC				1036800
 /* Frequency cap for target_load2 in KHz */
-#define LOAD2_CAP_BIGC				1555200
-#define TARGET_LOAD_1_BIGC 			24
-#define TARGET_LOAD_2_BIGC 			71
+#define LOAD2_CAP_BIGC				1920000
+#define TARGET_LOAD_1_BIGC 			25
+#define TARGET_LOAD_2_BIGC 			50
 
 #define NRGGOV_KTHREAD_PRIORITY		25
 
@@ -200,22 +200,16 @@ static unsigned int get_next_freq(struct nrggov_cpu *sg_cpu, unsigned long util,
 	struct nrggov_policy *sg_policy = sg_cpu->sg_policy;
 	struct cpufreq_policy *policy = sg_policy->policy;
 	struct nrggov_tunables *tunables = sg_policy->tunables;
-	unsigned int freq, bitshift;
+	unsigned int freq;
 	unsigned long load = 100 * util / max;
 	
 	if(load < tunables->target_load1){
-		freq = tunables->load1_cap;
-		bitshift = 1;
+		freq = (tunables->load1_cap + (tunables->load1_cap >> 1)) * util / max;
 	} else if (load >= tunables->target_load1 && load < tunables->target_load2){
-		freq = tunables->load2_cap;
-		bitshift = 2;
+		freq = tunables->load2_cap * util / max;
 	} else {
-		freq = policy->cpuinfo.max_freq;
-		bitshift = 10;
+		freq = (policy->cpuinfo.max_freq - (policy->cpuinfo.max_freq >> 6)) * util / max;
 	}
-	
-	
-	freq = (freq + (freq >> bitshift)) * util / max;
 	
 	if (freq == sg_cpu->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

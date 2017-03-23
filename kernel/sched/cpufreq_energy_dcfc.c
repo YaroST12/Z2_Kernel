@@ -33,17 +33,17 @@ unsigned long boosted_cpu_util(int cpu);
 #define DOWN_RATE_LIMIT				1000
 
 /* Frequency cap for target_load1 in KHz */
-#define LOAD1_CAP					1228800
+#define LOAD1_CAP					1132800
 /* Frequency cap for target_load2 in KHz */
-#define LOAD2_CAP					1478400
-#define TARGET_LOAD_1				25
+#define LOAD2_CAP					1440000
+#define TARGET_LOAD_1				20
 #define TARGET_LOAD_2				50
 
 /* Frequency cap for target_load1 in KHz */
-#define LOAD1_CAP_BIGC				1036800
+#define LOAD1_CAP_BIGC				1132800
 /* Frequency cap for target_load2 in KHz */
-#define LOAD2_CAP_BIGC				1920000
-#define TARGET_LOAD_1_BIGC 			25
+#define LOAD2_CAP_BIGC				1900800
+#define TARGET_LOAD_1_BIGC 			15
 #define TARGET_LOAD_2_BIGC 			50
 
 #define NRGGOV_KTHREAD_PRIORITY		25

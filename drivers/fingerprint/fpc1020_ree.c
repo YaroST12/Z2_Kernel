@@ -61,6 +61,7 @@ extern bool home_button_pressed(void);
 extern void reset_home_button(void);
 
 bool reset;
+static bool utouch_disable;
 
 static int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data);
@@ -120,7 +121,7 @@ static ssize_t set_key(struct device *device,
 
 		home_pressed = home_button_pressed();
 
-		if (val && home_pressed)
+		if ((val && home_pressed) || utouch_disable)
 			val = 0;
 
 		pr_info("home key pressed = %d\n", (int)home_pressed);
@@ -137,6 +138,33 @@ static ssize_t set_key(struct device *device,
 }
 
 static DEVICE_ATTR(key, S_IRUSR | S_IWUSR, get_key, set_key);
+
+static ssize_t utouch_store_disable(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+    int value;
+	if (1 != sscanf(buf, "%d", &value)) {
+		dev_err(dev, "Failed to parse integer: <%s>\n", buf);
+		return -EINVAL;
+	}
+	if (value == 1) {
+		utouch_disable = true;
+		pr_info("utouch disabled\n");
+	} else {
+		utouch_disable = false;
+		pr_info("utouch enabled\n");
+	}
+	return count;
+}
+ static ssize_t utouch_show_disable(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	if (utouch_disable)
+		return sprintf(buf, "1\n");
+	else
+		return sprintf(buf, "0\n");
+}
+static DEVICE_ATTR(utouch_disable, S_IRUGO|S_IWUSR, utouch_show_disable, utouch_store_disable);
 
 static ssize_t proximity_state_set(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -156,6 +184,7 @@ static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
 	&dev_attr_proximity_state.attr,
+	&dev_attr_utouch_disable.attr,
 	NULL
 };
 

@@ -208,7 +208,7 @@ static unsigned int get_next_freq(struct nrggov_cpu *sg_cpu, unsigned long util,
 	} else if (load >= tunables->target_load1 && load < tunables->target_load2){
 		freq = (tunables->load2_cap + (tunables->load2_cap >> 2)) * util / max;
 	} else {
-		freq = (policy->cpuinfo.max_freq - (policy->cpuinfo.max_freq >> 6)) * util / max;
+		freq = policy->cpuinfo.max_freq * util / max;
 	}
 	
 	if (freq == sg_cpu->cached_raw_freq && sg_policy->next_freq != UINT_MAX)

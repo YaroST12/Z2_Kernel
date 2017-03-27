@@ -6066,7 +6066,10 @@ static int start_cpu(bool boosted)
 static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 				   bool boosted, bool prefer_idle)
 {
-	unsigned long best_idle_min_cap_orig = ULONG_MAX;
+	int target_cpu = -1;
+	unsigned long target_util = prefer_idle ? ULONG_MAX : 0;
+	unsigned long backup_capacity = ULONG_MAX;
+	int backup_cpu = -1;
 	unsigned long min_util = boosted_task_util(p);
 	unsigned long target_capacity = ULONG_MAX;
 	unsigned long min_wake_util = ULONG_MAX;
@@ -6076,12 +6079,8 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	int best_idle_cstate = INT_MAX;
 	struct sched_domain *sd;
 	struct sched_group *sg;
-	int best_active_cpu = -1;
-	int best_idle_cpu = -1;
-	int target_cpu = -1;
-	int cpu, i;
-
-	*backup_cpu = -1;
+	int cpu = start_cpu(boosted);
+	struct cpumask energy_candidates;
 
 	schedstat_inc(p, se.statistics.nr_wakeups_fbt_attempts);
 	schedstat_inc(this_rq(), eas_stats.fbt_attempts);
@@ -6104,6 +6103,8 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 
 	/* Scan CPUs in all SDs */
 	sg = sd->groups;
+	cpumask_clear(&energy_candidates);
+
 	do {
 		for_each_cpu_and(i, tsk_cpus_allowed(p), sched_group_cpus(sg)) {
 			unsigned long capacity_curr = capacity_curr_of(i);
@@ -6164,50 +6165,32 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			 */
 			if (prefer_idle) {
 
-				/*
-				 * Case A.1: IDLE CPU
-				 * Return the first IDLE CPU we find.
-				 */
-				if (idle_cpu(i)) {
-					schedstat_inc(p, se.statistics.nr_wakeups_fbt_pref_idle);
-					schedstat_inc(this_rq(), eas_stats.fbt_pref_idle);
+			cur_capacity = capacity_curr_of(i);
 
-					trace_sched_find_best_target(p,
-							prefer_idle, min_util,
-							cpu, best_idle_cpu,
-							best_active_cpu, i);
-
-					return i;
-				}
-
-				/*
-				 * Case A.2: Target ACTIVE CPU
-				 * Favor CPUs with max spare capacity.
-				 */
-				if ((capacity_curr > new_util) &&
-					(capacity_orig - new_util > target_max_spare_cap)) {
-					target_max_spare_cap = capacity_orig - new_util;
-					target_cpu = i;
-					continue;
-				}
-				if (target_cpu != -1)
-					continue;
-
-
-				/*
-				 * Case A.3: Backup ACTIVE CPU
-				 * Favor CPUs with:
-				 * - lower utilization due to other tasks
-				 * - lower utilization with the task in
-				 */
-				if (wake_util > min_wake_util)
-					continue;
-				if (new_util > best_active_util)
-					continue;
-				min_wake_util = wake_util;
-				best_active_util = new_util;
-				best_active_cpu = i;
-				continue;
+			if (new_util < cur_capacity) {
+				if (cpu_rq(i)->nr_running) {
+					/*
+					 * Find a target cpu with the lowest/highest
+					 * utilization if prefer_idle/!prefer_idle.
+					 */
+					if (prefer_idle) {
+						/* Favor the CPU that last ran the task */
+						if (new_util > target_util ||
+						    wake_util > min_wake_util)
+							continue;
+						min_wake_util = wake_util;
+						target_util = new_util;
+						target_cpu = i;
+					} else if (target_util < new_util) {
+						target_util = new_util;
+						target_cpu = i;
+					}
+				} else if (!prefer_idle)
+					cpumask_set_cpu(i, &energy_candidates);
+			} else if (backup_capacity > cur_capacity) {
+				/* Find a backup cpu with least capacity. */
+				backup_capacity = cur_capacity;
+				backup_cpu = i;
 			}
 
 			/*
@@ -6294,34 +6277,26 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 
 	} while (sg = sg->next, sg != sd->groups);
 
-	/*
-	 * For non latency sensitive tasks, cases B and C in the previous loop,
-	 * we pick the best IDLE CPU only if we was not able to find a target
-	 * ACTIVE CPU.
-	 *
-	 * Policies priorities:
-	 *
-	 * - prefer_idle tasks:
-	 *
-	 *   a) IDLE CPU available, we return immediately
-	 *   b) ACTIVE CPU where task fits and has the bigger maximum spare
-	 *      capacity (i.e. target_cpu)
-	 *   c) ACTIVE CPU with less contention due to other tasks
-	 *      (i.e. best_active_cpu)
-	 *
-	 * - NON prefer_idle tasks:
-	 *
-	 *   a) ACTIVE CPU: target_cpu
-	 *   b) IDLE CPU: best_idle_cpu
-	 */
-	if (target_cpu == -1)
-		target_cpu = prefer_idle
-			? best_active_cpu
-			: best_idle_cpu;
-	else
-		*backup_cpu = prefer_idle
-		? best_active_cpu
-		: best_idle_cpu;
+	if (target_cpu < 0) {
+		int min_nrg_diff = 0;
+		int nrg_diff, i;
+
+		for_each_cpu(i, &energy_candidates) {
+			struct energy_env eenv = {
+				.util_delta     = task_util(p),
+				.src_cpu        = task_cpu(p),
+				.dst_cpu        = i,
+				.task           = p,
+			};
+			nrg_diff = energy_diff(&eenv);
+			if (nrg_diff < min_nrg_diff) {
+				target_cpu = i;
+				min_nrg_diff = nrg_diff;
+			}
+		}
+		if (target_cpu < 0)
+			target_cpu = backup_cpu;
+	}
 
 	trace_sched_find_best_target(p, prefer_idle, min_util, cpu,
 				     best_idle_cpu, best_active_cpu,

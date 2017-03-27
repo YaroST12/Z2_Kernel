@@ -203,13 +203,39 @@ static unsigned int get_next_freq(struct nrggov_cpu *sg_cpu, unsigned long util,
 	unsigned int freq;
 	unsigned long load = 100 * util / max;
 	
-	if(load < tunables->target_load1){
-		freq = (tunables->load1_cap + (tunables->load1_cap >> 1)) * util / max;
-	} else if (load >= tunables->target_load1 && load < tunables->target_load2){
-		freq = tunables->load2_cap * util / max;
-	} else {
-		freq = policy->cpuinfo.max_freq * util / max;
-	}
+	if(load < tunables->target_load1)
+		freq = tunables->load1_cap;
+	else if (load >= tunables->target_load1 && load < tunables->target_load2)
+		freq = tunables->load2_cap;
+	else
+		freq = policy->cpuinfo.max_freq;
+		
+	/*
+	* Little cluster requires small tipping
+	* point for fast responsiveness.
+	* 
+	* Big cluster requires util boost for gaming.
+	* We don't use bitshift here because it will cause
+	* unecessary frequency jumps way too often.
+	* 
+	* Big cluster will have 10% higher util than
+	* tracked to compensate for certain games
+	* having light CPU load.
+	* 
+	* This should help improve scenarios when games
+	* only use CPU load below 50%.
+	* 
+	* The problem is that when games demand more power
+	* and their CPU load is light, the governor will
+	* automatically assume it does not require a lot
+	* of power and therefore, will choose low frequencies
+	* for those tasks, which will cause a lot of stuttering
+	* and framerate drops during gameplay.
+	*/
+	if(policy->cpu < 2)
+		freq = (freq + (freq >> 1)) * util / max;
+	else 
+		freq = freq * (util + ((util * 10) / 100)) / max;
 	
 	if (freq == sg_cpu->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

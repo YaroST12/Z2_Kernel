@@ -979,17 +979,22 @@ int adreno_dispatcher_queue_cmd(struct adreno_device *adreno_dev,
 		struct adreno_context *drawctxt, struct kgsl_cmdbatch *cmdbatch,
 		uint32_t *timestamp)
 {
-	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
-	struct adreno_dispatcher_cmdqueue *dispatch_q =
-				ADRENO_CMDBATCH_DISPATCH_CMDQUEUE(cmdbatch);
-	int ret;
-
-	spin_lock(&drawctxt->lock);
-
-	if (kgsl_context_detached(&drawctxt->base)) {
-		spin_unlock(&drawctxt->lock);
-		return -ENOENT;
-	}
+	/*
+	 * Set the fault tolerance policy for the command batch - assuming the
+	 * context hasn't disabled FT use the current device policy
+	 */
+	if (drawctxt->base.flags & KGSL_CONTEXT_NO_FAULT_TOLERANCE)
+		set_bit(KGSL_FT_DISABLE, &cmdobj->fault_policy);
+	/*
+	 *  Set the fault tolerance policy to FT_REPLAY - As context wants
+	 *  to invalidate it after a replay attempt fails. This doesn't
+	 *  require to execute the default FT policy.
+	 */
+	else if (drawctxt->base.flags & KGSL_CONTEXT_INVALIDATE_ON_FAULT)
+		set_bit(KGSL_FT_REPLAY, &cmdobj->fault_policy);
+	else
+		cmdobj->fault_policy = adreno_dev->ft_policy;
+}
 
 	/*
 	 * Force the preamble for this submission only - this is usually

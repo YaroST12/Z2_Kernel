@@ -18,6 +18,7 @@
 #include <linux/moduleparam.h>
 #include <linux/wakeup_reason.h>
 #include <linux/proc_fs.h>
+#include <linux/wakeup_reason.h>
 #include <trace/events/power.h>
 
 #include "power.h"
@@ -899,7 +900,6 @@ bool pm_wakeup_pending(void)
 					     MAX_SUSPEND_ABORT_LEN);
 		log_suspend_abort_reason(suspend_abort);
 		pr_info("PM: %s\n", suspend_abort);
-
 	}
 
 	return ret || pm_abort_suspend;

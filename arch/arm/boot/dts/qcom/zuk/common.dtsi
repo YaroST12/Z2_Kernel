@@ -105,10 +105,12 @@
 	};
 	
 	qcom,bcl {
-		/delete-property/ qcom,bcl-enable;
-		qcom,vph-high-threshold-uv = <3200000>;
-		qcom,vph-low-threshold-uv = <3000000>;
-		qcom,soc-low-threshold = <0>;
+		/delete-property/ qcom,bcl-hotplug-list;
+		/delete-property/ qcom,bcl-soc-hotplug-list;
+		qcom,ibat-monitor {
+			qcom,soc-low-threshold = <5>;
+			qcom,mitigation-freq-khz = <1132800>;
+		};
 	};
 };
 

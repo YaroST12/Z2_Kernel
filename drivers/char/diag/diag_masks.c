@@ -1811,7 +1811,7 @@ int diag_copy_to_user_msg_mask(char __user *buf, size_t count,
 		return -EIO;
 	}
 	mutex_unlock(&driver->diag_maskclear_mutex);
-
+	mutex_lock(&driver->msg_mask_lock);
 	mutex_lock(&mask_info->lock);
 	mask = (struct diag_msg_mask_t *)(mask_info->ptr);
 	for (i = 0; i < driver->msg_mask_tbl_count; i++, mask++) {

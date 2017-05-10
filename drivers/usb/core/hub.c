@@ -382,11 +382,7 @@ static int get_hub_descriptor(struct usb_device *hdev,
 		if (hub_is_superspeed(hdev)) {
 			if (ret == size)
 				return ret;
-		} else if (ret >= USB_DT_HUB_NONVAR_SIZE + 2) {
-			/* Make sure we have the DeviceRemovable field. */
-			size = USB_DT_HUB_NONVAR_SIZE + desc->bNbrPorts / 8 + 1;
-			if (ret < size)
-				return -EMSGSIZE;
+		} else if (ret >= (USB_DT_HUB_NONVAR_SIZE + 2)) {
 			return ret;
 		}
 	}

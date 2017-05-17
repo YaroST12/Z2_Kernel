@@ -354,7 +354,6 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_PE_START,
 	POWER_SUPPLY_PROP_CTM_CURRENT_MAX,
 	POWER_SUPPLY_PROP_HW_CURRENT_MAX,
-	POWER_SUPPLY_PROP_REAL_TYPE,
 	POWER_SUPPLY_PROP_PR_SWAP,
 	POWER_SUPPLY_PROP_PD_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_PD_VOLTAGE_MIN,
@@ -378,17 +377,6 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		rc = smblib_get_prop_usb_online(chg, val);
-		if (!val->intval)
-			break;
-
-		if ((chg->typec_mode == POWER_SUPPLY_TYPEC_SOURCE_DEFAULT ||
-			chg->micro_usb_mode) &&
-			chg->real_charger_type == POWER_SUPPLY_TYPE_USB)
-			val->intval = 0;
-		else
-			val->intval = 1;
-		if (chg->real_charger_type == POWER_SUPPLY_TYPE_UNKNOWN)
-			val->intval = 0;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
 		rc = smblib_get_prop_usb_voltage_max(chg, val);
@@ -403,9 +391,6 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_input_current_settled(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
-		val->intval = POWER_SUPPLY_TYPE_USB_PD;
-		break;
-	case POWER_SUPPLY_PROP_REAL_TYPE:
 		if (chip->bad_part)
 			val->intval = POWER_SUPPLY_TYPE_USB_PD;
 		else
@@ -495,10 +480,6 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	int rc = 0;
 
 	mutex_lock(&chg->lock);
-	if (!chg->typec_present) {
-		rc = -EINVAL;
-		goto unlock;
-	}
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_PD_CURRENT_MAX:
@@ -541,7 +522,6 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 		break;
 	}
 
-unlock:
 	mutex_unlock(&chg->lock);
 	return rc;
 }

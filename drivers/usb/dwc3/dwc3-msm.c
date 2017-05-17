@@ -3767,7 +3767,7 @@ int get_psy_type(struct dwc3_msm *mdwc)
 		}
 	}
 
-	power_supply_get_property(mdwc->usb_psy, POWER_SUPPLY_PROP_REAL_TYPE,
+	power_supply_get_property(mdwc->usb_psy, POWER_SUPPLY_PROP_TYPE,
 			&pval);
 
 	return pval.intval;

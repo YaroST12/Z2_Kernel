@@ -2240,6 +2240,8 @@ EXPORT_SYMBOL_GPL(blk_mq_tags_cpumask);
  */
 int blk_mq_alloc_tag_set(struct blk_mq_tag_set *set)
 {
+	int ret;
+
 	BUILD_BUG_ON(BLK_MQ_MAX_DEPTH > 1 << BLK_MQ_UNIQUE_TAG_BITS);
 
 	if (!set->nr_hw_queues)
@@ -2278,11 +2280,21 @@ int blk_mq_alloc_tag_set(struct blk_mq_tag_set *set)
 	if (!set->tags)
 		return -ENOMEM;
 
-	set->mq_map = blk_mq_make_queue_map(set);
+	ret = -ENOMEM;
+	set->mq_map = kzalloc_node(sizeof(*set->mq_map) * nr_cpu_ids,
+			GFP_KERNEL, set->numa_node);
 	if (!set->mq_map)
 		goto out_free_tags;
 
-	if (blk_mq_alloc_rq_maps(set))
+	if (set->ops->map_queues)
+		ret = set->ops->map_queues(set);
+	else
+		ret = blk_mq_map_queues(set);
+	if (ret)
+		goto out_free_mq_map;
+
+	ret = blk_mq_alloc_rq_maps(set);
+	if (ret)
 		goto out_free_mq_map;
 
 	mutex_init(&set->tag_list_lock);
@@ -2296,7 +2308,7 @@ out_free_mq_map:
 out_free_tags:
 	kfree(set->tags);
 	set->tags = NULL;
-	return -ENOMEM;
+	return ret;
 }
 EXPORT_SYMBOL(blk_mq_alloc_tag_set);
 

@@ -653,7 +653,7 @@ int mmc_cmdq_init(struct mmc_queue *mq, struct mmc_card *card)
 		}
 	}
 
-	ret = blk_queue_init_tags(mq->queue, q_depth, NULL);
+	ret = blk_queue_init_tags(mq->queue, q_depth, NULL, 0);
 	if (ret) {
 		pr_warn("%s: unable to allocate cmdq tags %d\n",
 				mmc_card_name(card), q_depth);

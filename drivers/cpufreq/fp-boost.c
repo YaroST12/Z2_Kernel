@@ -154,7 +154,7 @@ static void cpu_fp_input_event(struct input_handle *handle, unsigned int type,
 	if (!(state & DRIVER_ENABLED) || touched)
 		return;
 
-	pr_info("Recieved input event\n");
+	pr_info("Received input event\n");
 	touched = true;
 	set_boost_bit(b, FINGERPRINT_BOOST);
 

@@ -618,7 +618,7 @@ static void acgov_irq_work(struct irq_work *irq_work)
 	 *
 	 * This is (mostly) guaranteed by the work_in_progress flag. The flag is
 	 * updated only at the end of the acgov_work() function and before that
-	 * the darknessched governor rejects all other frequency scaling requests.
+	 * the alucardched governor rejects all other frequency scaling requests.
 	 *
 	 * There is a very rare case though, where the RT thread yields right
 	 * after the work_in_progress flag is cleared. The effects of that are

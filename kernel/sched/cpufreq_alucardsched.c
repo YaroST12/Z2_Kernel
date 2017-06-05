@@ -930,8 +930,10 @@ static struct kobj_type acgov_tunables_ktype = {
 };
 
 /********************** cpufreq governor interface *********************/
-
-static struct cpufreq_governor alucardsched_gov;
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ALUCARDSCHED
+static
+#endif
+struct cpufreq_governor alucardsched_gov;
 
 static struct acgov_policy *acgov_policy_alloc(struct cpufreq_policy *policy)
 {

@@ -25,9 +25,7 @@
 #include <linux/state_notifier.h>
 #endif
 
-#ifdef CONFIG_SCHED_WALT
 unsigned long boosted_cpu_util(int cpu);
-#endif
 
 /* Stub out fast switch routines present on mainline to reduce the backport
  * overhead. */
@@ -50,6 +48,7 @@ struct dkgov_tunables {
 	 * CPUs frequency scaling
 	 */
 	unsigned int boost_perc;
+	bool iowait_boost_enable;
 };
 
 struct dkgov_policy {
@@ -92,6 +91,11 @@ struct dkgov_cpu {
 	unsigned long util;
 	unsigned long max;
 	unsigned int flags;
+
+	/* The field below is for single-CPU policies only. */
+#ifdef CONFIG_NO_HZ_COMMON
+	unsigned long saved_idle_calls;
+#endif
 };
 
 static DEFINE_PER_CPU(struct dkgov_cpu, dkgov_cpu);
@@ -217,25 +221,20 @@ static void dkgov_update_commit(struct dkgov_policy *sg_policy, u64 time,
 	if (dkgov_up_down_rate_limit(sg_policy, time, next_freq))
 		return;
 
+	if (!next_freq || sg_policy->next_freq == next_freq)
+		return;
+
+	sg_policy->next_freq = next_freq;
 	sg_policy->last_freq_update_time = time;
 
-	if (!next_freq)
-		return;
-	
 	if (policy->fast_switch_enabled) {
-		if (policy->cur == next_freq) {
-			trace_cpu_frequency(policy->cur, smp_processor_id());
-			return;
-		}
-		sg_policy->next_freq = next_freq;
 		next_freq = cpufreq_driver_fast_switch(policy, next_freq);
 		if (next_freq == CPUFREQ_ENTRY_INVALID)
 			return;
 
 		policy->cur = next_freq;
 		trace_cpu_frequency(next_freq, smp_processor_id());
-	} else if (policy->cur != next_freq) {
-		sg_policy->next_freq = next_freq;
+	} else {
 		sg_policy->work_in_progress = true;
 		irq_work_queue(&sg_policy->irq_work);
 	}
@@ -276,7 +275,7 @@ static unsigned int resolve_target_freq(struct cpufreq_policy *policy,
 
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.
- * @sg_cpu: darknesssched cpu object to compute the new frequency for.
+ * @sg_policy: darknesssched policy object to compute the new frequency for.
  * @util: Current CPU utilization.
  * @max: CPU capacity.
  *
@@ -284,10 +283,9 @@ static unsigned int resolve_target_freq(struct cpufreq_policy *policy,
  * next_freq (as calculated above) is returned, subject to policy min/max and
  * cpufreq driver limitations.
  */
-static unsigned int get_next_freq(struct dkgov_cpu *sg_cpu, unsigned long util,
+static unsigned int get_next_freq(struct dkgov_policy *sg_policy, unsigned long util,
 				  unsigned long max)
 {
-	struct dkgov_policy *sg_policy = sg_cpu->sg_policy;
 	struct cpufreq_policy *policy = sg_policy->policy;
 	struct dkgov_tunables *tunables = sg_policy->tunables;
 	unsigned int next_freq = 0;
@@ -302,6 +300,15 @@ static unsigned int get_next_freq(struct dkgov_cpu *sg_cpu, unsigned long util,
 		return cpufreq_driver_resolve_freq(policy, next_freq);
 	}
 	return next_freq;
+}
+
+static inline bool use_pelt(void)
+{
+#ifdef CONFIG_SCHED_WALT
+	return (!sysctl_sched_use_walt_cpu_util || walt_disabled);
+#else
+	return true;
+#endif
 }
 
 static void dkgov_get_util(unsigned long *util, unsigned long *max, u64 time)
@@ -320,17 +327,21 @@ static void dkgov_get_util(unsigned long *util, unsigned long *max, u64 time)
 	rt = div64_u64(rq->rt_avg, sched_avg_period() + delta);
 	rt = (rt * max_cap) >> SCHED_CAPACITY_SHIFT;
 
-	*util = min(rq->cfs.avg.util_avg + rt, max_cap);
-#ifdef CONFIG_SCHED_WALT
-	if (!walt_disabled && sysctl_sched_use_walt_cpu_util)
-		*util = boosted_cpu_util(cpu);
-#endif
+	*util = boosted_cpu_util(cpu);
+	if (likely(use_pelt()))
+		*util = min((*util + rt), max_cap);
+
 	*max = max_cap;
 }
 
 static void dkgov_set_iowait_boost(struct dkgov_cpu *sg_cpu, u64 time,
 				   unsigned int flags)
 {
+	struct dkgov_policy *sg_policy = sg_cpu->sg_policy;
+
+	if (!sg_policy->tunables->iowait_boost_enable)
+		return;
+
 	if (flags & SCHED_CPUFREQ_IOWAIT) {
 		sg_cpu->iowait_boost = sg_cpu->iowait_boost_max;
 	} else if (sg_cpu->iowait_boost) {
@@ -358,6 +369,19 @@ static void dkgov_iowait_boost(struct dkgov_cpu *sg_cpu, unsigned long *util,
 	sg_cpu->iowait_boost >>= 1;
 }
 
+#ifdef CONFIG_NO_HZ_COMMON
+static bool dkgov_cpu_is_busy(struct dkgov_cpu *sg_cpu)
+{
+	unsigned long idle_calls = tick_nohz_get_idle_calls();
+	bool ret = idle_calls == sg_cpu->saved_idle_calls;
+
+	sg_cpu->saved_idle_calls = idle_calls;
+	return ret;
+}
+#else
+static inline bool dkgov_cpu_is_busy(struct dkgov_cpu *sg_cpu) { return false; }
+#endif /* CONFIG_NO_HZ_COMMON */
+
 static void dkgov_update_single(struct update_util_data *hook, u64 time,
 				unsigned int flags)
 {
@@ -366,6 +390,7 @@ static void dkgov_update_single(struct update_util_data *hook, u64 time,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned long util, max;
 	unsigned int next_f;
+	bool busy;
 
 	dkgov_set_iowait_boost(sg_cpu, time, flags);
 	sg_cpu->last_update = time;
@@ -373,40 +398,36 @@ static void dkgov_update_single(struct update_util_data *hook, u64 time,
 	if (!dkgov_should_update_freq(sg_policy, time))
 		return;
 
+	busy = dkgov_cpu_is_busy(sg_cpu);
+
 	if (flags & SCHED_CPUFREQ_DL) {
 		next_f = policy->cpuinfo.max_freq;
 	} else {
 		dkgov_get_util(&util, &max, time);
 		dkgov_iowait_boost(sg_cpu, &util, &max);
-		next_f = get_next_freq(sg_cpu, util, max);
+		next_f = get_next_freq(sg_policy, util, max);
+		/*
+		 * Do not reduce the frequency if the CPU has not been idle
+		 * recently, as the reduction is likely to be premature then.
+		 */
+		if (busy && next_f < sg_policy->next_freq)
+			next_f = sg_policy->next_freq;
 	}
 	dkgov_update_commit(sg_policy, time, next_f);
 }
 
-static unsigned int dkgov_next_freq_shared(struct dkgov_cpu *sg_cpu,
-					   unsigned long util, unsigned long max,
-					   unsigned int flags)
+static unsigned int dkgov_next_freq_shared(struct dkgov_cpu *sg_cpu, u64 time)
 {
 	struct dkgov_policy *sg_policy = sg_cpu->sg_policy;
 	struct cpufreq_policy *policy = sg_policy->policy;
-	unsigned int max_f = policy->cpuinfo.max_freq;
-	u64 last_freq_update_time = sg_policy->last_freq_update_time;
+	unsigned long util = 0, max = 1;
 	unsigned int j;
 
-	if (flags & SCHED_CPUFREQ_DL)
-		return max_f;
-
-	dkgov_iowait_boost(sg_cpu, &util, &max);
-
 	for_each_cpu(j, policy->cpus) {
-		struct dkgov_cpu *j_sg_cpu;
+		struct dkgov_cpu *j_sg_cpu = &per_cpu(dkgov_cpu, j);
 		unsigned long j_util, j_max;
 		s64 delta_ns;
 
-		if (j == smp_processor_id())
-			continue;
-
-		j_sg_cpu = &per_cpu(dkgov_cpu, j);
 		/*
 		 * If the CPU utilization was last updated before the previous
 		 * frequency update and the time elapsed between the last update
@@ -414,13 +435,13 @@ static unsigned int dkgov_next_freq_shared(struct dkgov_cpu *sg_cpu,
 		 * enough, don't take the CPU into account as it probably is
 		 * idle now (and clear iowait_boost for it).
 		 */
-		delta_ns = last_freq_update_time - j_sg_cpu->last_update;
+		delta_ns = time - j_sg_cpu->last_update;
 		if (delta_ns > TICK_NSEC) {
 			j_sg_cpu->iowait_boost = 0;
 			continue;
 		}
 		if (j_sg_cpu->flags & SCHED_CPUFREQ_DL)
-			return max_f;
+			return policy->cpuinfo.max_freq;
 
 		j_util = j_sg_cpu->util;
 		j_max = j_sg_cpu->max;
@@ -432,7 +453,7 @@ static unsigned int dkgov_next_freq_shared(struct dkgov_cpu *sg_cpu,
 		dkgov_iowait_boost(j_sg_cpu, &util, &max);
 	}
 
-	return get_next_freq(sg_cpu, util, max);
+	return get_next_freq(sg_policy, util, max);
 }
 
 static void dkgov_update_shared(struct update_util_data *hook, u64 time,
@@ -455,7 +476,11 @@ static void dkgov_update_shared(struct update_util_data *hook, u64 time,
 	sg_cpu->last_update = time;
 
 	if (dkgov_should_update_freq(sg_policy, time)) {
-		next_f = dkgov_next_freq_shared(sg_cpu, util, max, flags);
+		if (flags & SCHED_CPUFREQ_DL)
+			next_f = sg_policy->policy->cpuinfo.max_freq;
+		else
+			next_f = dkgov_next_freq_shared(sg_cpu, time);
+
 		dkgov_update_commit(sg_policy, time, next_f);
 	}
 
@@ -481,15 +506,15 @@ static void dkgov_irq_work(struct irq_work *irq_work)
 	sg_policy = container_of(irq_work, struct dkgov_policy, irq_work);
 
 	/*
-	 * For Real Time and Deadline tasks, schedutil governor shoots the
-	 * frequency to maximum. And special care must be taken to ensure that
-	 * this kthread doesn't result in that.
+	 * For RT and deadline tasks, the darknessched governor shoots the
+	 * frequency to maximum. Special care must be taken to ensure that this
+	 * kthread doesn't result in the same behavior.
 	 *
 	 * This is (mostly) guaranteed by the work_in_progress flag. The flag is
-	 * updated only at the end of the dkgov_work() and before that schedutil
-	 * rejects all other frequency scaling requests.
+	 * updated only at the end of the dkgov_work() function and before that
+	 * the darknessched governor rejects all other frequency scaling requests.
 	 *
-	 * Though there is a very rare case where the RT thread yields right
+	 * There is a very rare case though, where the RT thread yields right
 	 * after the work_in_progress flag is cleared. The effects of that are
 	 * neglected for now.
 	 */
@@ -538,6 +563,15 @@ static ssize_t boost_perc_show(struct gov_attr_set *attr_set, char *buf)
 	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
 
 	return sprintf(buf, "%u\n", tunables->boost_perc);
+}
+
+/* iowait_boost_enable */
+static ssize_t iowait_boost_enable_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->iowait_boost_enable);
 }
 
 /* up_rate_limit_us */
@@ -608,14 +642,31 @@ static ssize_t boost_perc_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+/* iowait_boost_enable */
+static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+	bool enable;
+
+	if (strtobool(buf, &enable))
+		return -EINVAL;
+
+	tunables->iowait_boost_enable = enable;
+
+	return count;
+}
+
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr boost_perc = __ATTR_RW(boost_perc);
+static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 
 static struct attribute *dkgov_attributes[] = {
 	&up_rate_limit_us.attr,
 	&down_rate_limit_us.attr,
 	&boost_perc.attr,
+	&iowait_boost_enable.attr,
 	NULL
 };
 
@@ -637,15 +688,12 @@ static struct dkgov_policy *dkgov_policy_alloc(struct cpufreq_policy *policy)
 		return NULL;
 
 	sg_policy->policy = policy;
-	init_irq_work(&sg_policy->irq_work, dkgov_irq_work);
-	mutex_init(&sg_policy->work_lock);
 	raw_spin_lock_init(&sg_policy->update_lock);
 	return sg_policy;
 }
 
 static void dkgov_policy_free(struct dkgov_policy *sg_policy)
 {
-	mutex_destroy(&sg_policy->work_lock);
 	kfree(sg_policy);
 }
 
@@ -679,6 +727,9 @@ static int dkgov_kthread_create(struct dkgov_policy *sg_policy)
 
 	sg_policy->thread = thread;
 	kthread_bind_mask(thread, policy->related_cpus);
+	init_irq_work(&sg_policy->irq_work, dkgov_irq_work);
+	mutex_init(&sg_policy->work_lock);
+
 	wake_up_process(thread);
 
 	return 0;
@@ -692,6 +743,7 @@ static void dkgov_kthread_stop(struct dkgov_policy *sg_policy)
 
 	flush_kthread_worker(&sg_policy->worker);
 	kthread_stop(sg_policy->thread);
+	mutex_destroy(&sg_policy->work_lock);
 }
 
 static struct dkgov_tunables *dkgov_tunables_alloc(struct dkgov_policy *sg_policy)
@@ -727,6 +779,7 @@ static void store_tunables_data(struct dkgov_tunables *tunables,
 	ptunables->up_rate_limit_us = tunables->up_rate_limit_us;
 	ptunables->down_rate_limit_us = tunables->down_rate_limit_us;
 	ptunables->boost_perc = tunables->boost_perc;
+	ptunables->iowait_boost_enable = tunables->iowait_boost_enable; 
 	pr_debug("tunables data saved for cpu[%u]\n", cpu);
 }
 
@@ -745,6 +798,7 @@ static void get_tunables_data(struct dkgov_tunables *tunables,
 		tunables->up_rate_limit_us = ptunables->up_rate_limit_us;
 		tunables->down_rate_limit_us = ptunables->down_rate_limit_us;
 		tunables->boost_perc = ptunables->boost_perc;
+		tunables->iowait_boost_enable = ptunables->iowait_boost_enable;
 		pr_debug("tunables data restored for cpu[%u]\n", cpu);
 		goto out;
 	}
@@ -773,9 +827,13 @@ static int dkgov_init(struct cpufreq_policy *policy)
 	if (policy->governor_data)
 		return -EBUSY;
 
+	cpufreq_enable_fast_switch(policy);
+
 	sg_policy = dkgov_policy_alloc(policy);
-	if (!sg_policy)
-		return -ENOMEM;
+	if (!sg_policy) {
+		ret = -ENOMEM;
+		goto disable_fast_switch;
+	}
 
 	ret = dkgov_kthread_create(sg_policy);
 	if (ret)
@@ -811,13 +869,11 @@ static int dkgov_init(struct cpufreq_policy *policy)
 	if (ret)
 		goto fail;
 
- out:
+out:
 	mutex_unlock(&global_tunables_lock);
-
-	cpufreq_enable_fast_switch(policy);
 	return 0;
 
- fail:
+fail:
 	policy->governor_data = NULL;
 	dkgov_tunables_free(tunables);
 
@@ -828,6 +884,10 @@ free_sg_policy:
 	mutex_unlock(&global_tunables_lock);
 
 	dkgov_policy_free(sg_policy);
+
+disable_fast_switch:
+	cpufreq_disable_fast_switch(policy);
+
 	pr_err("initialization failed (error %d)\n", ret);
 	return ret;
 }
@@ -837,8 +897,6 @@ static int dkgov_exit(struct cpufreq_policy *policy)
 	struct dkgov_policy *sg_policy = policy->governor_data;
 	struct dkgov_tunables *tunables = sg_policy->tunables;
 	unsigned int count;
-
-	cpufreq_disable_fast_switch(policy);
 
 	mutex_lock(&global_tunables_lock);
 
@@ -852,6 +910,7 @@ static int dkgov_exit(struct cpufreq_policy *policy)
 
 	dkgov_kthread_stop(sg_policy);
 	dkgov_policy_free(sg_policy);
+	cpufreq_disable_fast_switch(policy);
 
 	return 0;
 }
@@ -880,20 +939,14 @@ static int dkgov_start(struct cpufreq_policy *policy)
 	for_each_cpu(cpu, policy->cpus) {
 		struct dkgov_cpu *sg_cpu = &per_cpu(dkgov_cpu, cpu);
 
+		memset(sg_cpu, 0, sizeof(*sg_cpu));
 		sg_cpu->sg_policy = sg_policy;
-		if (policy_is_shared(policy)) {
-			sg_cpu->util = 0;
-			sg_cpu->max = 0;
-			sg_cpu->flags = SCHED_CPUFREQ_DL;
-			sg_cpu->last_update = 0;
-			sg_cpu->iowait_boost = 0;
-			sg_cpu->iowait_boost_max = policy->cpuinfo.max_freq;
-			cpufreq_add_update_util_hook(cpu, &sg_cpu->update_util,
-						     dkgov_update_shared);
-		} else {
-			cpufreq_add_update_util_hook(cpu, &sg_cpu->update_util,
-						     dkgov_update_single);
-		}
+		sg_cpu->flags = SCHED_CPUFREQ_DL;
+		sg_cpu->iowait_boost_max = policy->cpuinfo.max_freq;
+		cpufreq_add_update_util_hook(cpu, &sg_cpu->update_util,
+					     policy_is_shared(policy) ?
+							dkgov_update_shared :
+							dkgov_update_single);
 	}
 	return 0;
 }
@@ -908,8 +961,10 @@ static int dkgov_stop(struct cpufreq_policy *policy)
 
 	synchronize_sched();
 
-	irq_work_sync(&sg_policy->irq_work);
-	kthread_cancel_work_sync(&sg_policy->work);
+	if (!policy->fast_switch_enabled) {
+		irq_work_sync(&sg_policy->irq_work);
+		kthread_cancel_work_sync(&sg_policy->work);
+	}
 
 	return 0;
 }

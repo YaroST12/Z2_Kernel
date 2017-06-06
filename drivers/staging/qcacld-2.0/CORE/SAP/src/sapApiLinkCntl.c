@@ -220,7 +220,7 @@ WLANSAP_ScanCallback
                       "%s: No suitable channel selected due to DFS, LTE-Coex and Concurrent mode restrictions", __func__);
 
             if (eCSR_BAND_ALL == psapContext->scanBandPreference ||
-                psapContext->allBandScanned == eSAP_TRUE) {
+                psapContext->allBandScanned == true) {
                 psapContext->sapsMachine = eSAP_CH_SELECT;
                 event = eSAP_CHANNEL_SELECTION_FAILED;
             } else {
@@ -232,7 +232,7 @@ WLANSAP_ScanCallback
                 else
                     psapContext->currentPreferredBand = eCSR_BAND_24;
 
-                psapContext->allBandScanned = eSAP_TRUE;
+                psapContext->allBandScanned = true;
                 /* go back to DISCONNECT state, scan next band */
                 psapContext->sapsMachine = eSAP_DISCONNECTED;
                 event = eSAP_CHANNEL_SELECTION_RETRY;
@@ -457,7 +457,7 @@ WLANSAP_PreStartBssAcsScanCallback
                        FL("No suitable channel selected"));
 
             if ( eCSR_BAND_ALL ==  psapContext->scanBandPreference ||
-                     psapContext->allBandScanned == eSAP_TRUE)
+                     psapContext->allBandScanned == true)
             {
                 halStatus = sapSignalHDDevent(psapContext, NULL,
                                       eSAP_ACS_CHANNEL_SELECTED,
@@ -472,7 +472,7 @@ WLANSAP_PreStartBssAcsScanCallback
                 else
                     psapContext->currentPreferredBand = eCSR_BAND_24;
 
-                psapContext->allBandScanned = eSAP_TRUE;
+                psapContext->allBandScanned = true;
                 /*
                  * Go back to scanning, scan next band
                  *
@@ -632,7 +632,7 @@ WLANSAP_RoamCallback
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
                       FL("Session %d opened successfully"),
                                  sapContext->sessionId);
-            sapContext->isSapSessionOpen = eSAP_TRUE;
+            sapContext->isSapSessionOpen = true;
             vos_event_set(&sapContext->sap_session_opened_evt);
             break;
         }

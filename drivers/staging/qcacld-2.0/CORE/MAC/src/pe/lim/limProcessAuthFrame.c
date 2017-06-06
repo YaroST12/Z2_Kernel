@@ -303,7 +303,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                  pHdr->sa,
                                  LIM_NO_WEP_IN_FC,
                                  psessionEntry,
-                                 eSIR_FALSE);
+                                 false);
             goto free;
         }
 
@@ -366,7 +366,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                      pHdr->sa,
                                      LIM_NO_WEP_IN_FC,
                                      psessionEntry,
-                                     eSIR_FALSE);
+                                     false);
                 goto free;
             }
             else
@@ -404,7 +404,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                          pHdr->sa,
                                          LIM_NO_WEP_IN_FC,
                                          psessionEntry,
-                                         eSIR_FALSE);
+                                         false);
                     goto free;
                 }
             }
@@ -438,7 +438,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                          pHdr->sa,
                                          LIM_NO_WEP_IN_FC,
                                          psessionEntry,
-                                         eSIR_FALSE);
+                                         false);
                     goto free;
                 } // if (!pKeyMapEntry->wepOn)
                 else
@@ -468,7 +468,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                             pHdr->sa,
                                             LIM_NO_WEP_IN_FC,
                                             psessionEntry,
-                                            eSIR_FALSE);
+                                            false);
 
 
                         goto free;
@@ -517,7 +517,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                          pHdr->sa,
                                          LIM_NO_WEP_IN_FC,
                                          psessionEntry,
-                                         eSIR_FALSE);
+                                         false);
 
                     goto free;
                 }
@@ -549,7 +549,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                             pHdr->sa,
                                             LIM_NO_WEP_IN_FC,
                                             psessionEntry,
-                                            eSIR_FALSE);
+                                            false);
                         goto free;
                     }
                     if ( ( sirConvertAuthFrame2Struct(pMac, plainBody, frameLen-8,
@@ -587,7 +587,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                  pHdr->sa,
                                  LIM_NO_WEP_IN_FC,
                                  psessionEntry,
-                                 eSIR_FALSE);
+                                 false);
             goto free;
         } // else if (wlan_cfgGetInt(CFG_PRIVACY_OPTION_IMPLEMENTED))
     } // if (fc.wep)
@@ -640,7 +640,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
             {
                 tLimMlmDisassocReq      *pMlmDisassocReq = NULL;
                 tLimMlmDeauthReq        *pMlmDeauthReq = NULL;
-                tAniBool                 isConnected = eSIR_TRUE;
+                bool                 isConnected = true;
 
                 pMlmDisassocReq = pMac->lim.limDisassocDeauthCnfReq.pMlmDisassocReq;
                 if (pMlmDisassocReq &&
@@ -653,7 +653,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                 MAC_ADDRESS_STR),
                                 MAC_ADDR_ARRAY(pMlmDisassocReq->peerMacAddr));)
                     limProcessDisassocAckTimeout(pMac);
-                    isConnected = eSIR_FALSE;
+                    isConnected = false;
                 }
                 pMlmDeauthReq = pMac->lim.limDisassocDeauthCnfReq.pMlmDeauthReq;
                 if (pMlmDeauthReq &&
@@ -666,7 +666,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                 MAC_ADDRESS_STR),
                                 MAC_ADDR_ARRAY(pMlmDeauthReq->peerMacAddr));)
                     limProcessDeauthAckTimeout(pMac);
-                    isConnected = eSIR_FALSE;
+                    isConnected = false;
                 }
 
                 /* pStaDS != NULL and isConnected = 1 means the STA is already
@@ -797,7 +797,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                      pHdr->sa,
                                      LIM_NO_WEP_IN_FC,
                                      psessionEntry,
-                                     eSIR_FALSE);
+                                     false);
 
                 goto free;
             }
@@ -855,7 +855,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                             pHdr->sa,
                                             LIM_NO_WEP_IN_FC,
                                             psessionEntry,
-                                            eSIR_FALSE);
+                                            false);
 
                         /// Send Auth indication to SME
 
@@ -913,7 +913,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                                 pHdr->sa,
                                                 LIM_NO_WEP_IN_FC,
                                                 psessionEntry,
-                                                eSIR_FALSE);
+                                                false);
                             goto free;
                         }
                         else
@@ -977,7 +977,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                                      pHdr->sa,
                                                      LIM_NO_WEP_IN_FC,
                                                      psessionEntry,
-                                                     eSIR_FALSE);
+                                                     false);
 
                                 limDeletePreAuthNode(pMac, pHdr->sa);
                                 goto free;
@@ -1023,7 +1023,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                                 pHdr->sa,
                                                 LIM_NO_WEP_IN_FC,
                                                 psessionEntry,
-                                                eSIR_FALSE);
+                                                false);
                         } // if (wlan_cfgGetInt(CFG_PRIVACY_OPTION_IMPLEMENTED))
 
                         break;
@@ -1055,7 +1055,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                             pHdr->sa,
                                             LIM_NO_WEP_IN_FC,
                                             psessionEntry,
-                                            eSIR_FALSE);
+                                            false);
                         goto free;
                 } // end switch(pRxAuthFrameBody->authAlgoNumber)
             } // if (limIsAuthAlgoSupported(pRxAuthFrameBody->authAlgoNumber))
@@ -1083,7 +1083,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                      pHdr->sa,
                                      LIM_NO_WEP_IN_FC,
                                      psessionEntry,
-                                     eSIR_FALSE);
+                                     false);
                 goto free;
             } //end if (limIsAuthAlgoSupported(pRxAuthFrameBody->authAlgoNumber))
             break;
@@ -1277,7 +1277,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                             pHdr->sa,
                                             LIM_NO_WEP_IN_FC,
                                             psessionEntry,
-                                            eSIR_FALSE);
+                                            false);
                         goto free;
                     }
                     else
@@ -1334,7 +1334,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                                      pHdr->sa,
                                                      pRxAuthFrameBody->length,
                                                      psessionEntry,
-                                                     eSIR_FALSE);
+                                                     false);
 
                                 break;
                         } // if (pKeyMapEntry)
@@ -1378,7 +1378,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                                     pHdr->sa,
                                                     LIM_NO_WEP_IN_FC,
                                                     psessionEntry,
-                                                    eSIR_FALSE);
+                                                    false);
 
                                 limRestoreFromAuthState(pMac, eSIR_SME_INVALID_WEP_DEFAULT_KEY,
                                                               eSIR_MAC_UNSPEC_FAILURE_REASON,psessionEntry);
@@ -1420,7 +1420,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                                      pHdr->sa,
                                                      pRxAuthFrameBody->length,
                                                      psessionEntry,
-                                                     eSIR_FALSE);
+                                                     false);
                                 break;
                         } // end if (pKeyMapEntry)
                     } // end if (!wlan_cfgGetInt(CFG_PRIVACY_OPTION_IMPLEMENTED))
@@ -1471,7 +1471,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                      pHdr->sa,
                                      LIM_NO_WEP_IN_FC,
                                      psessionEntry,
-                                     eSIR_FALSE);
+                                     false);
                 goto free;
             }
 
@@ -1501,7 +1501,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                          pHdr->sa,
                                          LIM_NO_WEP_IN_FC,
                                          psessionEntry,
-                                         eSIR_FALSE);
+                                         false);
                     goto free;
                 }
 
@@ -1530,7 +1530,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                          pHdr->sa,
                                          LIM_NO_WEP_IN_FC,
                                          psessionEntry,
-                                         eSIR_FALSE);
+                                         false);
                     goto free;
                 }
 
@@ -1557,7 +1557,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                         pHdr->sa,
                                         LIM_NO_WEP_IN_FC,
                                         psessionEntry,
-                                        eSIR_FALSE);
+                                        false);
 
                     /// Delete pre-auth context of STA
                     limDeletePreAuthNode(pMac,
@@ -1614,7 +1614,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                          pHdr->sa,
                                          LIM_NO_WEP_IN_FC,
                                          psessionEntry,
-                                         eSIR_FALSE);
+                                         false);
 
                     /// Send Auth indication to SME
                     vos_mem_copy((tANI_U8 *) mlmAuthInd.peerMacAddr,
@@ -1654,7 +1654,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                                          pHdr->sa,
                                          LIM_NO_WEP_IN_FC,
                                          psessionEntry,
-                                         eSIR_FALSE);
+                                         false);
                     goto free;
                 }
             } // if (pMac->lim.gLimSystemRole == eLIM_AP_ROLE || ...

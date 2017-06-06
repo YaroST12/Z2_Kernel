@@ -858,7 +858,7 @@ sapPrintACL(v_MACADDR_t *macList, v_U8_t size);
   SIDE EFFECTS
 
 ============================================================================*/
-eSapBool
+bool
 sapSearchMacList(v_MACADDR_t *macList, v_U8_t num_mac, v_U8_t *peerMac, v_U8_t *index);
 
 

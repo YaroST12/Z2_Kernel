@@ -5797,7 +5797,7 @@ static int hdd_driver_command(hdd_adapter_t *pAdapter,
                                     wlan_hdd_change_country_code_callback,
                                     country_code, pAdapter,
                                     pHddCtx->pvosContext,
-                                    eSIR_TRUE, eSIR_TRUE);
+                                    true, true);
            if (status == eHAL_STATUS_SUCCESS)
            {
                rc = wait_for_completion_timeout(
@@ -17258,7 +17258,7 @@ int hdd_wlan_startup(struct device *dev, v_VOID_t *hif_sc)
       ret = sme_ChangeCountryCode(pHddCtx->hHal,
             (void *)(tSmeChangeCountryCallback)
             wlan_hdd_change_country_code_callback,
-            country_code, pAdapter, pHddCtx->pvosContext, eSIR_TRUE, eSIR_TRUE);
+            country_code, pAdapter, pHddCtx->pvosContext, true, true);
       if (eHAL_STATUS_SUCCESS == ret)
       {
           rc = wait_for_completion_timeout(

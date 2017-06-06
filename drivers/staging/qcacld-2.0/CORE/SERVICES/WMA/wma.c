@@ -40155,7 +40155,7 @@ eHalStatus wma_set_htconfig(tANI_U8 vdev_id, tANI_U16 ht_capab, int value)
 }
 
 eHalStatus WMA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId,
-		tAniBool sendRegHint)
+		bool sendRegHint)
 {
 	if(VOS_STATUS_SUCCESS != vos_nv_setRegDomain(clientCtxt, regId, sendRegHint))
 		return eHAL_STATUS_INVALID_PARAMETER;

@@ -2160,7 +2160,7 @@ limSendAssocReqMgmtFrame(tpAniSirGlobal   pMac,
         LIM_BSS_CAPS_GET( WSM, psessionEntry->limCurrentBssQosCaps );
 
     if ( psessionEntry->lim11hEnable  &&
-            psessionEntry->pLimJoinReq->spectrumMgtIndicator == eSIR_TRUE )
+            psessionEntry->pLimJoinReq->spectrumMgtIndicator == true )
     {
 #if defined WLAN_FEATURE_VOWIFI
         PowerCapsPopulated = TRUE;
@@ -2618,7 +2618,7 @@ limSendReassocReqWithFTIEsMgmtFrame(tpAniSirGlobal     pMac,
         LIM_BSS_CAPS_GET( WSM, psessionEntry->limReassocBssQosCaps );
 
     if ( psessionEntry->lim11hEnable  &&
-            psessionEntry->pLimReAssocReq->spectrumMgtIndicator == eSIR_TRUE )
+            psessionEntry->pLimReAssocReq->spectrumMgtIndicator == true )
     {
 #if defined WLAN_FEATURE_VOWIFI
         PowerCapsPopulated = TRUE;
@@ -3180,7 +3180,7 @@ limSendReassocReqMgmtFrame(tpAniSirGlobal     pMac,
 
 
     if ( psessionEntry->lim11hEnable  &&
-         psessionEntry->pLimReAssocReq->spectrumMgtIndicator == eSIR_TRUE )
+         psessionEntry->pLimReAssocReq->spectrumMgtIndicator == true )
     {
 #if defined WLAN_FEATURE_VOWIFI
         PowerCapsPopulated = TRUE;
@@ -3475,7 +3475,7 @@ limSendAuthMgmtFrame(tpAniSirGlobal pMac,
                      tSirMacAddr           peerMacAddr,
                      tANI_U8               wep_challenge_len,
                      tpPESession           psessionEntry,
-                     tAniBool              waitForAck)
+                     bool              waitForAck)
 {
     tANI_U8            *pFrame, *pBody;
     tANI_U32            frameLen = 0, bodyLen = 0;
@@ -3778,7 +3778,7 @@ limSendAuthMgmtFrame(tpAniSirGlobal pMac,
     MTRACE(vos_trace(VOS_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
        psessionEntry->peSessionId, pMacHdr->fc.subType));
 
-    if (eSIR_TRUE == waitForAck) {
+    if (true == waitForAck) {
 
         pMac->auth_ack_status = LIM_AUTH_ACK_NOT_RCD;
         halstatus = halTxFrameWithTxComplete(pMac, pPacket,

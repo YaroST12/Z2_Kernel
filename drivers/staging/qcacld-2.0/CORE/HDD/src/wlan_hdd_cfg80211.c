@@ -19859,7 +19859,7 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
                                       wlan_hdd_change_country_code_cb,
                                       pConfig->apCntryCode, pAdapter,
                                       pHddCtx->pvosContext,
-                                      eSIR_FALSE, eSIR_TRUE);
+                                      false, true);
                 if (eHAL_STATUS_SUCCESS == hstatus) {
                     /* Wait for completion */
                     rc = wait_for_completion_timeout(

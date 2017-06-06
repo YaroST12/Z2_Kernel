@@ -300,18 +300,18 @@ typedef struct sPESession           // Added to Support BT-AMP
 #endif
 
 #ifdef WLAN_FEATURE_VOWIFI_11R
-    tAniBool            is11Rconnection;
+    bool            is11Rconnection;
 #endif
 
 #ifdef FEATURE_WLAN_ESE
-    tAniBool            isESEconnection;
+    bool            isESEconnection;
     tEsePEContext       eseContext;
 #endif
 #if defined WLAN_FEATURE_VOWIFI_11R || defined FEATURE_WLAN_ESE || defined(FEATURE_WLAN_LFR)
-    tAniBool            isFastTransitionEnabled;
+    bool            isFastTransitionEnabled;
 #endif
 #ifdef FEATURE_WLAN_LFR
-    tAniBool            isFastRoamIniFeatureEnabled;
+    bool            isFastRoamIniFeatureEnabled;
 #endif
     tSirNoAParam p2pNoA;
     tSirP2PNoaAttr p2pGoPsUpdate;

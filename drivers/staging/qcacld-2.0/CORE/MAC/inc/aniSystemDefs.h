@@ -65,13 +65,6 @@
 #define TRUE    1
 #endif
 
-typedef enum eAniBool
-{
-    eSIR_FALSE,
-    eSIR_TRUE,
-    eSIR_DONOT_USE_BOOL = SIR_MAX_ENUM_SIZE
-} tAniBool;
-
 /// Authentication type enum used with peer
 typedef enum eAniAuthType
 {
@@ -206,7 +199,7 @@ typedef struct sSirMicFailureInfo
     tSirMacAddr            srcMacAddr; //address used to compute MIC
     tSirMacAddr            taMacAddr; //transmitter address
     tSirMacAddr            dstMacAddr;
-    tAniBool               multicast;
+    bool               multicast;
     tANI_U8     IV1;            // first byte of IV
     tANI_U8     keyId;          // second byte of IV
     tANI_U8     TSC[SIR_CIPHER_SEQ_CTR_SIZE]; // sequence number

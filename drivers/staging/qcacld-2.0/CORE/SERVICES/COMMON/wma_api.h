@@ -122,7 +122,7 @@ int wma_cli_get_command(void *wmapvosContext, int vdev_id,
 			int param_id, int vpdev);
 eHalStatus wma_set_htconfig(tANI_U8 vdev_id, tANI_U16 ht_capab, int value);
 eHalStatus WMA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId,
-		tAniBool sendRegHint);
+		bool sendRegHint);
 
 VOS_STATUS WMA_GetWcnssSoftwareVersion(v_PVOID_t pvosGCtx, tANI_U8 *pVersion,
                                        tANI_U32 versionBufferSize);

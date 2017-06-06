@@ -73,7 +73,7 @@
  * and limTriggerBackgroundScanDuringQuietBss() returned failure.  In this case, we will stop data
  * traffic instead of going into scan.  The recover function limProcessQuietBssTimeout() needs to have
  * this information. */
-static tAniBool glimTriggerBackgroundScanDuringQuietBss_Status = eSIR_TRUE;
+static bool glimTriggerBackgroundScanDuringQuietBss_Status = true;
 
 /* 11A Channel list to decode RX BD channel information */
 static const tANI_U8 abChannel[]= {36,40,44,48,52,56,60,64,100,104,108,112,116,
@@ -2488,7 +2488,7 @@ void limProcessQuietTimeout(tpAniSirGlobal pMac)
         /* If we have sta bk scan triggered and trigger bk scan actually started successfully, */
         /* print message, otherwise, stop data traffic and stay quiet */
         if( pMac->lim.gLimTriggerBackgroundScanDuringQuietBss &&
-          (eSIR_TRUE == (glimTriggerBackgroundScanDuringQuietBss_Status = limTriggerBackgroundScanDuringQuietBss( pMac ))) )
+          (true == (glimTriggerBackgroundScanDuringQuietBss_Status = limTriggerBackgroundScanDuringQuietBss( pMac ))) )
         {
            limLog( pMac, LOG2,
                FL("Attempting to trigger a background scan..."));
@@ -2574,7 +2574,7 @@ void limProcessQuietBssTimeout( tpAniSirGlobal pMac )
         // Transition to eLIM_QUIET_INIT
         psessionEntry->gLimSpecMgmt.quietState = eLIM_QUIET_INIT;
 
-        if( !pMac->lim.gLimTriggerBackgroundScanDuringQuietBss || (glimTriggerBackgroundScanDuringQuietBss_Status == eSIR_FALSE) )
+        if( !pMac->lim.gLimTriggerBackgroundScanDuringQuietBss || (glimTriggerBackgroundScanDuringQuietBss_Status == false) )
         {
           // Resume data traffic only if channel switch is not running in silent mode.
           if (!((psessionEntry->gLimSpecMgmt.dot11hChanSwState == eLIM_11H_CHANSW_RUNNING) &&
@@ -2585,8 +2585,8 @@ void limProcessQuietBssTimeout( tpAniSirGlobal pMac )
           }
 
           /* Reset status flag */
-          if(glimTriggerBackgroundScanDuringQuietBss_Status == eSIR_FALSE)
-              glimTriggerBackgroundScanDuringQuietBss_Status = eSIR_TRUE;
+          if(glimTriggerBackgroundScanDuringQuietBss_Status == false)
+              glimTriggerBackgroundScanDuringQuietBss_Status = true;
 
           limLog( pMac, LOG2,
               FL("Quiet BSS: Resuming traffic..."));
@@ -2999,12 +2999,12 @@ tANI_U8 limActiveScanAllowed(
  * If possible, try to revisit this API
  *
  * @param  pMac Pointer to Global MAC structure
- * @return eSIR_TRUE, if a background scan was attempted
- *         eSIR_FALSE, if not
+ * @return true, if a background scan was attempted
+ *         false, if not
  */
-tAniBool limTriggerBackgroundScanDuringQuietBss( tpAniSirGlobal pMac )
+bool limTriggerBackgroundScanDuringQuietBss( tpAniSirGlobal pMac )
 {
-    tAniBool bScanTriggered = eSIR_FALSE;
+    bool bScanTriggered = false;
     tpPESession psessionEntry = &pMac->lim.gpSession[0];
 
     if (!LIM_IS_STA_ROLE(psessionEntry))
@@ -3033,7 +3033,7 @@ tAniBool limTriggerBackgroundScanDuringQuietBss( tpAniSirGlobal pMac )
             // failure instead of having a void return type
             limTriggerBackgroundScan( pMac );
 
-            bScanTriggered = eSIR_TRUE;
+            bScanTriggered = true;
         }
         else
         {
@@ -5362,7 +5362,7 @@ void lim_add_channel_status_info(tpAniSirGlobal p_mac,
  * @param  channel - New channel to which we are expected to move
  * @return None
  */
-tAniBool
+bool
 limIsChannelValidForChannelSwitch(tpAniSirGlobal pMac, tANI_U8 channel)
 {
     tANI_U8  index;
@@ -5371,7 +5371,7 @@ limIsChannelValidForChannelSwitch(tpAniSirGlobal pMac, tANI_U8 channel)
 #ifdef FEATURE_WLAN_DISABLE_CHANNEL_SWITCH
     if (!vos_is_chan_ok_for_dnbs(channel)) {
         PELOGE(limLog(pMac, LOGE, FL("channel is not valid for dnbs"));)
-        return (eSIR_FALSE);
+        return (false);
     }
 #endif
     if (wlan_cfgGetStr(pMac, WNI_CFG_VALID_CHANNEL_LIST,
@@ -5379,17 +5379,17 @@ limIsChannelValidForChannelSwitch(tpAniSirGlobal pMac, tANI_U8 channel)
           (tANI_U32 *)&validChannelListLen) != eSIR_SUCCESS)
     {
         PELOGE(limLog(pMac, LOGE, FL("could not retrieve valid channel list"));)
-        return (eSIR_FALSE);
+        return (false);
     }
 
     for(index = 0; index < validChannelListLen; index++)
     {
         if(validChannelList[index] == channel)
-            return (eSIR_TRUE);
+            return (true);
     }
 
     /* channel does not belong to list of valid channels */
-    return (eSIR_FALSE);
+    return (false);
 }
 
 /**------------------------------------------------------

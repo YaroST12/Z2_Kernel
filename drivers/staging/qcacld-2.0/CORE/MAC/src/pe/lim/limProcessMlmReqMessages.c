@@ -723,7 +723,7 @@ void limDoSendAuthMgmtFrame(tpAniSirGlobal pMac, tpPESession psessionEntry)
         limSendAuthMgmtFrame(pMac,
                         &authFrameBody,
                         pMac->lim.gpLimMlmAuthReq->peerMacAddr,
-                        LIM_NO_WEP_IN_FC, psessionEntry, eSIR_TRUE);
+                        LIM_NO_WEP_IN_FC, psessionEntry, true);
         if (tx_timer_activate(&pMac->lim.limTimers.gLimAuthFailureTimer)
                         != TX_SUCCESS) {
                 //Could not start Auth failure timer.
@@ -4109,7 +4109,7 @@ static void lim_process_auth_retry_timer(tpAniSirGlobal mac_ctx)
 			limSendAuthMgmtFrame(mac_ctx,
 					&auth_frame,
 					mac_ctx->lim.gpLimMlmAuthReq->peerMacAddr,
-					LIM_NO_WEP_IN_FC, session_entry, eSIR_TRUE);
+					LIM_NO_WEP_IN_FC, session_entry, true);
 		}
 
 		limDeactivateAndChangeTimer(mac_ctx, eLIM_AUTH_RETRY_TIMER);

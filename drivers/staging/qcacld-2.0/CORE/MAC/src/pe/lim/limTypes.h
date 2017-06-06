@@ -247,13 +247,13 @@ typedef struct sLimMlmAssocInd
     tSirWAPIie           wapiIE;
     tSirAddie            addIE; // additional IE received from the peer, which possibly includes WSC IE and/or P2P IE.
     tSirMacCapabilityInfo capabilityInfo;
-    tAniBool                spectrumMgtIndicator;
+    bool                spectrumMgtIndicator;
     tSirMacPowerCapInfo     powerCap;
     tSirSupChnl             supportedChannels;
     tANI_U8                 sessionId;
 
 
-    tAniBool               WmmStaInfoPresent;
+    bool               WmmStaInfoPresent;
 
     // Required for indicating the frames to upper layer
     tANI_U32             beaconLength;
@@ -302,11 +302,11 @@ typedef struct sLimMlmReassocInd
     tSirWAPIie           wapiIE;
     tSirAddie            addIE; // additional IE received from the peer, which can be WSC IE and/or P2P IE.
     tSirMacCapabilityInfo capabilityInfo;
-    tAniBool                spectrumMgtIndicator;
+    bool                spectrumMgtIndicator;
     tSirMacPowerCapInfo     powerCap;
     tSirSupChnl             supportedChannels;
 
-    tAniBool               WmmStaInfoPresent;
+    bool               WmmStaInfoPresent;
 
     // Required for indicating the frames to upper layer
     tANI_U32             beaconLength;
@@ -675,7 +675,7 @@ tSirRetStatus limPopulateMacHeader(tpAniSirGlobal, tANI_U8*, tANI_U8, tANI_U8, t
 tSirRetStatus limSendProbeReqMgmtFrame(tpAniSirGlobal, tSirMacSSid *, tSirMacAddr, tANI_U8, tSirMacAddr, tANI_U32, tANI_U32, tANI_U8 *);
 void limSendProbeRspMgmtFrame(tpAniSirGlobal, tSirMacAddr, tpAniSSID, short, tANI_U8, tpPESession, tANI_U8);
 void limSendAuthMgmtFrame(tpAniSirGlobal, tSirMacAuthFrameBody *, tSirMacAddr,
-                                             tANI_U8, tpPESession , tAniBool);
+                                             tANI_U8, tpPESession , bool);
 void limSendAssocReqMgmtFrame(tpAniSirGlobal, tLimMlmAssocReq *,tpPESession);
 void limSendReassocReqMgmtFrame(tpAniSirGlobal, tLimMlmReassocReq *,tpPESession);
 #ifdef WLAN_FEATURE_VOWIFI_11R

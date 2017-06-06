@@ -2598,7 +2598,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
             msg.src_addr.sa_family = ARPHRD_ETHER;
             memcpy(msg.src_addr.sa_data, &pSapEvent->sapevt.sapStationMICFailureEvent.staMac, sizeof(v_MACADDR_t));
             hddLog(LOG1, "MIC MAC "MAC_ADDRESS_STR, MAC_ADDR_ARRAY(msg.src_addr.sa_data));
-            if(pSapEvent->sapevt.sapStationMICFailureEvent.multicast == eSAP_TRUE)
+            if(pSapEvent->sapevt.sapStationMICFailureEvent.multicast == true)
              msg.flags = IW_MICFAILURE_GROUP;
             else
              msg.flags = IW_MICFAILURE_PAIRWISE;
@@ -2611,7 +2611,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
         cfg80211_michael_mic_failure(dev,
                                      pSapEvent->sapevt.
                                      sapStationMICFailureEvent.staMac.bytes,
-                                     ((pSapEvent->sapevt.sapStationMICFailureEvent.multicast == eSAP_TRUE) ?
+                                     ((pSapEvent->sapevt.sapStationMICFailureEvent.multicast == true) ?
                                       NL80211_KEYTYPE_GROUP :
                                       NL80211_KEYTYPE_PAIRWISE),
                                      pSapEvent->sapevt.sapStationMICFailureEvent.keyId,

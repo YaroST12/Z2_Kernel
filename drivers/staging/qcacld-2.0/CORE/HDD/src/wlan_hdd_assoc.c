@@ -3466,7 +3466,7 @@ static eHalStatus hdd_RoamMicErrorIndicationHandler( hdd_adapter_t *pAdapter, tC
       hddLog(LOG1, "MIC MAC " MAC_ADDRESS_STR,
              MAC_ADDR_ARRAY(msg.src_addr.sa_data));
 
-      if(pRoamInfo->u.pMICFailureInfo->multicast == eSIR_TRUE)
+      if(pRoamInfo->u.pMICFailureInfo->multicast == true)
          msg.flags = IW_MICFAILURE_GROUP;
       else
          msg.flags = IW_MICFAILURE_PAIRWISE;
@@ -3476,7 +3476,7 @@ static eHalStatus hdd_RoamMicErrorIndicationHandler( hdd_adapter_t *pAdapter, tC
       /* inform mic failure to nl80211 */
       cfg80211_michael_mic_failure(pAdapter->dev,
               pRoamInfo->u.pMICFailureInfo->taMacAddr,
-              ((pRoamInfo->u.pMICFailureInfo->multicast == eSIR_TRUE) ?
+              ((pRoamInfo->u.pMICFailureInfo->multicast == true) ?
                NL80211_KEYTYPE_GROUP :
                NL80211_KEYTYPE_PAIRWISE),
               pRoamInfo->u.pMICFailureInfo->keyId,

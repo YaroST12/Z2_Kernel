@@ -1644,34 +1644,34 @@ limUpdateOverlapStaParam(tpAniSirGlobal pMac, tSirMacAddr bssId, tpLimProtStaPar
  * @param  pBeacon  - Parsed Beacon Frame structure
  * @param  pSession - Pointer to the PE session
  *
- * @return eSIR_TRUE if encryption type is matched; eSIR_FALSE otherwise
+ * @return true if encryption type is matched; false otherwise
  */
-static tAniBool limIbssEncTypeMatched(tpSchBeaconStruct  pBeacon,
+static bool limIbssEncTypeMatched(tpSchBeaconStruct  pBeacon,
                                       tpPESession        pSession)
 {
     if (!pBeacon || !pSession)
-        return eSIR_FALSE;
+        return false;
 
     /* Open case */
     if (pBeacon->capabilityInfo.privacy == 0
             && pSession->encryptType == eSIR_ED_NONE)
-        return eSIR_TRUE;
+        return true;
 
     /* WEP case */
     if (pBeacon->capabilityInfo.privacy == 1 && pBeacon->wpaPresent == 0
             && pBeacon->rsnPresent == 0
             && (pSession->encryptType == eSIR_ED_WEP40
                     || pSession->encryptType == eSIR_ED_WEP104))
-        return eSIR_TRUE;
+        return true;
 
     /* WPA-None case */
     if (pBeacon->capabilityInfo.privacy == 1 && pBeacon->wpaPresent == 1
             && pBeacon->rsnPresent == 0
             && ((pSession->encryptType == eSIR_ED_CCMP) ||
                 (pSession->encryptType == eSIR_ED_TKIP)))
-        return eSIR_TRUE;
+        return true;
 
-    return eSIR_FALSE;
+    return false;
 }
 
 
@@ -1716,7 +1716,7 @@ limHandleIBSScoalescing(
          (limCmpSSid(pMac, &pBeacon->ssId,psessionEntry) != true) ||
          (psessionEntry->currentOperChannel != pBeacon->channelNumber) )
         retCode =  eSIR_LIM_IGNORE_BEACON;
-    else if (limIbssEncTypeMatched(pBeacon, psessionEntry) != eSIR_TRUE)
+    else if (limIbssEncTypeMatched(pBeacon, psessionEntry) != true)
     {
         PELOG3(limLog(pMac, LOG3,
             FL("peer privacy %d peer wpa %d peer rsn %d self encType %d"),
@@ -1817,7 +1817,7 @@ lim_enc_type_matched(tpAniSirGlobal mac_ctx,
      */
     if (session->osen_association ||
             session->wps_registration)
-        return eSIR_TRUE;
+        return true;
 
     return false;
 }
@@ -1872,7 +1872,7 @@ limDetectChangeInApCapabilities(tpAniSirGlobal pMac,
             SIR_MAC_GET_QOS(psessionEntry->limCurrentBssCaps) ) ||
           ( (newChannel !=  psessionEntry->currentOperChannel) &&
             (newChannel != 0) ) ||
-          (eSIR_FALSE == security_caps_matched)
+          (false == security_caps_matched)
           ) ) )
     {
         if (false == psessionEntry->fWaitForProbeRsp)

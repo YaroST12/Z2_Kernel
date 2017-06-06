@@ -1234,7 +1234,7 @@ limFillAssocIndParams(tpAniSirGlobal pMac, tpLimMlmAssocInd pAssocInd,
                  pAssocInd->addIE.length);
 
     pSirSmeAssocInd->spectrumMgtIndicator = pAssocInd->spectrumMgtIndicator;
-    if (pAssocInd->spectrumMgtIndicator == eSIR_TRUE)
+    if (pAssocInd->spectrumMgtIndicator == true)
     {
         pSirSmeAssocInd->powerCap.minTxPower = pAssocInd->powerCap.minTxPower;
         pSirSmeAssocInd->powerCap.maxTxPower = pAssocInd->powerCap.maxTxPower;

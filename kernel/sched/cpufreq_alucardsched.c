@@ -245,7 +245,7 @@ static void acgov_update_commit(struct acgov_policy *sg_policy, u64 time,
 	if (acgov_up_down_rate_limit(sg_policy, time, next_freq))
 		return;
 
-	if (!next_freq || sg_policy->next_freq == next_freq)
+	if (!next_freq || policy->cur == next_freq)
 		return;
 
 	sg_policy->next_freq = next_freq;

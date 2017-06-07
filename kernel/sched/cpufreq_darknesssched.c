@@ -49,6 +49,7 @@ struct dkgov_tunables {
 	 */
 	unsigned int boost_perc;
 	bool iowait_boost_enable;
+	bool eval_busy_for_freq;
 };
 
 struct dkgov_policy {
@@ -398,7 +399,10 @@ static void dkgov_update_single(struct update_util_data *hook, u64 time,
 	if (!dkgov_should_update_freq(sg_policy, time))
 		return;
 
-	busy = dkgov_cpu_is_busy(sg_cpu);
+	if (sg_policy->tunables->eval_busy_for_freq)
+		busy = dkgov_cpu_is_busy(sg_cpu);
+	else
+		busy = false;
 
 	if (flags & SCHED_CPUFREQ_DL) {
 		next_f = policy->cpuinfo.max_freq;
@@ -574,6 +578,15 @@ static ssize_t iowait_boost_enable_show(struct gov_attr_set *attr_set,
 	return sprintf(buf, "%u\n", tunables->iowait_boost_enable);
 }
 
+/* eval_busy_for_freq */
+static ssize_t eval_busy_for_freq_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->eval_busy_for_freq);
+}
+
 /* up_rate_limit_us */
 static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
 				      const char *buf, size_t count)
@@ -657,16 +670,33 @@ static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+/* eval_busy_for_freq */
+static ssize_t eval_busy_for_freq_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+	bool enable;
+
+	if (strtobool(buf, &enable))
+		return -EINVAL;
+
+	tunables->eval_busy_for_freq = enable;
+
+	return count;
+}
+
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr boost_perc = __ATTR_RW(boost_perc);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
+static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
 
 static struct attribute *dkgov_attributes[] = {
 	&up_rate_limit_us.attr,
 	&down_rate_limit_us.attr,
 	&boost_perc.attr,
 	&iowait_boost_enable.attr,
+	&eval_busy_for_freq.attr,
 	NULL
 };
 
@@ -781,7 +811,8 @@ static void store_tunables_data(struct dkgov_tunables *tunables,
 	ptunables->up_rate_limit_us = tunables->up_rate_limit_us;
 	ptunables->down_rate_limit_us = tunables->down_rate_limit_us;
 	ptunables->boost_perc = tunables->boost_perc;
-	ptunables->iowait_boost_enable = tunables->iowait_boost_enable; 
+	ptunables->iowait_boost_enable = tunables->iowait_boost_enable;
+	ptunables->eval_busy_for_freq = tunables->eval_busy_for_freq;
 	pr_debug("tunables data saved for cpu[%u]\n", cpu);
 }
 
@@ -801,6 +832,7 @@ static void get_tunables_data(struct dkgov_tunables *tunables,
 		tunables->down_rate_limit_us = ptunables->down_rate_limit_us;
 		tunables->boost_perc = ptunables->boost_perc;
 		tunables->iowait_boost_enable = ptunables->iowait_boost_enable;
+		tunables->eval_busy_for_freq = ptunables->eval_busy_for_freq;
 		pr_debug("tunables data restored for cpu[%u]\n", cpu);
 		goto out;
 	}
@@ -814,6 +846,7 @@ initialize:
 		tunables->down_rate_limit_us *= lat;
 	}
 	tunables->boost_perc = BOOST_PERC;
+	tunables->eval_busy_for_freq = false;
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:
 	return;

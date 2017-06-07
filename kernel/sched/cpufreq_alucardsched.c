@@ -71,6 +71,7 @@ struct acgov_tunables {
 	int pump_dec_step_at_min_freq;
 	unsigned int boost_perc;
 	bool iowait_boost_enable;
+	bool eval_busy_for_freq;
 };
 
 struct acgov_policy {
@@ -504,7 +505,10 @@ static void acgov_update_single(struct update_util_data *hook, u64 time,
 	if (!acgov_should_update_freq(sg_policy, time))
 		return;
 
-	busy = acgov_cpu_is_busy(sg_cpu);
+	if (sg_policy->tunables->eval_busy_for_freq)
+		busy = acgov_cpu_is_busy(sg_cpu);
+	else
+		busy = false;
 
 	if (flags & SCHED_CPUFREQ_DL) {
 		next_f = policy->cpuinfo.max_freq;
@@ -720,6 +724,15 @@ static ssize_t iowait_boost_enable_show(struct gov_attr_set *attr_set,
 	return sprintf(buf, "%u\n", tunables->iowait_boost_enable);
 }
 
+/* eval_busy_for_freq */
+static ssize_t eval_busy_for_freq_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->eval_busy_for_freq);
+}
+
 /* up_rate_limit_us */
 static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
 				      const char *buf, size_t count)
@@ -901,6 +914,21 @@ static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+/* eval_busy_for_freq */
+static ssize_t eval_busy_for_freq_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+	bool enable;
+
+	if (strtobool(buf, &enable))
+		return -EINVAL;
+
+	tunables->eval_busy_for_freq = enable;
+
+	return count;
+}
+
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr freq_responsiveness = __ATTR_RW(freq_responsiveness);
@@ -910,6 +938,7 @@ static struct governor_attr pump_dec_step_at_min_freq = __ATTR_RW(pump_dec_step_
 static struct governor_attr pump_dec_step = __ATTR_RW(pump_dec_step);
 static struct governor_attr boost_perc = __ATTR_RW(boost_perc);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
+static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
 
 static struct attribute *acgov_attributes[] = {
 	&up_rate_limit_us.attr,
@@ -921,6 +950,7 @@ static struct attribute *acgov_attributes[] = {
 	&pump_dec_step.attr,
 	&boost_perc.attr,
 	&iowait_boost_enable.attr,
+	&eval_busy_for_freq.attr,
 	NULL
 };
 
@@ -1040,7 +1070,8 @@ static void store_tunables_data(struct acgov_tunables *tunables,
 	ptunables->pump_inc_step = tunables->pump_inc_step;
 	ptunables->pump_dec_step = tunables->pump_dec_step;
 	ptunables->boost_perc = tunables->boost_perc;
-	ptunables->iowait_boost_enable = tunables->iowait_boost_enable; 
+	ptunables->iowait_boost_enable = tunables->iowait_boost_enable;
+	ptunables->eval_busy_for_freq = tunables->eval_busy_for_freq;
 	pr_debug("tunables data saved for cpu[%u]\n", cpu);
 }
 
@@ -1065,6 +1096,7 @@ static void get_tunables_data(struct acgov_tunables *tunables,
 		tunables->pump_dec_step = ptunables->pump_dec_step;
 		tunables->boost_perc = ptunables->boost_perc;
 		tunables->iowait_boost_enable = ptunables->iowait_boost_enable;
+		tunables->eval_busy_for_freq = ptunables->eval_busy_for_freq;
 		pr_debug("tunables data restored for cpu[%u]\n", cpu);
 		goto out;
 	}
@@ -1092,6 +1124,7 @@ initialize:
 	tunables->pump_inc_step = PUMP_INC_STEP;
 	tunables->pump_dec_step = PUMP_DEC_STEP;
 	tunables->boost_perc = BOOST_PERC;
+	tunables->eval_busy_for_freq = false;
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:
 	return;

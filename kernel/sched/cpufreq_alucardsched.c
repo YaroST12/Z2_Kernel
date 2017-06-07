@@ -39,18 +39,18 @@ unsigned long boosted_cpu_util(int cpu);
 #define UP_RATE_LIMIT_US_BIGC		(10000)
 #define DOWN_RATE_LIMIT_US			(20000)
 #define FREQ_RESPONSIVENESS			1036800
-#define PUMP_INC_STEP_AT_MIN_FREQ	6
-#define PUMP_INC_STEP				3
+#define PUMP_INC_STEP_AT_MIN_FREQ	3
+#define PUMP_INC_STEP				2
 #define PUMP_DEC_STEP_AT_MIN_FREQ	3
-#define PUMP_DEC_STEP				1
+#define PUMP_DEC_STEP				2
 #define BOOST_PERC					10
 #else
 #define LATENCY_MULTIPLIER			(2000)
 #define FREQ_RESPONSIVENESS			1036800
-#define PUMP_INC_STEP_AT_MIN_FREQ	1
-#define PUMP_INC_STEP				1
-#define PUMP_DEC_STEP_AT_MIN_FREQ	1
-#define PUMP_DEC_STEP				1
+#define PUMP_INC_STEP_AT_MIN_FREQ	3
+#define PUMP_INC_STEP				2
+#define PUMP_DEC_STEP_AT_MIN_FREQ	3
+#define PUMP_DEC_STEP				2
 #define BOOST_PERC					10
 #endif
 #ifdef CONFIG_STATE_NOTIFIER
@@ -72,6 +72,7 @@ struct acgov_tunables {
 	unsigned int boost_perc;
 	bool iowait_boost_enable;
 	bool eval_busy_for_freq;
+	bool freq_responsiveness_jump;
 };
 
 struct acgov_policy {
@@ -266,7 +267,7 @@ static void acgov_update_commit(struct acgov_policy *sg_policy, u64 time,
 }
 
 static unsigned int resolve_target_freq(struct cpufreq_policy *policy,
-					int index, unsigned int step, bool isup)
+					int index, int rfindex, unsigned int step, bool isup)
 {
 	struct cpufreq_frequency_table *table;
 	unsigned int target_freq = 0;
@@ -277,6 +278,9 @@ static unsigned int resolve_target_freq(struct cpufreq_policy *policy,
 
 	table = policy->freq_table;
 	if (isup) {
+		if (rfindex > index) {
+			return table[rfindex].frequency;
+		}
 		for (i = (index + 1); (table[i].frequency != CPUFREQ_TABLE_END); i++) {
 			if (table[i].frequency != CPUFREQ_ENTRY_INVALID) {
 				target_freq = table[i].frequency;
@@ -361,7 +365,7 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 	unsigned int cur_load =
 		(util * (100 + tunables->boost_perc)) / max;
 #endif
-	int index;
+	int index, rfindex = -1;
 
 #ifdef CONFIG_MSM_TRACK_FREQ_TARGET_INDEX
 	index = policy->cur_index;
@@ -373,28 +377,31 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 	if (policy->cur < freq_responsiveness) {
 		pump_inc_step = tunables->pump_inc_step_at_min_freq;
 		pump_dec_step = tunables->pump_dec_step_at_min_freq;
+		if (tunables->freq_responsiveness_jump)
+			rfindex = cpufreq_frequency_table_get_index(policy,
+					freq_responsiveness);			
 	}
 #ifdef CONFIG_MACH_MSM8996_H1
 	get_target_capacity(policy->cpu, index, &down_cap, &up_cap);
 	if (cur_util >= up_cap
 		&& policy->cur < policy->max) {
 		next_freq = resolve_target_freq(policy,
-			index, pump_inc_step, true);
+			index, rfindex, pump_inc_step, true);
 	} else if (cur_util < down_cap
 		&& policy->cur > policy->min) {
 		next_freq = resolve_target_freq(policy,
-			index, pump_dec_step, false);
+			index, rfindex, pump_dec_step, false);
 	}
 #else
 	get_target_load(policy, index, &down_load, &up_load);
 	if (cur_load >= up_load
 		&& policy->cur < policy->max) {
 		next_freq = resolve_target_freq(policy,
-			index, pump_inc_step, true);
+			index, rfindex, pump_inc_step, true);
 	} else if (cur_load < down_load
 		&& policy->cur > policy->min) {
 		next_freq = resolve_target_freq(policy,
-			index, pump_dec_step, false);
+			index, rfindex, pump_dec_step, false);
 	}
 #endif
 #ifndef CONFIG_MSM_TRACK_FREQ_TARGET_INDEX
@@ -733,6 +740,15 @@ static ssize_t eval_busy_for_freq_show(struct gov_attr_set *attr_set,
 	return sprintf(buf, "%u\n", tunables->eval_busy_for_freq);
 }
 
+/* freq_responsiveness_jump */
+static ssize_t freq_responsiveness_jump_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->freq_responsiveness_jump);
+}
+
 /* up_rate_limit_us */
 static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
 				      const char *buf, size_t count)
@@ -929,6 +945,21 @@ static ssize_t eval_busy_for_freq_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+/* freq_responsiveness_jump */
+static ssize_t freq_responsiveness_jump_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+	bool enable;
+
+	if (strtobool(buf, &enable))
+		return -EINVAL;
+
+	tunables->freq_responsiveness_jump = enable;
+
+	return count;
+}
+
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr freq_responsiveness = __ATTR_RW(freq_responsiveness);
@@ -939,6 +970,7 @@ static struct governor_attr pump_dec_step = __ATTR_RW(pump_dec_step);
 static struct governor_attr boost_perc = __ATTR_RW(boost_perc);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
+static struct governor_attr freq_responsiveness_jump = __ATTR_RW(freq_responsiveness_jump);
 
 static struct attribute *acgov_attributes[] = {
 	&up_rate_limit_us.attr,
@@ -951,6 +983,7 @@ static struct attribute *acgov_attributes[] = {
 	&boost_perc.attr,
 	&iowait_boost_enable.attr,
 	&eval_busy_for_freq.attr,
+	&freq_responsiveness_jump.attr,
 	NULL
 };
 
@@ -1072,6 +1105,7 @@ static void store_tunables_data(struct acgov_tunables *tunables,
 	ptunables->boost_perc = tunables->boost_perc;
 	ptunables->iowait_boost_enable = tunables->iowait_boost_enable;
 	ptunables->eval_busy_for_freq = tunables->eval_busy_for_freq;
+	ptunables->freq_responsiveness_jump = tunables->freq_responsiveness_jump;
 	pr_debug("tunables data saved for cpu[%u]\n", cpu);
 }
 
@@ -1097,6 +1131,7 @@ static void get_tunables_data(struct acgov_tunables *tunables,
 		tunables->boost_perc = ptunables->boost_perc;
 		tunables->iowait_boost_enable = ptunables->iowait_boost_enable;
 		tunables->eval_busy_for_freq = ptunables->eval_busy_for_freq;
+		tunables->freq_responsiveness_jump = ptunables->freq_responsiveness_jump;
 		pr_debug("tunables data restored for cpu[%u]\n", cpu);
 		goto out;
 	}
@@ -1125,6 +1160,7 @@ initialize:
 	tunables->pump_dec_step = PUMP_DEC_STEP;
 	tunables->boost_perc = BOOST_PERC;
 	tunables->eval_busy_for_freq = false;
+	tunables->freq_responsiveness_jump = true;
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:
 	return;

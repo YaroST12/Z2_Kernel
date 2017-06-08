@@ -504,7 +504,7 @@ static void acgov_update_single(struct update_util_data *hook, u64 time,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned long util, max;
 	unsigned int next_f;
-	bool busy;
+	bool busy = false;
 
 	acgov_set_iowait_boost(sg_cpu, time, flags);
 	sg_cpu->last_update = time;
@@ -514,8 +514,6 @@ static void acgov_update_single(struct update_util_data *hook, u64 time,
 
 	if (sg_policy->tunables->eval_busy_for_freq)
 		busy = acgov_cpu_is_busy(sg_cpu);
-	else
-		busy = false;
 
 	if (flags & SCHED_CPUFREQ_DL) {
 		next_f = policy->cpuinfo.max_freq;

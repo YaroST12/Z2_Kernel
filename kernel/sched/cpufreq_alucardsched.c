@@ -41,7 +41,7 @@ unsigned long boosted_cpu_util(int cpu);
 #define FREQ_RESPONSIVENESS			1113600
 #define PUMP_INC_STEP_AT_MIN_FREQ	3
 #define PUMP_INC_STEP				2
-#define PUMP_DEC_STEP_AT_MIN_FREQ	3
+#define PUMP_DEC_STEP_AT_MIN_FREQ	2
 #define PUMP_DEC_STEP				2
 #define BOOST_PERC					10
 #else
@@ -49,7 +49,7 @@ unsigned long boosted_cpu_util(int cpu);
 #define FREQ_RESPONSIVENESS			1113600
 #define PUMP_INC_STEP_AT_MIN_FREQ	3
 #define PUMP_INC_STEP				2
-#define PUMP_DEC_STEP_AT_MIN_FREQ	3
+#define PUMP_DEC_STEP_AT_MIN_FREQ	2
 #define PUMP_DEC_STEP				2
 #define BOOST_PERC					10
 #endif

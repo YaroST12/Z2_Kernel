@@ -65,6 +65,7 @@ struct acgov_tunables {
 	 * CPUs frequency scaling
 	 */
 	int freq_responsiveness;
+	int freq_responsiveness_index;
 	int pump_inc_step;
 	int pump_inc_step_at_min_freq;
 	int pump_dec_step;
@@ -378,8 +379,7 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 		pump_inc_step = tunables->pump_inc_step_at_min_freq;
 		pump_dec_step = tunables->pump_dec_step_at_min_freq;
 		if (tunables->freq_responsiveness_jump)
-			rfindex = cpufreq_frequency_table_get_index(policy,
-					freq_responsiveness);			
+			rfindex = tunables->freq_responsiveness_index;			
 	}
 #ifdef CONFIG_MACH_MSM8996_H1
 	get_target_capacity(policy->cpu, index, &down_cap, &up_cap);
@@ -646,6 +646,11 @@ static inline struct acgov_tunables *to_acgov_tunables(struct gov_attr_set *attr
 	return container_of(attr_set, struct acgov_tunables, attr_set);
 }
 
+static inline struct acgov_policy *to_acgov_policy(struct acgov_tunables *tunables)
+{
+	return container_of(&tunables, struct acgov_policy, tunables);
+}
+
 static DEFINE_MUTEX(min_rate_lock);
 
 static void update_min_rate_limit_us(struct acgov_policy *sg_policy)
@@ -678,6 +683,14 @@ static ssize_t freq_responsiveness_show(struct gov_attr_set *attr_set, char *buf
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
 
 	return sprintf(buf, "%d\n", tunables->freq_responsiveness);
+}
+
+/* freq_responsiveness_index */
+static ssize_t freq_responsiveness_index_show(struct gov_attr_set *attr_set, char *buf)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+
+	return sprintf(buf, "%d\n", tunables->freq_responsiveness_index);
 }
 
 /* pump_inc_step_at_min_freq */
@@ -800,6 +813,8 @@ static ssize_t freq_responsiveness_store(struct gov_attr_set *attr_set,
 					const char *buf, size_t count)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+	struct acgov_policy *sg_policy;
+	struct cpufreq_policy *policy;
 	int input;
 
 	if (kstrtouint(buf, 10, &input))
@@ -809,6 +824,18 @@ static ssize_t freq_responsiveness_store(struct gov_attr_set *attr_set,
 		return count;
 
 	tunables->freq_responsiveness = input;
+	tunables->freq_responsiveness_index = -1;
+
+	sg_policy = to_acgov_policy(tunables);
+	if (!sg_policy)
+		return count;
+
+	policy = sg_policy->policy;
+	if (!policy)
+		return count;
+
+	tunables->freq_responsiveness_index = 
+		cpufreq_frequency_table_get_index(policy, input);
 
 	return count;
 }
@@ -961,6 +988,7 @@ static ssize_t freq_responsiveness_jump_store(struct gov_attr_set *attr_set,
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr freq_responsiveness = __ATTR_RW(freq_responsiveness);
+static struct governor_attr freq_responsiveness_index = __ATTR_RO(freq_responsiveness_index);
 static struct governor_attr pump_inc_step_at_min_freq = __ATTR_RW(pump_inc_step_at_min_freq);
 static struct governor_attr pump_inc_step = __ATTR_RW(pump_inc_step);
 static struct governor_attr pump_dec_step_at_min_freq = __ATTR_RW(pump_dec_step_at_min_freq);
@@ -974,6 +1002,7 @@ static struct attribute *acgov_attributes[] = {
 	&up_rate_limit_us.attr,
 	&down_rate_limit_us.attr,
 	&freq_responsiveness.attr,
+	&freq_responsiveness_index.attr,
 	&pump_inc_step_at_min_freq.attr,
 	&pump_inc_step.attr,
 	&pump_dec_step_at_min_freq.attr,
@@ -1096,6 +1125,7 @@ static void store_tunables_data(struct acgov_tunables *tunables,
 	ptunables->up_rate_limit_us = tunables->up_rate_limit_us;
 	ptunables->down_rate_limit_us = tunables->down_rate_limit_us;
 	ptunables->freq_responsiveness = tunables->freq_responsiveness;
+	ptunables->freq_responsiveness_index = tunables->freq_responsiveness_index;
 	ptunables->pump_inc_step_at_min_freq = tunables->pump_inc_step_at_min_freq;
 	ptunables->pump_dec_step_at_min_freq = tunables->pump_dec_step_at_min_freq;
 	ptunables->pump_inc_step = tunables->pump_inc_step;
@@ -1122,6 +1152,11 @@ static void get_tunables_data(struct acgov_tunables *tunables,
 		tunables->up_rate_limit_us = ptunables->up_rate_limit_us;
 		tunables->down_rate_limit_us = ptunables->down_rate_limit_us;
 		tunables->freq_responsiveness = ptunables->freq_responsiveness;
+		tunables->freq_responsiveness_index = ptunables->freq_responsiveness_index;
+		if (tunables->freq_responsiveness_index < 0) {
+			tunables->freq_responsiveness_index =
+				cpufreq_frequency_table_get_index(policy, tunables->freq_responsiveness);
+		}
 		tunables->pump_inc_step_at_min_freq = ptunables->pump_inc_step_at_min_freq;
 		tunables->pump_dec_step_at_min_freq = ptunables->pump_dec_step_at_min_freq;
 		tunables->pump_inc_step = ptunables->pump_inc_step;
@@ -1152,6 +1187,8 @@ initialize:
 		tunables->down_rate_limit_us *= lat;
 	}
 	tunables->freq_responsiveness = FREQ_RESPONSIVENESS;
+	tunables->freq_responsiveness_index =
+		cpufreq_frequency_table_get_index(policy, FREQ_RESPONSIVENESS);
 	tunables->pump_inc_step_at_min_freq = PUMP_INC_STEP_AT_MIN_FREQ;
 	tunables->pump_dec_step_at_min_freq = PUMP_DEC_STEP_AT_MIN_FREQ;
 	tunables->pump_inc_step = PUMP_INC_STEP;

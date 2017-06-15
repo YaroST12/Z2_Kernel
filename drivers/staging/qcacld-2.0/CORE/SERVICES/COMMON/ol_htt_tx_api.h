@@ -748,7 +748,7 @@ void
 htt_tx_desc_type(
     htt_pdev_handle pdev,
     void *htt_tx_desc,
-    enum wlan_frm_fmt type,
+    enum htt_pkt_type type,
     u_int8_t sub_type)
 {
     u_int32_t *word0;

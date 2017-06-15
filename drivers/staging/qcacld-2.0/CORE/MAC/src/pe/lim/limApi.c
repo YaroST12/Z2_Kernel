@@ -609,7 +609,7 @@ static tSirRetStatus __limInitConfig( tpAniSirGlobal pMac )
 */
 tSirRetStatus limStart(tpAniSirGlobal pMac)
 {
-   tSirResultCodes retCode = eSIR_SUCCESS;
+   tSirRetStatus retCode = eSIR_SUCCESS;
 
    PELOG1(limLog(pMac, LOG1, FL(" enter"));)
 

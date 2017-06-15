@@ -575,6 +575,7 @@ typedef enum
 typedef enum
 {
     eCSR_ROAM_RESULT_NONE,
+ 	eCSR_ROAM_RESULT_SUCCESS = eCSR_ROAM_RESULT_NONE,
     //this means no more action in CSR
     //If roamStatus is eCSR_ROAM_ASSOCIATION_COMPLETION, tCsrRoamInfo's pBssDesc may pass back
     eCSR_ROAM_RESULT_FAILURE,

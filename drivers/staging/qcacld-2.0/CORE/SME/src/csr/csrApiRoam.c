@@ -9205,7 +9205,7 @@ static void csrRoamRoamingStateReassocRspProcessor( tpAniSirGlobal pMac, tpSirSm
                     vos_mem_zero(&roamInfo, sizeof(tCsrRoamInfo));
                     csrRoamCallCallback(pMac, pSmeJoinRsp->sessionId, &roamInfo,
                                         roamId, eCSR_ROAM_FT_REASSOC_FAILED,
-                                        eSIR_SME_SUCCESS);
+                                        eCSR_ROAM_RESULT_SUCCESS);
                     /*
                      * Since the above callback sends a disconnect
                      * to HDD, we should clean-up our state
@@ -9468,7 +9468,7 @@ POST_ROAM_FAILURE:
         /* Inform the upper layers that the reassoc failed */
         vos_mem_zero(roam_info, sizeof(*roam_info));
         csrRoamCallCallback(pMac, sessionId,
-                roam_info, 0, eCSR_ROAM_FT_REASSOC_FAILED, eSIR_SME_SUCCESS);
+                roam_info, 0, eCSR_ROAM_FT_REASSOC_FAILED, eCSR_ROAM_RESULT_SUCCESS);
 
         /*
          * Issue a disassoc request so that PE/LIM uses this to clean-up the FT session.

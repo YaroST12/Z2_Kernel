@@ -5817,7 +5817,7 @@ void csrNeighborRoamRequestHandoff(tpAniSirGlobal pMac, tANI_U8 sessionId)
 
     vos_mem_zero(&roamInfo, sizeof(tCsrRoamInfo));
     csrRoamCallCallback(pMac, sessionId, &roamInfo, roamId, eCSR_ROAM_FT_START,
-                        eSIR_SME_SUCCESS);
+                        eCSR_ROAM_RESULT_SUCCESS);
 
     vos_mem_zero(&roamInfo, sizeof(tCsrRoamInfo));
     csr_neighbor_roam_state_transition(pMac,
@@ -6129,7 +6129,7 @@ eHalStatus csrNeighborRoamCandidateFoundIndHdlr(tpAniSirGlobal pMac, void* pMsg)
          * purge non-P2P results from the past */
         csrScanFlushSelectiveResult(pMac, VOS_FALSE);
         /* Once it gets the candidates found indication from PE, will issue
-         * a scan req to PE with “freshScan” in scanreq structure set
+         * a scan req to PE with \93freshScan\94 in scanreq structure set
          * as follows: 0x42 - Return & purge LFR scan results
          */
         status = csrScanRequestLfrResult(pMac, sessionId,

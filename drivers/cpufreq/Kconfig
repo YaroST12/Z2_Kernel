@@ -140,23 +140,23 @@ config CPU_FREQ_DEFAULT_GOV_PWRUTILX
 	  have a look at the help section of that governor. The fallback
 	  governor will be 'performance'.
 
-config CPU_FREQ_DEFAULT_GOV_ALUCARDSCHED
-	bool "alucardsched"
+config CPU_FREQ_DEFAULT_GOV_SCHEDALUCARD
+	bool "schedalucard"
 	depends on SMP
-	select CPU_FREQ_GOV_ALUCARDSCHED
+	select CPU_FREQ_GOV_SCHEDALUCARD
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
-	  Use the 'alucardsched' CPUFreq governor by default. If unsure,
+	  Use the 'schedalucard' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
 	  governor will be 'performance'.
 
-config CPU_FREQ_DEFAULT_GOV_DARKNESSSCHED
-	bool "darknesssched"
+config CPU_FREQ_DEFAULT_GOV_SCHEDDARKNESS
+	bool "scheddarkness"
 	depends on SMP
-	select CPU_FREQ_GOV_DARKNESSSCHED
+	select CPU_FREQ_GOV_SCHEDDARKNESS
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
-	  Use the 'darknesssched' CPUFreq governor by default. If unsure,
+	  Use the 'scheddarkness' CPUFreq governor by default. If unsure,
 	  have a look at the help section of that governor. The fallback
 	  governor will be 'performance'.
 
@@ -317,8 +317,8 @@ config CPU_FREQ_GOV_ALUCARD
 	tristate "'alucard' cpufreq governor"
 	depends on CPU_FREQ
 
-config CPU_FREQ_GOV_ALUCARDSCHED
-	bool "'alucardsched' cpufreq policy governor"
+config CPU_FREQ_GOV_SCHEDALUCARD
+	bool "'schedalucard' cpufreq policy governor"
 	depends on CPU_FREQ && SMP
 	select CPU_FREQ_GOV_ATTR_SET
 	select IRQ_WORK
@@ -334,8 +334,8 @@ config CPU_FREQ_GOV_ALUCARDSCHED
 
 	  If in doubt, say N.
 
-config CPU_FREQ_GOV_DARKNESSSCHED
-	bool "'darknesssched' cpufreq policy governor"
+config CPU_FREQ_GOV_SCHEDDARKNESS
+	bool "'scheddarkness' cpufreq policy governor"
 	depends on CPU_FREQ && SMP && MACH_MSM8996_H1
 	select CPU_FREQ_GOV_ATTR_SET
 	select IRQ_WORK

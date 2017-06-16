@@ -52,7 +52,7 @@ struct dkgov_tunables {
 	bool freq_responsiveness_jump;
 	unsigned int boost_perc;
 	bool iowait_boost_enable;
-	bool eval_busy_for_freq;
+	int eval_busy_for_freq;
 };
 
 struct dkgov_policy {
@@ -369,6 +369,8 @@ static void dkgov_update_single(struct update_util_data *hook, u64 time,
 	unsigned int next_f;
 	unsigned int freq_responsiveness =
 		sg_policy->tunables->freq_responsiveness;
+	unsigned int busy_freq = freq_responsiveness;
+	int eval_busy = sg_policy->tunables->eval_busy_for_freq;
 	bool busy = false;
 
 	dkgov_set_iowait_boost(sg_cpu, time, flags);
@@ -377,8 +379,11 @@ static void dkgov_update_single(struct update_util_data *hook, u64 time,
 	if (!dkgov_should_update_freq(sg_policy, time))
 		return;
 
-	if (sg_policy->tunables->eval_busy_for_freq)
+	if (eval_busy) {
 		busy = dkgov_cpu_is_busy(sg_cpu);
+		if (eval_busy > 1)
+			busy_freq = policy->cur;
+	}
 
 	if (flags & SCHED_CPUFREQ_DL) {
 		next_f = policy->cpuinfo.max_freq;
@@ -401,7 +406,7 @@ static void dkgov_update_single(struct update_util_data *hook, u64 time,
 		 * Do not reduce the frequency if the CPU has not been idle
 		 * recently, as the reduction is likely to be premature then.
 		 */
-		if (busy && next_f < policy->cur
+		if (busy && next_f < busy_freq
 			&& sg_policy->next_freq != UINT_MAX)
 			next_f = policy->cur;
 	}
@@ -707,12 +712,17 @@ static ssize_t eval_busy_for_freq_store(struct gov_attr_set *attr_set,
 					 const char *buf, size_t count)
 {
 	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
-	bool enable;
+	int input;
 
-	if (strtobool(buf, &enable))
+	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	tunables->eval_busy_for_freq = enable;
+	input = min(max(0, input), 2);
+
+	if (input == tunables->eval_busy_for_freq)
+		return count;
+
+	tunables->eval_busy_for_freq = input;
 
 	return count;
 }
@@ -888,7 +898,7 @@ initialize:
 	tunables->freq_responsiveness = FREQ_RESPONSIVENESS;
 	tunables->freq_responsiveness_jump = true;
 	tunables->boost_perc = BOOST_PERC;
-	tunables->eval_busy_for_freq = false;
+	tunables->eval_busy_for_freq = 0;
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:
 	return;

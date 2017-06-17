@@ -8358,8 +8358,13 @@ static int __migrate_task(struct task_struct *p, int src_cpu, int dest_cpu)
 	int ret = 0;
 	int check_groups;
 
-	if (unlikely(!cpu_active(dest_cpu)))
-		return ret;
+	if (p->flags & PF_KTHREAD) {
+		if (unlikely(!cpu_online(dest_cpu)))
+			return ret;
+	} else {
+		if (unlikely(!cpu_active(dest_cpu)))
+			return ret;
+	}
 
 	rq = cpu_rq(src_cpu);
 

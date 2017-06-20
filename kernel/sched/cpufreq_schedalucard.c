@@ -36,14 +36,14 @@ unsigned long boosted_cpu_util(int cpu);
 
 #ifdef CONFIG_MACH_MSM8996_H1
 #define UP_RATE_LIMIT_US			(1000)
-#define UP_RATE_LIMIT_US_BIGC		(2000)
-#define DOWN_RATE_LIMIT_US			(6000)
+#define UP_RATE_LIMIT_US_BIGC		(1000)
+#define DOWN_RATE_LIMIT_US			(1000)
 #define FREQ_RESPONSIVENESS			1113600
 #define PUMP_INC_STEP_AT_MIN_FREQ	3
 #define PUMP_INC_STEP				1
 #define PUMP_DEC_STEP_AT_MIN_FREQ	1
 #define PUMP_DEC_STEP				2
-#define BOOST_PERC					10
+#define BOOST_PERC					0
 #else
 #define LATENCY_MULTIPLIER			(2000)
 #define FREQ_RESPONSIVENESS			1113600

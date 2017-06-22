@@ -1146,7 +1146,7 @@ static ssize_t target_loads_store(struct gov_attr_set *attr_set,
 			spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 			return -EINVAL;
 		} else {
-			pr_info("CPU[%u], index[%d], val[%u]\n", tunables->cpu, i, tunables->target_loads[i]);
+			pr_debug("CPU[%u], index[%d], val[%u]\n", tunables->cpu, i, tunables->target_loads[i]);
 		}
 
 		cp = strpbrk(cp, ":");

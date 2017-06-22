@@ -35,23 +35,23 @@ unsigned long boosted_cpu_util(int cpu);
 #define ACGOV_KTHREAD_PRIORITY	50
 
 #ifdef CONFIG_MACH_MSM8996_H1
-#define UP_RATE_LIMIT_US			(1000)
+#define UP_RATE_LIMIT_US		(1000)
 #define UP_RATE_LIMIT_US_BIGC		(1000)
-#define DOWN_RATE_LIMIT_US			(1000)
-#define FREQ_RESPONSIVENESS			1113600
+#define DOWN_RATE_LIMIT_US		(1000)
+#define FREQ_RESPONSIVENESS		1113600
 #define PUMP_INC_STEP_AT_MIN_FREQ	3
-#define PUMP_INC_STEP				1
+#define PUMP_INC_STEP			1
 #define PUMP_DEC_STEP_AT_MIN_FREQ	1
-#define PUMP_DEC_STEP				2
-#define BOOST_PERC					0
+#define PUMP_DEC_STEP			2
+#define BOOST_PERC			0
 #else
-#define LATENCY_MULTIPLIER			(2000)
-#define FREQ_RESPONSIVENESS			1113600
+#define LATENCY_MULTIPLIER		(2000)
+#define FREQ_RESPONSIVENESS		1113600
 #define PUMP_INC_STEP_AT_MIN_FREQ	3
-#define PUMP_INC_STEP				1
+#define PUMP_INC_STEP			1
 #define PUMP_DEC_STEP_AT_MIN_FREQ	1
-#define PUMP_DEC_STEP				2
-#define BOOST_PERC					10
+#define PUMP_DEC_STEP			2
+#define BOOST_PERC			10
 #endif
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
@@ -75,12 +75,10 @@ struct acgov_tunables {
 	unsigned int boost_perc;
 	bool iowait_boost_enable;
 	int eval_busy_for_freq;
-#ifdef CONFIG_MACH_MSM8996_H1
-	bool use_battery_loads;
-	spinlock_t battery_loads_lock;
-	unsigned int *battery_loads;
-	int nbattery_loads;
-#endif
+	bool use_target_loads;
+	spinlock_t target_loads_lock;
+	unsigned int *target_loads;
+	int ntarget_loads;
 };
 
 struct acgov_policy {
@@ -129,9 +127,9 @@ struct acgov_cpu {
 static DEFINE_PER_CPU(struct acgov_cpu, acgov_cpu);
 static DEFINE_PER_CPU(struct acgov_tunables, cached_tunables);
 
+#define LITTLE_NFREQS			16
+#define BIG_NFREQS			25
 #ifdef CONFIG_MACH_MSM8996_H1
-#define LITTLE_NFREQS				16
-#define BIG_NFREQS					25
 static unsigned long little_capacity[LITTLE_NFREQS][2] = {
 	{0, 149},
 	{149, 205},
@@ -178,6 +176,7 @@ static unsigned long big_capacity[BIG_NFREQS][2] = {
 	{961, 988},
 	{988, 1024}
 };
+#endif
 
 /*
 freqs->loads: 	{307200, 71},
@@ -197,7 +196,7 @@ freqs->loads: 	{307200, 71},
 				{1478400, 99},
 				{1593600, 99}
 */
-static unsigned int little_battery_loads[LITTLE_NFREQS] = {
+static unsigned int little_target_loads[LITTLE_NFREQS] = {
 	71,
 	71,
 	71,
@@ -243,7 +242,7 @@ freqs->loads: 	{307200, 65},
 				{2073600, 99},
 				{2150400, 99}
 */
-static unsigned int big_battery_loads[BIG_NFREQS] = {
+static unsigned int big_target_loads[BIG_NFREQS] = {
 	65,
 	65,
 	65,
@@ -270,7 +269,6 @@ static unsigned int big_battery_loads[BIG_NFREQS] = {
 	99,
 	99
 };
-#endif
 
 /************************ Governor internals ***********************/
 
@@ -441,13 +439,12 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 	unsigned long cur_util =
 			util + ((util * tunables->boost_perc) / 100);
 	unsigned int cur_load =	(cur_util * 100) / max;
-	unsigned int up_load = 0, down_load = 200;
-	unsigned long flags;
 #else
-	unsigned int up_load = 0, down_load = 0;
 	unsigned int cur_load =
 		(util * (100 + tunables->boost_perc)) / max;
 #endif
+	unsigned int up_load = 0, down_load = 200;
+	unsigned long flags;
 	int fr_index = -1;
 #ifdef CONFIG_MSM_TRACK_FREQ_TARGET_INDEX
 	int index = policy->cur_index;
@@ -466,11 +463,11 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 	}
 #ifdef CONFIG_MACH_MSM8996_H1
 	get_target_capacity(policy->cpu, index, &down_cap, &up_cap);
-	if (tunables->use_battery_loads
-		&& tunables->battery_loads) {
-		spin_lock_irqsave(&tunables->battery_loads_lock, flags);
-		up_load = tunables->battery_loads[index];
-		spin_unlock_irqrestore(&tunables->battery_loads_lock, flags);
+	if (tunables->use_target_loads
+		&& tunables->target_loads) {
+		spin_lock_irqsave(&tunables->target_loads_lock, flags);
+		up_load = tunables->target_loads[index];
+		spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 		down_load = up_load;
 	}
 	if (cur_util >= up_cap
@@ -485,7 +482,15 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 			index, fr_index, pump_dec_step, false);
 	}
 #else
-	get_target_load(policy, index, &down_load, &up_load);
+	if (tunables->use_target_loads
+		&& tunables->target_loads) {
+		spin_lock_irqsave(&tunables->target_loads_lock, flags);
+		up_load = tunables->target_loads[index];
+		spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
+		down_load = up_load;
+	} else {
+		get_target_load(policy, index, &down_load, &up_load);
+	}
 	if (cur_load >= up_load
 		&& policy->cur < policy->max) {
 		next_freq = resolve_target_freq(policy,
@@ -847,18 +852,17 @@ static ssize_t eval_busy_for_freq_show(struct gov_attr_set *attr_set,
 	return sprintf(buf, "%u\n", tunables->eval_busy_for_freq);
 }
 
-#ifdef CONFIG_MACH_MSM8996_H1
-/* use_battery_loads */
-static ssize_t use_battery_loads_show(struct gov_attr_set *attr_set,
+/* use_target_loads */
+static ssize_t use_target_loads_show(struct gov_attr_set *attr_set,
 					char *buf)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
 
-	return sprintf(buf, "%u\n", tunables->use_battery_loads);
+	return sprintf(buf, "%u\n", tunables->use_target_loads);
 }
 
-/* battery_loads */
-static ssize_t battery_loads_show(struct gov_attr_set *attr_set,
+/* target_loads */
+static ssize_t target_loads_show(struct gov_attr_set *attr_set,
 					char *buf)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
@@ -866,20 +870,19 @@ static ssize_t battery_loads_show(struct gov_attr_set *attr_set,
 	ssize_t ret = 0;
 	unsigned long flags;
 
-	if (!tunables->battery_loads)
+	if (!tunables->target_loads)
 		return -EINVAL;
 
-	spin_lock_irqsave(&tunables->battery_loads_lock, flags);
-	for (i = 0; i < tunables->nbattery_loads; i++)
-		ret += sprintf(buf + ret, "%u%s", tunables->battery_loads[i],
+	spin_lock_irqsave(&tunables->target_loads_lock, flags);
+	for (i = 0; i < tunables->ntarget_loads; i++)
+		ret += sprintf(buf + ret, "%u%s", tunables->target_loads[i],
 			       ":");
-	spin_unlock_irqrestore(&tunables->battery_loads_lock, flags);
+	spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 
 	sprintf(buf + ret - 1, "\n");
 
 	return ret;
 }
-#endif
 
 /* up_rate_limit_us */
 static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
@@ -1102,9 +1105,8 @@ static ssize_t eval_busy_for_freq_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
-#ifdef CONFIG_MACH_MSM8996_H1
-/* use_battery_loads */
-static ssize_t use_battery_loads_store(struct gov_attr_set *attr_set,
+/* use_target_loads */
+static ssize_t use_target_loads_store(struct gov_attr_set *attr_set,
 					 const char *buf, size_t count)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
@@ -1113,12 +1115,12 @@ static ssize_t use_battery_loads_store(struct gov_attr_set *attr_set,
 	if (strtobool(buf, &enable))
 		return -EINVAL;
 
-	tunables->use_battery_loads = enable;
+	tunables->use_target_loads = enable;
 
 	return count;
 }
 
-static ssize_t battery_loads_store(struct gov_attr_set *attr_set,
+static ssize_t target_loads_store(struct gov_attr_set *attr_set,
 					 const char *buf, size_t count)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
@@ -1127,22 +1129,22 @@ static ssize_t battery_loads_store(struct gov_attr_set *attr_set,
 	int ntokens = 1;
 	unsigned long flags;
 
-	if (!tunables->battery_loads)
+	if (!tunables->target_loads)
 		return -EINVAL;
 
 	cp = buf;
 	while ((cp = strpbrk(cp + 1, ":")))
 		ntokens++;
 
-	if (ntokens != tunables->nbattery_loads)
+	if (ntokens != tunables->ntarget_loads)
 		return -EINVAL;
 
 	cp = buf;
 	i = 0;
-	spin_lock_irqsave(&tunables->battery_loads_lock, flags);
+	spin_lock_irqsave(&tunables->target_loads_lock, flags);
 	while (i < ntokens) {
-		if (sscanf(cp, "%u", &tunables->battery_loads[i++]) != 1) {
-			spin_unlock_irqrestore(&tunables->battery_loads_lock, flags);
+		if (sscanf(cp, "%u", &tunables->target_loads[i++]) != 1) {
+			spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 			return -EINVAL;
 		}
 
@@ -1151,11 +1153,10 @@ static ssize_t battery_loads_store(struct gov_attr_set *attr_set,
 			break;
 		cp++;
 	}
-	spin_unlock_irqrestore(&tunables->battery_loads_lock, flags);
+	spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 
 	return count;
 }
-#endif
 
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
@@ -1169,10 +1170,8 @@ static struct governor_attr pump_dec_step = __ATTR_RW(pump_dec_step);
 static struct governor_attr boost_perc = __ATTR_RW(boost_perc);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
-#ifdef CONFIG_MACH_MSM8996_H1
-static struct governor_attr use_battery_loads = __ATTR_RW(use_battery_loads);
-static struct governor_attr battery_loads = __ATTR_RW(battery_loads);
-#endif
+static struct governor_attr use_target_loads = __ATTR_RW(use_target_loads);
+static struct governor_attr target_loads = __ATTR_RW(target_loads);
 
 static struct attribute *acgov_attributes[] = {
 	&up_rate_limit_us.attr,
@@ -1187,10 +1186,8 @@ static struct attribute *acgov_attributes[] = {
 	&boost_perc.attr,
 	&iowait_boost_enable.attr,
 	&eval_busy_for_freq.attr,
-#ifdef CONFIG_MACH_MSM8996_H1
-	&use_battery_loads.attr,
-	&battery_loads.attr,
-#endif
+	&use_target_loads.attr,
+	&target_loads.attr,
 	NULL
 };
 
@@ -1314,10 +1311,8 @@ static void store_tunables_data(struct acgov_tunables *tunables,
 	ptunables->boost_perc = tunables->boost_perc;
 	ptunables->iowait_boost_enable = tunables->iowait_boost_enable;
 	ptunables->eval_busy_for_freq = tunables->eval_busy_for_freq;
-#ifdef CONFIG_MACH_MSM8996_H1
-	ptunables->use_battery_loads = tunables->use_battery_loads;
-	tunables->battery_loads = NULL;
-#endif
+	ptunables->use_target_loads = tunables->use_target_loads;
+	tunables->target_loads = NULL;
 	pr_debug("tunables data saved for cpu[%u]\n", cpu);
 }
 
@@ -1333,6 +1328,14 @@ static void get_tunables_data(struct acgov_tunables *tunables,
 		goto initialize;
 
 	tunables->cpu = cpu;
+	if (cpu < 2) {
+		tunables->target_loads = little_target_loads;
+		tunables->ntarget_loads = LITTLE_NFREQS;
+	} else {
+		tunables->target_loads = big_target_loads;
+		tunables->ntarget_loads = BIG_NFREQS;
+	}
+	spin_lock_init(&tunables->target_loads_lock);
 	if (ptunables->freq_responsiveness > 0) {
 		tunables->up_rate_limit_us = ptunables->up_rate_limit_us;
 		tunables->down_rate_limit_us = ptunables->down_rate_limit_us;
@@ -1350,9 +1353,7 @@ static void get_tunables_data(struct acgov_tunables *tunables,
 		tunables->boost_perc = ptunables->boost_perc;
 		tunables->iowait_boost_enable = ptunables->iowait_boost_enable;
 		tunables->eval_busy_for_freq = ptunables->eval_busy_for_freq;
-#ifdef CONFIG_MACH_MSM8996_H1
-		tunables->use_battery_loads = ptunables->use_battery_loads;
-#endif
+		tunables->use_target_loads = ptunables->use_target_loads;
 		pr_debug("tunables data restored for cpu[%u]\n", cpu);
 		goto out;
 	}
@@ -1386,16 +1387,6 @@ initialize:
 	tunables->eval_busy_for_freq = 0;
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:
-#ifdef CONFIG_MACH_MSM8996_H1
-	if (cpu < 2) {
-		tunables->battery_loads = little_battery_loads;
-		tunables->nbattery_loads = LITTLE_NFREQS;
-	} else {
-		tunables->battery_loads = big_battery_loads;
-		tunables->nbattery_loads = BIG_NFREQS;
-	}
-	spin_lock_init(&tunables->battery_loads_lock);
-#endif
 	return;
 }
 

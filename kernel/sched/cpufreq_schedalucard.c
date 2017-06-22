@@ -1140,12 +1140,13 @@ static ssize_t target_loads_store(struct gov_attr_set *attr_set,
 		return -EINVAL;
 
 	cp = buf;
-	i = 0;
 	spin_lock_irqsave(&tunables->target_loads_lock, flags);
-	while (i < ntokens) {
-		if (sscanf(cp, "%u", &tunables->target_loads[i++]) != 1) {
+	for (i = 0; i < ntokens; i++) {
+		if (sscanf(cp, "%u", &tunables->target_loads[i]) != 1) {
 			spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 			return -EINVAL;
+		} else {
+			pr_info("CPU[%u], index[%d], val[%u]\n", tunables->cpu, i, tunables->target_loads[i]);
 		}
 
 		cp = strpbrk(cp, ":");

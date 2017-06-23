@@ -767,3 +767,5 @@ config SENSORS_HALL
 	  module will be called CM36283.
 
 endif
+
+source "drivers/input/misc/vibrator/Kconfig"

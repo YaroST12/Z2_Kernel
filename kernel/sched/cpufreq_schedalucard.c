@@ -69,10 +69,10 @@ struct acgov_tunables {
 	unsigned long *up_target_capacity;
 	unsigned long *down_target_capacity;
 	int ntarget_capacity;
-	spinlock_t frequency_delay_lock;
-	unsigned int *up_frequency_delay;
-	unsigned int *down_frequency_delay;
-	int nfrequency_delay;
+	spinlock_t target_frequency_delay_lock;
+	unsigned int *up_target_frequency_delay;
+	unsigned int *down_target_frequency_delay;
+	int ntarget_frequency_delay;
 };
 
 struct acgov_policy {
@@ -218,7 +218,7 @@ static unsigned long big_down_target_capacity[BIG_NFREQS] = {
 	988
 };
 
-static unsigned int little_up_frequency_delay[LITTLE_NFREQS] = {
+static unsigned int little_up_target_frequency_delay[LITTLE_NFREQS] = {
 	0,
 	0,
 	0,
@@ -237,7 +237,7 @@ static unsigned int little_up_frequency_delay[LITTLE_NFREQS] = {
 	0
 };
 
-static unsigned int little_down_frequency_delay[LITTLE_NFREQS] = {
+static unsigned int little_down_target_frequency_delay[LITTLE_NFREQS] = {
 	0,
 	0,
 	0,
@@ -256,7 +256,7 @@ static unsigned int little_down_frequency_delay[LITTLE_NFREQS] = {
 	0
 };
 
-static unsigned int big_up_frequency_delay[BIG_NFREQS] = {
+static unsigned int big_up_target_frequency_delay[BIG_NFREQS] = {
 	0,
 	0,
 	0,
@@ -284,7 +284,7 @@ static unsigned int big_up_frequency_delay[BIG_NFREQS] = {
 	0
 };
 
-static unsigned int big_down_frequency_delay[BIG_NFREQS] = {
+static unsigned int big_down_target_frequency_delay[BIG_NFREQS] = {
 	0,
 	0,
 	0,
@@ -343,7 +343,7 @@ static bool acgov_up_down_rate_limit(struct acgov_policy *sg_policy, u64 time,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	struct acgov_tunables *tunables = sg_policy->tunables;
 	s64 delta_ns;
-	s64 up_frequency_delay_ns = 0, down_frequency_delay_ns = 0;
+	s64 up_target_frequency_delay_ns = 0, down_target_frequency_delay_ns = 0;
 	unsigned long flags;
 #ifdef CONFIG_MSM_TRACK_FREQ_TARGET_INDEX
 	int index = policy->cur_index;
@@ -357,22 +357,22 @@ static bool acgov_up_down_rate_limit(struct acgov_policy *sg_policy, u64 time,
 		if (delta_ns < DEFAULT_RATE_LIMIT_SUSP_NS)
 			return true;
 	} else if (index >= 0
-				&& tunables->up_frequency_delay
-				&& tunables->down_frequency_delay) {
-		spin_lock_irqsave(&tunables->frequency_delay_lock, flags);
-		up_frequency_delay_ns =
-			tunables->up_frequency_delay[index] * NSEC_PER_USEC;
-		down_frequency_delay_ns =
-			tunables->down_frequency_delay[index] * NSEC_PER_USEC;
-		spin_unlock_irqrestore(&tunables->frequency_delay_lock, flags);
+				&& tunables->up_target_frequency_delay
+				&& tunables->down_target_frequency_delay) {
+		spin_lock_irqsave(&tunables->target_frequency_delay_lock, flags);
+		up_target_frequency_delay_ns =
+			tunables->up_target_frequency_delay[index] * NSEC_PER_USEC;
+		down_target_frequency_delay_ns =
+			tunables->down_target_frequency_delay[index] * NSEC_PER_USEC;
+		spin_unlock_irqrestore(&tunables->target_frequency_delay_lock, flags);
 	}
 #endif
 	if (next_freq > sg_policy->next_freq &&
-	    delta_ns < (sg_policy->up_rate_delay_ns + up_frequency_delay_ns))
+	    delta_ns < (sg_policy->up_rate_delay_ns + up_target_frequency_delay_ns))
 			return true;
 
 	if (next_freq < sg_policy->next_freq &&
-	    delta_ns < (sg_policy->down_rate_delay_ns + down_frequency_delay_ns))
+	    delta_ns < (sg_policy->down_rate_delay_ns + down_target_frequency_delay_ns))
 			return true;
 
 	return false;
@@ -896,8 +896,8 @@ static ssize_t down_target_capacity_show(struct gov_attr_set *attr_set,
 	return ret;
 }
 
-/* up_frequency_delay */
-static ssize_t up_frequency_delay_show(struct gov_attr_set *attr_set,
+/* up_target_frequency_delay */
+static ssize_t up_target_frequency_delay_show(struct gov_attr_set *attr_set,
 					char *buf)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
@@ -905,22 +905,22 @@ static ssize_t up_frequency_delay_show(struct gov_attr_set *attr_set,
 	ssize_t ret = 0;
 	unsigned long flags;
 
-	if (!tunables->up_frequency_delay)
+	if (!tunables->up_target_frequency_delay)
 		return -EINVAL;
 
-	spin_lock_irqsave(&tunables->frequency_delay_lock, flags);
-	for (i = 0; i < tunables->nfrequency_delay; i++)
-		ret += sprintf(buf + ret, "%u%s", tunables->up_frequency_delay[i],
+	spin_lock_irqsave(&tunables->target_frequency_delay_lock, flags);
+	for (i = 0; i < tunables->ntarget_frequency_delay; i++)
+		ret += sprintf(buf + ret, "%u%s", tunables->up_target_frequency_delay[i],
 			       ":");
-	spin_unlock_irqrestore(&tunables->frequency_delay_lock, flags);
+	spin_unlock_irqrestore(&tunables->target_frequency_delay_lock, flags);
 
 	sprintf(buf + ret - 1, "\n");
 
 	return ret;
 }
 
-/* down_frequency_delay */
-static ssize_t down_frequency_delay_show(struct gov_attr_set *attr_set,
+/* down_target_frequency_delay */
+static ssize_t down_target_frequency_delay_show(struct gov_attr_set *attr_set,
 					char *buf)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
@@ -928,14 +928,14 @@ static ssize_t down_frequency_delay_show(struct gov_attr_set *attr_set,
 	ssize_t ret = 0;
 	unsigned long flags;
 
-	if (!tunables->down_frequency_delay)
+	if (!tunables->down_target_frequency_delay)
 		return -EINVAL;
 
-	spin_lock_irqsave(&tunables->frequency_delay_lock, flags);
-	for (i = 0; i < tunables->nfrequency_delay; i++)
-		ret += sprintf(buf + ret, "%u%s", tunables->down_frequency_delay[i],
+	spin_lock_irqsave(&tunables->target_frequency_delay_lock, flags);
+	for (i = 0; i < tunables->ntarget_frequency_delay; i++)
+		ret += sprintf(buf + ret, "%u%s", tunables->down_target_frequency_delay[i],
 			       ":");
-	spin_unlock_irqrestore(&tunables->frequency_delay_lock, flags);
+	spin_unlock_irqrestore(&tunables->target_frequency_delay_lock, flags);
 
 	sprintf(buf + ret - 1, "\n");
 
@@ -1243,8 +1243,8 @@ static ssize_t down_target_capacity_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
-/* up_frequency_delay */
-static ssize_t up_frequency_delay_store(struct gov_attr_set *attr_set,
+/* up_target_frequency_delay */
+static ssize_t up_target_frequency_delay_store(struct gov_attr_set *attr_set,
 					 const char *buf, size_t count)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
@@ -1253,24 +1253,24 @@ static ssize_t up_frequency_delay_store(struct gov_attr_set *attr_set,
 	int ntokens = 1;
 	unsigned long flags;
 
-	if (!tunables->up_frequency_delay)
+	if (!tunables->up_target_frequency_delay)
 		return -EINVAL;
 
 	cp = buf;
 	while ((cp = strpbrk(cp + 1, ":")))
 		ntokens++;
 
-	if (ntokens != tunables->nfrequency_delay)
+	if (ntokens != tunables->ntarget_frequency_delay)
 		return -EINVAL;
 
 	cp = buf;
-	spin_lock_irqsave(&tunables->frequency_delay_lock, flags);
+	spin_lock_irqsave(&tunables->target_frequency_delay_lock, flags);
 	for (i = 0; i < ntokens; i++) {
-		if (sscanf(cp, "%u", &tunables->up_frequency_delay[i]) != 1) {
-			spin_unlock_irqrestore(&tunables->frequency_delay_lock, flags);
+		if (sscanf(cp, "%u", &tunables->up_target_frequency_delay[i]) != 1) {
+			spin_unlock_irqrestore(&tunables->target_frequency_delay_lock, flags);
 			return -EINVAL;
 		} else {
-			pr_debug("CPU[%u], index[%d], val[%u]\n", tunables->cpu, i, tunables->up_frequency_delay[i]);
+			pr_debug("CPU[%u], index[%d], val[%u]\n", tunables->cpu, i, tunables->up_target_frequency_delay[i]);
 		}
 
 		cp = strpbrk(cp, ":");
@@ -1278,13 +1278,13 @@ static ssize_t up_frequency_delay_store(struct gov_attr_set *attr_set,
 			break;
 		cp++;
 	}
-	spin_unlock_irqrestore(&tunables->frequency_delay_lock, flags);
+	spin_unlock_irqrestore(&tunables->target_frequency_delay_lock, flags);
 
 	return count;
 }
 
-/* down_frequency_delay */
-static ssize_t down_frequency_delay_store(struct gov_attr_set *attr_set,
+/* down_target_frequency_delay */
+static ssize_t down_target_frequency_delay_store(struct gov_attr_set *attr_set,
 					 const char *buf, size_t count)
 {
 	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
@@ -1293,24 +1293,24 @@ static ssize_t down_frequency_delay_store(struct gov_attr_set *attr_set,
 	int ntokens = 1;
 	unsigned long flags;
 
-	if (!tunables->down_frequency_delay)
+	if (!tunables->down_target_frequency_delay)
 		return -EINVAL;
 
 	cp = buf;
 	while ((cp = strpbrk(cp + 1, ":")))
 		ntokens++;
 
-	if (ntokens != tunables->nfrequency_delay)
+	if (ntokens != tunables->ntarget_frequency_delay)
 		return -EINVAL;
 
 	cp = buf;
-	spin_lock_irqsave(&tunables->frequency_delay_lock, flags);
+	spin_lock_irqsave(&tunables->target_frequency_delay_lock, flags);
 	for (i = 0; i < ntokens; i++) {
-		if (sscanf(cp, "%u", &tunables->down_frequency_delay[i]) != 1) {
-			spin_unlock_irqrestore(&tunables->frequency_delay_lock, flags);
+		if (sscanf(cp, "%u", &tunables->down_target_frequency_delay[i]) != 1) {
+			spin_unlock_irqrestore(&tunables->target_frequency_delay_lock, flags);
 			return -EINVAL;
 		} else {
-			pr_debug("CPU[%u], index[%d], val[%u]\n", tunables->cpu, i, tunables->down_frequency_delay[i]);
+			pr_debug("CPU[%u], index[%d], val[%u]\n", tunables->cpu, i, tunables->down_target_frequency_delay[i]);
 		}
 
 		cp = strpbrk(cp, ":");
@@ -1318,7 +1318,7 @@ static ssize_t down_frequency_delay_store(struct gov_attr_set *attr_set,
 			break;
 		cp++;
 	}
-	spin_unlock_irqrestore(&tunables->frequency_delay_lock, flags);
+	spin_unlock_irqrestore(&tunables->target_frequency_delay_lock, flags);
 
 	return count;
 }
@@ -1337,8 +1337,8 @@ static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable)
 static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
 static struct governor_attr up_target_capacity = __ATTR_RW(up_target_capacity);
 static struct governor_attr down_target_capacity = __ATTR_RW(down_target_capacity);
-static struct governor_attr up_frequency_delay = __ATTR_RW(up_frequency_delay);
-static struct governor_attr down_frequency_delay = __ATTR_RW(down_frequency_delay);
+static struct governor_attr up_target_frequency_delay = __ATTR_RW(up_target_frequency_delay);
+static struct governor_attr down_target_frequency_delay = __ATTR_RW(down_target_frequency_delay);
 
 static struct attribute *acgov_attributes[] = {
 	&up_rate_limit_us.attr,
@@ -1355,8 +1355,8 @@ static struct attribute *acgov_attributes[] = {
 	&eval_busy_for_freq.attr,
 	&up_target_capacity.attr,
 	&down_target_capacity.attr,
-	&up_frequency_delay.attr,
-	&down_frequency_delay.attr,
+	&up_target_frequency_delay.attr,
+	&down_target_frequency_delay.attr,
 	NULL
 };
 
@@ -1482,8 +1482,8 @@ static void store_tunables_data(struct acgov_tunables *tunables,
 	ptunables->eval_busy_for_freq = tunables->eval_busy_for_freq;
 	tunables->up_target_capacity = NULL;
 	tunables->down_target_capacity = NULL;
-	tunables->up_frequency_delay = NULL;
-	tunables->down_frequency_delay = NULL;
+	tunables->up_target_frequency_delay = NULL;
+	tunables->down_target_frequency_delay = NULL;
 	pr_debug("tunables data saved for cpu[%u]\n", cpu);
 }
 
@@ -1503,19 +1503,19 @@ static void get_tunables_data(struct acgov_tunables *tunables,
 		tunables->up_target_capacity = little_up_target_capacity;
 		tunables->down_target_capacity = little_down_target_capacity;
 		tunables->ntarget_capacity = LITTLE_NFREQS;
-		tunables->up_frequency_delay = little_up_frequency_delay;
-		tunables->down_frequency_delay = little_down_frequency_delay;
-		tunables->nfrequency_delay = LITTLE_NFREQS;
+		tunables->up_target_frequency_delay = little_up_target_frequency_delay;
+		tunables->down_target_frequency_delay = little_down_target_frequency_delay;
+		tunables->ntarget_frequency_delay = LITTLE_NFREQS;
 	} else {
 		tunables->up_target_capacity = big_up_target_capacity;
 		tunables->down_target_capacity = big_down_target_capacity;
 		tunables->ntarget_capacity = BIG_NFREQS;
-		tunables->up_frequency_delay = big_up_frequency_delay;
-		tunables->down_frequency_delay = big_down_frequency_delay;
-		tunables->nfrequency_delay = BIG_NFREQS;
+		tunables->up_target_frequency_delay = big_up_target_frequency_delay;
+		tunables->down_target_frequency_delay = big_down_target_frequency_delay;
+		tunables->ntarget_frequency_delay = BIG_NFREQS;
 	}
 	spin_lock_init(&tunables->target_capacity_lock);
-	spin_lock_init(&tunables->frequency_delay_lock);
+	spin_lock_init(&tunables->target_frequency_delay_lock);
 	if (ptunables->freq_responsiveness > 0) {
 		tunables->up_rate_limit_us = ptunables->up_rate_limit_us;
 		tunables->down_rate_limit_us = ptunables->down_rate_limit_us;

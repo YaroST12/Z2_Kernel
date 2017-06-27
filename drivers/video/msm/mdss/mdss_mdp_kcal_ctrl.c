@@ -538,9 +538,9 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 	lut_data->val = DEF_PA;
 	lut_data->cont = DEF_PA;
 
-	mdss_mdp_kcal_update_pcc(lut_data);
-	mdss_mdp_kcal_update_pa(lut_data);
-	mdss_mdp_kcal_update_igc(lut_data);
+	//mdss_mdp_kcal_update_pcc(lut_data);
+	//mdss_mdp_kcal_update_pa(lut_data);
+	//mdss_mdp_kcal_update_igc(lut_data);
 	mdss_mdp_kcal_display_commit();
 
 	ret = device_create_file(&pdev->dev, &dev_attr_kcal);

@@ -10149,7 +10149,7 @@ int wlan_hdd_setIPv6Filter(hdd_context_t *pHddCtx, tANI_U8 filterType,
     case HDD_FILTER_IPV6_MC_UC:
         /* Setting IPV6 MC Filter below
          */
-        packetFilterSetReq.filterType = HDD_RCV_FILTER_SET;
+        packetFilterSetReq.filterType = SIR_RCV_FILTER_TYPE_FILTER_PKT;
         packetFilterSetReq.filterId = HDD_FILTER_ID_IPV6_MC;
         packetFilterSetReq.numFieldParams = 2;
         packetFilterSetReq.paramsData[0].protocolLayer =
@@ -10188,7 +10188,7 @@ int wlan_hdd_setIPv6Filter(hdd_context_t *pHddCtx, tANI_U8 filterType,
         /*
          * Setting IPV6 UC Filter below
          */
-        packetFilterSetReq.filterType = HDD_RCV_FILTER_SET;
+        packetFilterSetReq.filterType = SIR_RCV_FILTER_TYPE_FILTER_PKT;
         packetFilterSetReq.filterId = HDD_FILTER_ID_IPV6_UC;
         packetFilterSetReq.numFieldParams = 2;
         packetFilterSetReq.paramsData[0].protocolLayer =
@@ -10228,7 +10228,7 @@ int wlan_hdd_setIPv6Filter(hdd_context_t *pHddCtx, tANI_U8 filterType,
          * clear the UC Filter. As the Filter
          * IDs are static, we can directly clear it.
          */
-        packetFilterSetReq.filterType = HDD_RCV_FILTER_SET;
+        packetFilterSetReq.filterType = SIR_RCV_FILTER_TYPE_FILTER_PKT;
         packetFilterClrReq.filterId = HDD_FILTER_ID_IPV6_UC;
         if (eHAL_STATUS_SUCCESS != sme_ReceiveFilterClearFilter(pHddCtx->hHal,
                                     &packetFilterClrReq, sessionId))

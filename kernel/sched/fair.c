@@ -5377,7 +5377,7 @@ static inline int __energy_diff(struct energy_env *eenv)
 	 * Dead-zone margin preventing too many migrations.
 	 */
 
-	margin = eenv->nrg.before >> 4; /* ~6.4% */
+	margin = eenv->nrg.before >> 5; /* ~3.1% */
 
 	diff = eenv->nrg.after - eenv->nrg.before;
 

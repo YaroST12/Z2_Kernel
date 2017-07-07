@@ -42,7 +42,7 @@ unsigned long boosted_cpu_util(int cpu);
 #define PUMP_INC_STEP			1
 #define PUMP_DEC_STEP_AT_MIN_FREQ	1
 #define PUMP_DEC_STEP			1
-#define BOOST_PERC			0
+#define BOOST_PERC			100
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
 #endif
@@ -460,12 +460,11 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 	struct acgov_tunables *tunables = sg_policy->tunables;
 	int pump_inc_step = tunables->pump_inc_step;
 	int pump_dec_step = tunables->pump_dec_step;
-	unsigned int next_freq = CPUFREQ_ENTRY_INVALID;
 	unsigned long down_cap = 0, up_cap = 0;
-	unsigned long cur_util =
-		util + ((util * tunables->boost_perc) / 100);
+	unsigned long cur_util = ((util * tunables->boost_perc) / 100);
 	unsigned long flags;
 	int fr_index = -1;
+	unsigned int next_freq = policy->cur;
 #ifdef CONFIG_MSM_TRACK_FREQ_TARGET_INDEX
 	int index = policy->cur_index;
 #else
@@ -474,7 +473,6 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 	if (index < 0)
 		goto skip;
 #endif
-
 	if (policy->cur < tunables->freq_responsiveness) {
 		pump_inc_step = tunables->pump_inc_step_at_min_freq;
 		pump_dec_step = tunables->pump_dec_step_at_min_freq;
@@ -1118,7 +1116,7 @@ static ssize_t boost_perc_store(struct gov_attr_set *attr_set,
 	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	input = min(max(0, input), 20);
+	input = min(max(150, input), 100);
 
 	if (input == tunables->boost_perc)
 		return count;

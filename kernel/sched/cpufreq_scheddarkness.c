@@ -36,7 +36,7 @@ unsigned long boosted_cpu_util(int cpu);
 #define DKGOV_KTHREAD_PRIORITY	50
 
 #define FREQ_RESPONSIVENESS			1113600
-#define BOOST_PERC					0
+#define BOOST_PERC					100
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
 #endif
@@ -48,11 +48,16 @@ struct dkgov_tunables {
 	/*
 	 * CPUs frequency scaling
 	 */
+	unsigned int cpu;
 	int freq_responsiveness;
 	bool freq_responsiveness_jump;
 	unsigned int boost_perc;
 	bool iowait_boost_enable;
 	int eval_busy_for_freq;
+	spinlock_t target_capacity_lock;
+	unsigned long *up_target_capacity;
+	unsigned long *down_target_capacity;
+	int ntarget_capacity;
 };
 
 struct dkgov_policy {
@@ -103,7 +108,27 @@ static DEFINE_PER_CPU(struct dkgov_tunables, cached_tunables);
 
 #define LITTLE_NFREQS				16
 #define BIG_NFREQS					25
-static unsigned long little_capacity[LITTLE_NFREQS] = {
+
+static unsigned long little_up_target_capacity[LITTLE_NFREQS] = {
+	149,
+	205,
+	229,
+	253,
+	296,
+	350,
+	406,
+	469,
+	491,
+	527,
+	572,
+	584,
+	630,
+	666,
+	711,
+	763
+};
+
+static unsigned long little_down_target_capacity[LITTLE_NFREQS] = {
 	0,
 	149,
 	205,
@@ -122,7 +147,35 @@ static unsigned long little_capacity[LITTLE_NFREQS] = {
 	711
 };
 
-static unsigned long big_capacity[BIG_NFREQS] = {
+static unsigned long big_up_target_capacity[BIG_NFREQS] = {
+	149,
+	197,
+	229,
+	253,
+	296,
+	350,
+	372,
+	400,
+	445,
+	495,
+	527,
+	572,
+	598,
+	630,
+	666,
+	711,
+	743,
+	780,
+	812,
+	850,
+	868,
+	914,
+	961,
+	988,
+	1024
+};
+
+static unsigned long big_down_target_capacity[BIG_NFREQS] = {
 	0,
 	149,
 	197,
@@ -225,39 +278,6 @@ static void dkgov_update_commit(struct dkgov_policy *sg_policy, u64 time,
 	}
 }
 
-static unsigned int resolve_target_freq(struct cpufreq_policy *policy,
-					unsigned long util)
-{
-	struct cpufreq_frequency_table *table;
-	unsigned int target_freq = policy->cur;
-	int i = 0;
-
-	if (!policy)
-		return CPUFREQ_ENTRY_INVALID;
-
-	table = policy->freq_table;
-	if (policy->cpu < 2) {
-		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-			if (table[i].frequency == CPUFREQ_ENTRY_INVALID
-				|| i >= LITTLE_NFREQS)
-				continue;
-			if (util < little_capacity[i])
-				break;
-			target_freq = table[i].frequency;
-		}
-	} else {
-		for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-			if (table[i].frequency == CPUFREQ_ENTRY_INVALID
-				|| i >= BIG_NFREQS)
-				continue;
-			if (util < big_capacity[i])
-				break;
-			target_freq = table[i].frequency;
-		}
-	}
-	return target_freq;
-}
-
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.
  * @sg_policy: scheddarkness policy object to compute the new frequency for.
@@ -273,10 +293,51 @@ static unsigned int get_next_freq(struct dkgov_policy *sg_policy, unsigned long 
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
 	struct dkgov_tunables *tunables = sg_policy->tunables;
-	unsigned long cur_util =
-			util + ((util * tunables->boost_perc) / 100);
+	struct cpufreq_frequency_table *table = policy->freq_table;
+	unsigned long cur_util = ((util * tunables->boost_perc) / 100);
+	unsigned long flags;
+	int i = 0;
+	unsigned int next_freq = policy->cur;
+#ifdef CONFIG_MSM_TRACK_FREQ_TARGET_INDEX
+	int index = policy->cur_index;
+#else
+	int index = cpufreq_frequency_table_get_index(policy, policy->cur);
 
-	return resolve_target_freq(policy, cur_util);
+	if (index < 0)
+		goto skip;
+#endif
+	if (!tunables->up_target_capacity
+		|| !tunables->down_target_capacity)
+		return next_freq;
+
+	spin_lock_irqsave(&tunables->target_capacity_lock, flags);
+	if (cur_util >= tunables->up_target_capacity[index]) {
+		for (i = index + 1; i < tunables->ntarget_capacity; i++) {
+			if (table[i].frequency == CPUFREQ_ENTRY_INVALID)
+				continue;
+
+			next_freq = table[i].frequency;
+
+			if (cur_util <= tunables->up_target_capacity[i])
+				break;
+		}
+	} else if (cur_util < tunables->down_target_capacity[index]) {
+		for (i = index - 1; i >= 0; i--) {
+			if (table[i].frequency == CPUFREQ_ENTRY_INVALID)
+				continue;
+
+			next_freq = table[i].frequency;
+
+			if (cur_util >= tunables->down_target_capacity[i])
+				break;
+		}
+	}
+	spin_unlock_irqrestore(&tunables->target_capacity_lock, flags);
+
+#ifndef CONFIG_MSM_TRACK_FREQ_TARGET_INDEX
+skip:
+#endif
+	return next_freq;
 }
 
 static inline bool use_pelt(void)
@@ -597,6 +658,52 @@ static ssize_t eval_busy_for_freq_show(struct gov_attr_set *attr_set,
 	return sprintf(buf, "%u\n", tunables->eval_busy_for_freq);
 }
 
+/* up_target_capacity */
+static ssize_t up_target_capacity_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+	int i;
+	ssize_t ret = 0;
+	unsigned long flags;
+
+	if (!tunables->up_target_capacity)
+		return -EINVAL;
+
+	spin_lock_irqsave(&tunables->target_capacity_lock, flags);
+	for (i = 0; i < tunables->ntarget_capacity; i++)
+		ret += sprintf(buf + ret, "%lu%s", tunables->up_target_capacity[i],
+			       ":");
+	spin_unlock_irqrestore(&tunables->target_capacity_lock, flags);
+
+	sprintf(buf + ret - 1, "\n");
+
+	return ret;
+}
+
+/* down_target_capacity */
+static ssize_t down_target_capacity_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+	int i;
+	ssize_t ret = 0;
+	unsigned long flags;
+
+	if (!tunables->down_target_capacity)
+		return -EINVAL;
+
+	spin_lock_irqsave(&tunables->target_capacity_lock, flags);
+	for (i = 0; i < tunables->ntarget_capacity; i++)
+		ret += sprintf(buf + ret, "%lu%s", tunables->down_target_capacity[i],
+			       ":");
+	spin_unlock_irqrestore(&tunables->target_capacity_lock, flags);
+
+	sprintf(buf + ret - 1, "\n");
+
+	return ret;
+}
+
 /* up_rate_limit_us */
 static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
 				      const char *buf, size_t count)
@@ -682,7 +789,7 @@ static ssize_t boost_perc_store(struct gov_attr_set *attr_set,
 	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	input = min(max(0, input), 20);
+	input = min(max(150, input), 100);
 
 	if (input == tunables->boost_perc)
 		return count;
@@ -727,6 +834,86 @@ static ssize_t eval_busy_for_freq_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+/* up_target_capacity */
+static ssize_t up_target_capacity_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+	const char *cp;
+	int i;
+	int ntokens = 1;
+	unsigned long flags;
+
+	if (!tunables->up_target_capacity)
+		return -EINVAL;
+
+	cp = buf;
+	while ((cp = strpbrk(cp + 1, ":")))
+		ntokens++;
+
+	if (ntokens != tunables->ntarget_capacity)
+		return -EINVAL;
+
+	cp = buf;
+	spin_lock_irqsave(&tunables->target_capacity_lock, flags);
+	for (i = 0; i < ntokens; i++) {
+		if (sscanf(cp, "%lu", &tunables->up_target_capacity[i]) != 1) {
+			spin_unlock_irqrestore(&tunables->target_capacity_lock, flags);
+			return -EINVAL;
+		} else {
+			pr_debug("CPU[%u], index[%d], val[%lu]\n", tunables->cpu, i, tunables->up_target_capacity[i]);
+		}
+
+		cp = strpbrk(cp, ":");
+		if (!cp)
+			break;
+		cp++;
+	}
+	spin_unlock_irqrestore(&tunables->target_capacity_lock, flags);
+
+	return count;
+}
+
+/* down_target_capacity */
+static ssize_t down_target_capacity_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct dkgov_tunables *tunables = to_dkgov_tunables(attr_set);
+	const char *cp;
+	int i;
+	int ntokens = 1;
+	unsigned long flags;
+
+	if (!tunables->down_target_capacity)
+		return -EINVAL;
+
+	cp = buf;
+	while ((cp = strpbrk(cp + 1, ":")))
+		ntokens++;
+
+	if (ntokens != tunables->ntarget_capacity)
+		return -EINVAL;
+
+	cp = buf;
+	spin_lock_irqsave(&tunables->target_capacity_lock, flags);
+	for (i = 0; i < ntokens; i++) {
+		if (sscanf(cp, "%lu", &tunables->down_target_capacity[i]) != 1) {
+			spin_unlock_irqrestore(&tunables->target_capacity_lock, flags);
+			return -EINVAL;
+		} else {
+			pr_debug("CPU[%u], index[%d], val[%lu]\n", tunables->cpu, i, tunables->down_target_capacity[i]);
+		}
+
+		cp = strpbrk(cp, ":");
+		if (!cp)
+			break;
+		cp++;
+	}
+	spin_unlock_irqrestore(&tunables->target_capacity_lock, flags);
+
+	return count;
+}
+
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr freq_responsiveness = __ATTR_RW(freq_responsiveness);
@@ -734,6 +921,8 @@ static struct governor_attr freq_responsiveness_jump = __ATTR_RW(freq_responsive
 static struct governor_attr boost_perc = __ATTR_RW(boost_perc);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
+static struct governor_attr up_target_capacity = __ATTR_RW(up_target_capacity);
+static struct governor_attr down_target_capacity = __ATTR_RW(down_target_capacity);
 
 static struct attribute *dkgov_attributes[] = {
 	&up_rate_limit_us.attr,
@@ -743,6 +932,8 @@ static struct attribute *dkgov_attributes[] = {
 	&boost_perc.attr,
 	&iowait_boost_enable.attr,
 	&eval_busy_for_freq.attr,
+	&up_target_capacity.attr,
+	&down_target_capacity.attr,
 	NULL
 };
 
@@ -861,6 +1052,8 @@ static void store_tunables_data(struct dkgov_tunables *tunables,
 	ptunables->boost_perc = tunables->boost_perc;
 	ptunables->iowait_boost_enable = tunables->iowait_boost_enable;
 	ptunables->eval_busy_for_freq = tunables->eval_busy_for_freq;
+	tunables->up_target_capacity = NULL;
+	tunables->down_target_capacity = NULL;
 	pr_debug("tunables data saved for cpu[%u]\n", cpu);
 }
 
@@ -875,6 +1068,17 @@ static void get_tunables_data(struct dkgov_tunables *tunables,
 	if (!ptunables)
 		goto initialize;
 
+	tunables->cpu = cpu;
+	if (cpu < 2) {
+		tunables->up_target_capacity = little_up_target_capacity;
+		tunables->down_target_capacity = little_down_target_capacity;
+		tunables->ntarget_capacity = LITTLE_NFREQS;
+	} else {
+		tunables->up_target_capacity = big_up_target_capacity;
+		tunables->down_target_capacity = big_down_target_capacity;
+		tunables->ntarget_capacity = BIG_NFREQS;
+	}
+	spin_lock_init(&tunables->target_capacity_lock);
 	if (ptunables->up_rate_limit_us > 0) {
 		tunables->up_rate_limit_us = ptunables->up_rate_limit_us;
 		tunables->down_rate_limit_us = ptunables->down_rate_limit_us;

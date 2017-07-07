@@ -1116,7 +1116,7 @@ static ssize_t boost_perc_store(struct gov_attr_set *attr_set,
 	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	input = min(max(150, input), 100);
+	input = min(max(100, input), 150);
 
 	if (input == tunables->boost_perc)
 		return count;

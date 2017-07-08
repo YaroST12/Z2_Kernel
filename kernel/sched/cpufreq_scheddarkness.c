@@ -32,11 +32,15 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define LATENCY_MULTIPLIER			(1000)
 #define DKGOV_KTHREAD_PRIORITY	50
 
+#define UP_RATE_LIMIT_US			(1000)
+#define UP_RATE_LIMIT_US_BIGC		(1000)
+#define DOWN_RATE_LIMIT_US			(1000)
+#define DOWN_RATE_LIMIT_US_BIGC		(1000)
 #define FREQ_RESPONSIVENESS			1113600
-#define BOOST_PERC					100
+#define BOOST_PERC					125
+#define BOOST_PERC_BIGC				150
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
 #endif
@@ -1092,8 +1096,20 @@ static void get_tunables_data(struct dkgov_tunables *tunables,
 	}
 
 initialize:
-	tunables->up_rate_limit_us = LATENCY_MULTIPLIER;
-	tunables->down_rate_limit_us = LATENCY_MULTIPLIER;
+#ifdef CONFIG_MACH_MSM8996_H1
+	if (cpu < 2) {
+		tunables->up_rate_limit_us = UP_RATE_LIMIT_US;
+		tunables->down_rate_limit_us = DOWN_RATE_LIMIT_US;
+		tunables->boost_perc = BOOST_PERC;
+	} else {
+		tunables->up_rate_limit_us = UP_RATE_LIMIT_US_BIGC;
+		tunables->down_rate_limit_us = DOWN_RATE_LIMIT_US_BIGC;
+		tunables->boost_perc = BOOST_PERC_BIGC;
+	}
+#else
+	tunables->up_rate_limit_us = UP_RATE_LIMIT_US;
+	tunables->down_rate_limit_us = DOWN_RATE_LIMIT_US;
+#endif
 	lat = policy->cpuinfo.transition_latency / NSEC_PER_USEC;
 	if (lat) {
 		tunables->up_rate_limit_us *= lat;
@@ -1101,7 +1117,6 @@ initialize:
 	}
 	tunables->freq_responsiveness = FREQ_RESPONSIVENESS;
 	tunables->freq_responsiveness_jump = true;
-	tunables->boost_perc = BOOST_PERC;
 	tunables->eval_busy_for_freq = 0;
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:

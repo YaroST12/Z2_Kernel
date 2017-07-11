@@ -35,12 +35,12 @@ unsigned long boosted_cpu_util(int cpu);
 #define DKGOV_KTHREAD_PRIORITY	50
 
 #define UP_RATE_LIMIT_US			(1000)
-#define UP_RATE_LIMIT_US_BIGC		(1000)
+#define UP_RATE_LIMIT_US_BIGC		(2000)
 #define DOWN_RATE_LIMIT_US			(1000)
-#define DOWN_RATE_LIMIT_US_BIGC		(1000)
+#define DOWN_RATE_LIMIT_US_BIGC		(6000)
 #define FREQ_RESPONSIVENESS			1113600
-#define BOOST_PERC					125
-#define BOOST_PERC_BIGC				150
+#define BOOST_PERC					123
+#define BOOST_PERC_BIGC				120
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
 #endif

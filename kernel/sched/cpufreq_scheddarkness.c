@@ -36,7 +36,7 @@ unsigned long boosted_cpu_util(int cpu);
 
 #define UP_RATE_LIMIT_US			(1000)
 #define UP_RATE_LIMIT_US_BIGC		(2000)
-#define DOWN_RATE_LIMIT_US			(1000)
+#define DOWN_RATE_LIMIT_US			(6000)
 #define DOWN_RATE_LIMIT_US_BIGC		(6000)
 #define FREQ_RESPONSIVENESS			1113600
 #define BOOST_PERC					123

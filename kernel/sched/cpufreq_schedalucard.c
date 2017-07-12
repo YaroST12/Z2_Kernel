@@ -39,10 +39,10 @@ unsigned long boosted_cpu_util(int cpu);
 #define DOWN_RATE_LIMIT_US		(6000)
 #define DOWN_RATE_LIMIT_US_BIGC	(6000)
 #define FREQ_RESPONSIVENESS		1113600
-#define PUMP_INC_STEP_AT_MIN_FREQ	1
-#define PUMP_INC_STEP			1
-#define PUMP_DEC_STEP_AT_MIN_FREQ	1
-#define PUMP_DEC_STEP			1
+#define PUMP_INC_STEP_AT_MIN_FREQ	3
+#define PUMP_INC_STEP			3
+#define PUMP_DEC_STEP_AT_MIN_FREQ	10
+#define PUMP_DEC_STEP			10
 #define BOOST_PERC			123
 #define BOOST_PERC_BIGC		120
 #ifdef CONFIG_STATE_NOTIFIER
@@ -63,6 +63,8 @@ struct acgov_tunables {
 	int pump_inc_step_at_min_freq;
 	int pump_dec_step;
 	int pump_dec_step_at_min_freq;
+	bool limit_pump_inc_at_up_cap;
+	bool limit_pump_dec_at_down_cap;
 	unsigned int boost_perc;
 	bool iowait_boost_enable;
 	int eval_busy_for_freq;
@@ -424,6 +426,8 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 	struct cpufreq_frequency_table *table = policy->freq_table;
 	int pump_inc_step = tunables->pump_inc_step;
 	int pump_dec_step = tunables->pump_dec_step;
+	bool limit_pump_inc = tunables->limit_pump_inc_at_up_cap;
+	bool limit_pump_dec = tunables->limit_pump_dec_at_down_cap;
 	unsigned long cur_util = ((util * tunables->boost_perc) / 100);
 	unsigned long flags;
 	int i = 0;
@@ -454,6 +458,10 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 			pump_inc_step--;
 			if (!pump_inc_step)
 				break;
+
+			if (cur_util <= tunables->up_target_capacity[i]
+				 && limit_pump_inc)
+				break;
 		}
 	} else if (cur_util < tunables->down_target_capacity[index]) {
 		for (i = index - 1; i >= 0; i--) {
@@ -463,6 +471,10 @@ static unsigned int get_next_freq(struct acgov_policy *sg_policy, unsigned long 
 			next_freq = table[i].frequency;
 			pump_dec_step--;
 			if (!pump_dec_step)
+				break;
+
+			if (cur_util >= tunables->down_target_capacity[i]
+				 && limit_pump_dec)
 				break;
 		}
 	}
@@ -797,6 +809,24 @@ static ssize_t pump_dec_step_show(struct gov_attr_set *attr_set, char *buf)
 	return sprintf(buf, "%d\n", tunables->pump_dec_step);
 }
 
+/* limit_pump_inc_at_up_cap */
+static ssize_t limit_pump_inc_at_up_cap_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->limit_pump_inc_at_up_cap);
+}
+
+/* limit_pump_dec_at_down_cap */
+static ssize_t limit_pump_dec_at_down_cap_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->limit_pump_dec_at_down_cap);
+}
+
 /* boost_perc */
 static ssize_t boost_perc_show(struct gov_attr_set *attr_set, char *buf)
 {
@@ -1000,7 +1030,7 @@ static ssize_t pump_inc_step_at_min_freq_store(struct gov_attr_set *attr_set,
 	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	input = min(max(1, input), 6);
+	input = min(max(1, input), 10);
 
 	if (input == tunables->pump_inc_step_at_min_freq)
 		return count;
@@ -1020,7 +1050,7 @@ static ssize_t pump_inc_step_store(struct gov_attr_set *attr_set,
 	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	input = min(max(1, input), 6);
+	input = min(max(1, input), 10);
 
 	if (input == tunables->pump_inc_step)
 		return count;
@@ -1040,7 +1070,7 @@ static ssize_t pump_dec_step_at_min_freq_store(struct gov_attr_set *attr_set,
 	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	input = min(max(1, input), 6);
+	input = min(max(1, input), 10);
 
 	if (input == tunables->pump_dec_step_at_min_freq)
 		return count;
@@ -1060,12 +1090,42 @@ static ssize_t pump_dec_step_store(struct gov_attr_set *attr_set,
 	if (kstrtouint(buf, 10, &input))
 		return -EINVAL;
 
-	input = min(max(1, input), 6);
+	input = min(max(1, input), 10);
 
 	if (input == tunables->pump_dec_step)
 		return count;
 
 	tunables->pump_dec_step = input;
+
+	return count;
+}
+
+/* limit_pump_inc_at_up_cap */
+static ssize_t limit_pump_inc_at_up_cap_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+	bool enable;
+
+	if (strtobool(buf, &enable))
+		return -EINVAL;
+
+	tunables->limit_pump_inc_at_up_cap = enable;
+
+	return count;
+}
+
+/* limit_pump_dec_at_down_cap */
+static ssize_t limit_pump_dec_at_down_cap_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct acgov_tunables *tunables = to_acgov_tunables(attr_set);
+	bool enable;
+
+	if (strtobool(buf, &enable))
+		return -EINVAL;
+
+	tunables->limit_pump_dec_at_down_cap = enable;
 
 	return count;
 }
@@ -1293,6 +1353,8 @@ static struct governor_attr pump_inc_step_at_min_freq = __ATTR_RW(pump_inc_step_
 static struct governor_attr pump_inc_step = __ATTR_RW(pump_inc_step);
 static struct governor_attr pump_dec_step_at_min_freq = __ATTR_RW(pump_dec_step_at_min_freq);
 static struct governor_attr pump_dec_step = __ATTR_RW(pump_dec_step);
+static struct governor_attr limit_pump_inc_at_up_cap = __ATTR_RW(limit_pump_inc_at_up_cap);
+static struct governor_attr limit_pump_dec_at_down_cap = __ATTR_RW(limit_pump_dec_at_down_cap);
 static struct governor_attr boost_perc = __ATTR_RW(boost_perc);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
@@ -1310,6 +1372,8 @@ static struct attribute *acgov_attributes[] = {
 	&pump_inc_step.attr,
 	&pump_dec_step_at_min_freq.attr,
 	&pump_dec_step.attr,
+	&limit_pump_inc_at_up_cap.attr,
+	&limit_pump_dec_at_down_cap.attr,
 	&boost_perc.attr,
 	&iowait_boost_enable.attr,
 	&eval_busy_for_freq.attr,
@@ -1436,6 +1500,8 @@ static void store_tunables_data(struct acgov_tunables *tunables,
 	ptunables->pump_dec_step_at_min_freq = tunables->pump_dec_step_at_min_freq;
 	ptunables->pump_inc_step = tunables->pump_inc_step;
 	ptunables->pump_dec_step = tunables->pump_dec_step;
+	ptunables->limit_pump_inc_at_up_cap = tunables->limit_pump_inc_at_up_cap;
+	ptunables->limit_pump_dec_at_down_cap = tunables->limit_pump_dec_at_down_cap;
 	ptunables->boost_perc = tunables->boost_perc;
 	ptunables->iowait_boost_enable = tunables->iowait_boost_enable;
 	ptunables->eval_busy_for_freq = tunables->eval_busy_for_freq;
@@ -1484,6 +1550,8 @@ static void get_tunables_data(struct acgov_tunables *tunables,
 		tunables->pump_dec_step_at_min_freq = ptunables->pump_dec_step_at_min_freq;
 		tunables->pump_inc_step = ptunables->pump_inc_step;
 		tunables->pump_dec_step = ptunables->pump_dec_step;
+		tunables->limit_pump_inc_at_up_cap = ptunables->limit_pump_inc_at_up_cap;
+		tunables->limit_pump_dec_at_down_cap = ptunables->limit_pump_dec_at_down_cap;
 		tunables->boost_perc = ptunables->boost_perc;
 		tunables->iowait_boost_enable = ptunables->iowait_boost_enable;
 		tunables->eval_busy_for_freq = ptunables->eval_busy_for_freq;
@@ -1517,6 +1585,8 @@ initialize:
 	tunables->pump_dec_step_at_min_freq = PUMP_DEC_STEP_AT_MIN_FREQ;
 	tunables->pump_inc_step = PUMP_INC_STEP;
 	tunables->pump_dec_step = PUMP_DEC_STEP;
+	tunables->limit_pump_inc_at_up_cap = true;
+	tunables->limit_pump_dec_at_down_cap = true;
 	tunables->eval_busy_for_freq = 0;
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:

@@ -338,3 +338,7 @@
 &wil6210 {
 	status = "disabled";
 };
+
+&uartblsp2dm1 {
+ 	status = "disabled";
+};

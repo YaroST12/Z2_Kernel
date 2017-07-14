@@ -29,6 +29,7 @@ const struct cpumask *cpu_coregroup_mask(int cpu);
 #define arch_scale_freq_capacity cpufreq_scale_freq_capacity
 #define arch_scale_min_freq_capacity cpufreq_scale_min_freq_capacity
 extern unsigned long cpufreq_scale_min_freq_capacity(int cpu);
+#define arch_scale_max_freq_capacity cpufreq_scale_max_freq_capacity
 #endif
 #define arch_scale_cpu_capacity scale_cpu_capacity
 extern unsigned long scale_cpu_capacity(struct sched_domain *sd, int cpu);

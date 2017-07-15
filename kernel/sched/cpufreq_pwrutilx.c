@@ -27,7 +27,7 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
 #define LATENCY_MULTIPLIER			(1000)
-#define PWRGOV_KTHREAD_PRIORITY	50
+#define PWRGOV_KTHREAD_PRIORITY	25
 
 struct pwrgov_tunables {
 	struct gov_attr_set attr_set;
@@ -546,10 +546,10 @@ static int pwrgov_kthread_create(struct pwrgov_policy *sg_policy)
 	init_kthread_work(&sg_policy->work, pwrgov_work);
 	init_kthread_worker(&sg_policy->worker);
 	thread = kthread_create(kthread_worker_fn, &sg_policy->worker,
-				"sugov:%d",
+				"pwrgov:%d",
 				cpumask_first(policy->related_cpus));
 	if (IS_ERR(thread)) {
-		pr_err("failed to create sugov thread: %ld\n", PTR_ERR(thread));
+		pr_err("failed to create pwrgov thread: %ld\n", PTR_ERR(thread));
 		return PTR_ERR(thread);
 	}
 

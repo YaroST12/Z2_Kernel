@@ -1764,6 +1764,9 @@ static int cnss_wlan_pci_suspend(struct device *dev)
 	if (!penv)
 		goto out;
 
+	if (!penv->pcie_link_state)
+		goto out;
+
 	wdriver = penv->driver;
 	if (!wdriver)
 		goto out;
@@ -1789,6 +1792,9 @@ static int cnss_wlan_pci_resume(struct device *dev)
 	struct pci_dev *pdev = to_pci_dev(dev);
 
 	if (!penv)
+		goto out;
+
+	if (!penv->pcie_link_state)
 		goto out;
 
 	wdriver = penv->driver;

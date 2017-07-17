@@ -6016,7 +6016,7 @@ static int start_cpu(bool boosted)
 }
 
 static inline int find_best_target(struct task_struct *p, int *backup_cpu,
-				   bool boosted, bool prefer_idle)
+				   int prev_cpu, bool boosted, bool prefer_idle)
 {
 	unsigned long best_idle_min_cap_orig = ULONG_MAX;
 	unsigned long min_util = boosted_task_util(p);
@@ -6159,6 +6159,20 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 				best_active_cpu = i;
 				continue;
 			}
+
+			/*
+			 * Enforce energy_diff
+			 *
+			 * For non latency sensitive tasks, skip the task's
+			 * previous CPU.
+			 *
+			 * The goal here is to try hard to find another
+			 * possible candidate and use energy_diff to find out
+			 * if it's more energy efficient to move the task
+			 * there.
+			 */
+			if (i == prev_cpu)
+				continue;
 
 			/*
 			 * Case B) Non latency sensitive tasks on IDLE CPUs.
@@ -6335,7 +6349,7 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 	sync_entity_load_avg(&p->se);
 
 	/* Find a cpu with sufficient capacity */
-	tmp_target = find_best_target(p, &tmp_backup, boosted, prefer_idle);
+	tmp_target = find_best_target(p, &tmp_backup, prev_cpu, boosted, prefer_idle);
 
 	if (tmp_target >= 0) {
 		target_cpu = tmp_target;

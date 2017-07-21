@@ -5347,6 +5347,54 @@ static inline bool cpu_in_sg(struct sched_group *sg, int cpu)
 	return cpu != -1 && cpumask_test_cpu(cpu, sched_group_cpus(sg));
 }
 
+#ifdef CONFIG_SCHED_TUNE
+
+struct target_nrg schedtune_target_nrg;
+
+/*
+ * System energy normalization
+ * Returns the normalized value, in the range [0..SCHED_CAPACITY_SCALE],
+ * corresponding to the specified energy variation.
+ */
+static inline int
+normalize_energy(unsigned int nrg_next, unsigned nrg_prev)
+{
+	int nrg_delta = nrg_next - nrg_prev;
+	u32 normalized_nrg;
+
+	/* during early setup, we don't know the extents */
+	if (unlikely(!schedtune_initialized)) {
+		return clamp_t(int, nrg_delta, -SCHED_CAPACITY_SCALE,
+						SCHED_CAPACITY_SCALE);
+	}
+
+#ifdef CONFIG_SCHED_DEBUG
+	{
+	int max_delta;
+
+	/* Check for boundaries */
+	max_delta  = schedtune_target_nrg.max_power;
+	max_delta -= schedtune_target_nrg.min_power;
+	WARN_ON(abs(nrg_delta) >= max_delta);
+	}
+#endif
+
+	/* Do scaling using positive numbers to increase the range */
+	normalized_nrg = (nrg_delta < 0) ? -nrg_delta : nrg_delta;
+
+	/* Scale by energy magnitude */
+	normalized_nrg <<= SCHED_CAPACITY_SHIFT;
+
+	/* Normalize on max energy for target platform */
+	normalized_nrg = reciprocal_divide(
+			normalized_nrg, schedtune_target_nrg.rdiv);
+
+	return (nrg_delta < 0) ? -normalized_nrg : normalized_nrg;
+}
+#else
+#define normalize_energy(nrg_next, nrg_prev) (nrg_next - nrg_prev)
+#endif /* CONFIG_SCHED_TUNE */
+
 static inline void
 compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
 {
@@ -5356,8 +5404,8 @@ compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
 	unsigned long index;
 #endif
 
-	eenv->cpu[next_cpu].nrg_delta =
-		eenv->cpu[next_cpu].energy - eenv->cpu[prev_cpu].energy;
+	eenv->cpu[next_cpu].nrg_delta = normalize_energy(
+		eenv->cpu[next_cpu].energy, eenv->cpu[prev_cpu].energy);
 
 #ifdef CONFIG_SCHED_TUNE
 

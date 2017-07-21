@@ -5391,8 +5391,48 @@ normalize_energy(unsigned int nrg_next, unsigned nrg_prev)
 
 	return (nrg_delta < 0) ? -normalized_nrg : normalized_nrg;
 }
+
+static inline int
+relative_energy(unsigned int nrg_next, unsigned nrg_prev)
+{
+	/*
+	 * Relative energy normalization is defined as:
+	 *
+	 *    (nrg_after - nrg_before) / max(nrg_before, nrg_after)
+	 *
+	 * representing an index of energy variation which is:
+	 *  - positive: if energy is increasing
+	 *  - negative: if energy is decreasing
+	 * with a magnitude which is proportional to how much energy is
+	 * changing given the relative maximum.
+	 *
+	 * For example:
+	 *
+	 * nrg_before   nrg_after   nrg_index
+	 *        100          50       -512  we will spend 50% less energy
+	 *         50         100        512  we will spend 2 times more energy
+	 *        100          90       -102  we will save 10% energy
+	 *         10         100        921  we will spend 10 times more energy
+	 */
+	int value = SCHED_CAPACITY_SHIFT;
+
+	value *= abs((int)nrg_next - (int)nrg_prev);
+	value /= max(nrg_prev, nrg_next);
+
+	return (nrg_next < nrg_prev) ? -value : value;
+}
+
+static inline int
+energy_delta(unsigned int nrg_prev, unsigned nrg_next)
+{
+	if (sched_feat(ENERGY_NORMALIZE))
+		return  normalize_energy(nrg_prev, nrg_next);
+
+	return relative_energy(nrg_prev, nrg_next);
+}
+
 #else
-#define normalize_energy(nrg_next, nrg_prev) (nrg_next - nrg_prev)
+#define energy_delta(nrg_next, nrg_prev) (nrg_next - nrg_prev)
 #endif /* CONFIG_SCHED_TUNE */
 
 static inline void
@@ -5404,7 +5444,7 @@ compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
 	unsigned long index;
 #endif
 
-	eenv->cpu[next_cpu].nrg_delta = normalize_energy(
+	eenv->cpu[next_cpu].nrg_delta = energy_delta(
 		eenv->cpu[next_cpu].energy, eenv->cpu[prev_cpu].energy);
 
 #ifdef CONFIG_SCHED_TUNE

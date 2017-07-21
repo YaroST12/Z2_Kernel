@@ -5416,6 +5416,8 @@ compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
 	eenv->cpu[next_cpu].prf_delta =
 		eenv->cpu[next_cpu].perf_idx - eenv->cpu[prev_cpu].perf_idx;
 
+	trace_sched_perf_delta(eenv, prev_cpu, next_cpu);
+
 #endif
 }
 

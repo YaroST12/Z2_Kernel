@@ -943,6 +943,80 @@ TRACE_EVENT(sched_energy_diff,
 
 );
 
+#ifdef CONFIG_SCHED_TUNE
+TRACE_EVENT(sched_perf_delta,
+
+	TP_PROTO(struct energy_env *eenv, int cpu_prev, int cpu_next),
+
+	TP_ARGS(eenv, cpu_prev, cpu_next),
+
+	TP_STRUCT__entry(
+		__array( char,	comm,	TASK_COMM_LEN	)
+		__field( pid_t,		pid		)
+		__field( int,		util_delta	)
+
+		__field( int,		cpu_next	)
+		__field( int,		cpu_prev	)
+
+		__field( int,		prf_delta	)
+
+		__field( int,		prf_next	)
+		__field( int,		prf_prev	)
+
+		__field( unsigned,	cap_next	)
+		__field( unsigned,	sgu_next	)
+		__field( int,		spi_next	)
+		__field( int,		dli_next	)
+
+		__field( unsigned,	cap_prev	)
+		__field( unsigned,	sgu_prev	)
+		__field( int,		spi_prev	)
+		__field( int,		dli_prev	)
+	),
+
+	TP_fast_assign(
+		memcpy(__entry->comm,	  eenv->p->comm, TASK_COMM_LEN);
+		__entry->pid		= eenv->p->pid;
+		__entry->util_delta	= eenv->util_delta;
+
+		__entry->cpu_next 	= eenv->cpu[cpu_next].cpu_id;
+		__entry->cpu_prev 	= eenv->cpu[cpu_prev].cpu_id;
+
+		__entry->prf_delta	= eenv->cpu[cpu_next].prf_delta;
+
+		__entry->prf_next 	= eenv->cpu[cpu_next].perf_idx;
+		__entry->prf_prev 	= eenv->cpu[cpu_prev].perf_idx;
+
+		__entry->cap_next 	= eenv->cpu[cpu_next].cap;
+		__entry->sgu_next 	= eenv->cpu[cpu_next].sg_util;
+		__entry->spi_next 	= eenv->cpu[cpu_next].speedup_idx;
+		__entry->dli_next 	= eenv->cpu[cpu_next].delay_idx;
+
+		__entry->cap_prev	= eenv->cpu[cpu_prev].cap;
+		__entry->sgu_prev 	= eenv->cpu[cpu_prev].sg_util;
+		__entry->spi_prev 	= eenv->cpu[cpu_prev].speedup_idx;
+		__entry->dli_prev 	= eenv->cpu[cpu_prev].delay_idx;
+	),
+
+	TP_printk("pid=%d comm=%s util_delta=%d "
+		  "cpu_next=%d cpu_prev=%d "
+		  "prf_delta=%d "
+		  "prf_next=%d prf_prev=%d "
+		  "cap_next=%u cap_prev=%u "
+		  "sgu_next=%u sgu_prev=%u "
+		  "spi_next=%d spi_prev=%d "
+		  "dli_next=%d dli_prev=%d",
+		__entry->pid, __entry->comm,
+		__entry->util_delta,
+		__entry->cpu_next, __entry->cpu_prev,
+		__entry->prf_delta,
+		__entry->prf_next, __entry->prf_prev,
+		__entry->cap_next, __entry->cap_prev,
+		__entry->sgu_next, __entry->sgu_prev,
+		__entry->spi_next, __entry->spi_prev,
+		__entry->dli_next, __entry->dli_prev)
+);
+
 /*
  * Tracepoint for schedtune_tasks_update
  */
@@ -977,7 +1051,7 @@ TRACE_EVENT(sched_tune_filter,
 		__entry->nrg_gain, __entry->cap_gain,
 		__entry->payoff, __entry->region)
 );
-
+#endif
 /*
  * Tracepoint for system overutilized flag
  */

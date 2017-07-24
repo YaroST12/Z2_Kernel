@@ -5509,6 +5509,50 @@ compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
 #endif
 }
 
+static inline int eas_deadzone_filter(struct energy_env *eenv)
+{
+	int cpu_idx;
+	int margin;
+
+	/*
+	 * Compute the dead-zone margin used to prevent too many task
+	 * migrations with negligible energy savings.
+	 * An energy saving is considered meaningful if it reduces the energy
+	 * consumption of EAS_CPU_PRV CPU candidate by at least ~1.56%
+	 */
+	margin = eenv->cpu[EAS_CPU_PRV].energy >> 6;
+
+	/*
+	 * By default the EAS_CPU_PRV CPU is considered the most energy
+	 * efficient, with a 0 energy variation.
+	 */
+	eenv->next_idx = EAS_CPU_PRV;
+
+	/*
+	 * Compare the other CPU candidates to find a CPU which can be
+	 * more energy efficient then EAS_CPU_PRV
+	 */
+	for (cpu_idx = EAS_CPU_NXT; cpu_idx < EAS_CPU_CNT; ++cpu_idx) {
+
+		if (eenv->cpu[cpu_idx].cpu_id == -1)
+			continue;
+
+		/* Filter energy variations within the dead-zone margin */
+		if (abs(eenv->cpu[cpu_idx].nrg_delta) < margin)
+			eenv->cpu[cpu_idx].nrg_delta = 0;
+
+		/* Update the schedule candidate with min(nrg_delta) */
+		if (eenv->cpu[cpu_idx].nrg_delta <
+		    eenv->cpu[eenv->next_idx].nrg_delta)
+			eenv->next_idx = cpu_idx;
+
+		trace_sched_energy_diff(eenv, EAS_CPU_PRV, cpu_idx);
+	}
+
+	return eenv->next_idx;
+}
+#define filter_delta(eenv) eas_deadzone_filter(eenv)
+
 /*
  * select_energy_cpu_idx(): estimate the energy impact of changing the
  * utilization distribution.
@@ -5526,11 +5570,10 @@ compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
  */
 static inline int select_energy_cpu_idx(struct energy_env *eenv)
 {
+	int cpu_idx = EAS_CPU_PRV;
 	struct sched_domain *sd;
 	struct sched_group *sg;
 	int sd_cpu = -1;
-	int cpu_idx;
-	int margin;
 
 	sd_cpu = eenv->cpu[EAS_CPU_PRV].cpu_id;
 	sd = rcu_dereference(per_cpu(sd_ea, sd_cpu));
@@ -5564,20 +5607,6 @@ static inline int select_energy_cpu_idx(struct energy_env *eenv)
 		eenv->cpu[cpu_idx].energy >>= SCHED_CAPACITY_SHIFT;
 
 	/*
-	 * Compute the dead-zone margin used to prevent too many task
-	 * migrations with negligible energy savings.
-	 * An energy saving is considered meaningful if it reduces the energy
-	 * consumption of EAS_CPU_PRV CPU candidate by at least ~1.56%
-	 */
-	margin = eenv->cpu[EAS_CPU_PRV].energy >> 6;
-
-	/*
-	 * By default the EAS_CPU_PRV CPU is considered the most energy
-	 * efficient, with a 0 energy variation.
-	 */
-	eenv->next_idx = EAS_CPU_PRV;
-
-	/*
 	 * Compare the other CPU candidates to find a CPU which can be
 	 * more energy efficient then EAS_CPU_PRV
 	 */
@@ -5585,24 +5614,14 @@ static inline int select_energy_cpu_idx(struct energy_env *eenv)
 		/* Skip not valid scheduled candidates */
 		if (eenv->cpu[cpu_idx].cpu_id < 0)
 			continue;
-		/* Compute energy delta wrt EAS_CPU_PRV */
+		/* Compute energy/performance variations */
 		compute_delta(eenv, EAS_CPU_PRV, cpu_idx);
-
-		/* filter energy variations within the dead-zone margin */
-		if (abs(eenv->cpu[cpu_idx].nrg_delta) < margin)
-			eenv->cpu[cpu_idx].nrg_delta = 0;
-
-		trace_sched_energy_diff(eenv, EAS_CPU_PRV, cpu_idx);
-
-		/* update the schedule candidate with min(nrg_delta) */
-		if (eenv->cpu[cpu_idx].nrg_delta <
-		    eenv->cpu[eenv->next_idx].nrg_delta) {
-			eenv->next_idx = cpu_idx;
-			break;
-		}
 	}
 
-	return eenv->next_idx;
+	/* Work out which CPU is the best candidate */
+	cpu_idx = filter_delta(eenv);
+
+	return cpu_idx;
 }
 
 /*

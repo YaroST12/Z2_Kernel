@@ -45,6 +45,7 @@ static int sleepstate_pm_notifier(struct notifier_block *nb,
 
 static struct notifier_block sleepstate_pm_nb = {
 	.notifier_call = sleepstate_pm_notifier,
+	.priority = INT_MAX,
 };
 
 static int smp2p_sleepstate_probe(struct platform_device *pdev)

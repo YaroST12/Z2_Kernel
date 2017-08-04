@@ -4988,82 +4988,6 @@ static inline bool energy_aware(void)
 	return sched_feat(ENERGY_AWARE);
 }
 
-/*
- * CPU candidates.
- *
- * These are labels to reference CPU candidates for an energy_diff.
- * Currently we support only two possible candidates: the task's previous CPU
- * and another candiate CPU.
- * More advanced/aggressive EAS selection policies can consider more
- * candidates.
- */
-#define EAS_CPU_PRV	0
-#define EAS_CPU_NXT	1
-#define EAS_CPU_BKP	2
-#define EAS_CPU_CNT	3
-
-/*
- * energy_diff - supports the computation of the estimated energy impact in
- * moving a "task"'s "util_delta" between different CPU candidates.
- */
-struct energy_env {
-	/* Utilization to move */
-	struct task_struct	*p;
-	int			util_delta;
-
-	/* Mask of CPUs candidates to evaluate */
-	cpumask_t		cpus_mask;
-
-	/* CPU candidates to evaluate */
-	struct {
-
-		/* CPU ID, must be in cpus_mask */
-		int	cpu_id;
-
-		/*
-		 * Index (into sched_group_energy::cap_states) of the OPP the
-		 * CPU needs to run at if the task is placed on it.
-		 * This includes the both active and blocked load, due to
-		 * other tasks on this CPU,  as well as the task's own
-		 * utilization.
-		 */
-		int	cap_idx;
-		int	cap;
-
-		/* Estimated system energy */
-		unsigned int energy;
-
-		/* Estimated energy variation wrt EAS_CPU_PRV */
-		int	nrg_delta;
-
-#ifdef CONFIG_SCHED_TUNE
-
-		/* Estimated SG utilization */
-		unsigned long sg_util;
-
-		/* SchedTune's performance Index */
-		int	speedup_idx;
-		int	delay_idx;
-		int	perf_idx;
-
-		/* Estimated performance variation wrt EAS_CPU_PRV */
-		int	prf_delta;
-
-#endif
-	} cpu[EAS_CPU_CNT];
-
-	/*
-	 * Index (into energy_env::cpu) of the morst energy efficient CPU for
-	 * the specified energy_env::task
-	 */
-	int			next_idx;
-
-	/* Support data */
-	struct sched_group	*sg_top;
-	struct sched_group	*sg_cap;
-	struct sched_group	*sg;
-};
-
 static int cpu_util_wake(int cpu, struct task_struct *p);
 
 /*
@@ -5573,9 +5497,13 @@ static inline int select_energy_cpu_idx(struct energy_env *eenv)
 			continue;
 		/* Compute energy delta wrt EAS_CPU_PRV */
 		compute_delta(eenv, EAS_CPU_PRV, cpu_idx);
+
 		/* filter energy variations within the dead-zone margin */
 		if (abs(eenv->cpu[cpu_idx].nrg_delta) < margin)
 			eenv->cpu[cpu_idx].nrg_delta = 0;
+
+		trace_sched_energy_diff(eenv, EAS_CPU_PRV, cpu_idx);
+
 		/* update the schedule candidate with min(nrg_delta) */
 		if (eenv->cpu[cpu_idx].nrg_delta <
 		    eenv->cpu[eenv->next_idx].nrg_delta) {

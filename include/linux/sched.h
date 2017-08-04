@@ -1180,6 +1180,8 @@ extern void wake_up_if_idle(int cpu);
 # define SD_INIT_NAME(type)
 #endif
 
+struct energy_env;
+
 #else /* CONFIG_SMP */
 
 struct sched_domain_attr;

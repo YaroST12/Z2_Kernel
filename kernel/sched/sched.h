@@ -908,6 +908,71 @@ static inline unsigned int group_first_cpu(struct sched_group *group)
 
 extern int group_balance_cpu(struct sched_group *sg);
 
+/*
+ * CPU candidates.
+ *
+ * These are labels to reference CPU candidates for an energy_diff.
+ * Currently we support only two possible candidates: the task's previous CPU
+ * and another candiate CPU.
+ * More advanced/aggressive EAS selection policies can consider more
+ * candidates.
+ */
+#define EAS_CPU_PRV	0
+#define EAS_CPU_NXT	1
+#define EAS_CPU_BKP	2
+#define EAS_CPU_CNT	3
+
+/*
+ * energy_diff - supports the computation of the estimated energy impact in
+ * moving a "task"'s "util_delta" between different CPU candidates.
+ */
+struct energy_env {
+	/* Utilization to move */
+	struct task_struct *p;
+	int util_delta;
+
+	/* CPU candidates to evaluate */
+	struct {
+		/* CPU ID, must be in cpus_mask */
+		int	cpu_id;
+
+		/* Capacity of the cpu_id, including task's utilization */
+		int	cap_idx;
+		int	cap;
+
+		/* Estimated system energy */
+		unsigned int energy;
+
+		/* Estimated energy variation wrt EAS_CPU_PRV */
+		int	nrg_delta;
+
+#ifdef CONFIG_SCHED_TUNE
+		/* Estimated SG utilization */
+		unsigned long sg_util;
+
+		/* SchedTune's performance Index */
+		int	speedup_idx;
+		int	delay_idx;
+		int	perf_idx;
+
+		/* Estimated performance variation wrt EAS_CPU_PRV */
+		int	prf_delta;
+#endif
+	} cpu[EAS_CPU_CNT];
+
+	/* Mask of CPUs candidates to evaluate */
+	cpumask_t cpus_mask;
+
+	/* Most energy efficient CPU for task wakeup */
+	int next_cpu;
+	int next_idx;
+
+	/* Support data */
+	struct sched_group	*sg_top;
+	struct sched_group	*sg_cap;
+	struct sched_group 	*sg;
+};
+
 #else
 
 static inline void sched_ttwu_pending(void) { }

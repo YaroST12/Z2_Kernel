@@ -896,6 +896,54 @@ TRACE_EVENT(sched_find_best_target,
 );
 
 /*
+ * Tracepoint for accounting sched group energy
+ */
+TRACE_EVENT(sched_energy_diff,
+
+	TP_PROTO(struct energy_env *eenv, int cpu_prev, int cpu_next),
+
+	TP_ARGS(eenv, cpu_prev, cpu_next),
+
+	TP_STRUCT__entry(
+		__array( char,	comm,	TASK_COMM_LEN	)
+		__field( pid_t,		pid		)
+		__field( int,		util_delta	)
+
+		__field( int,		cpu_next	)
+		__field( int,		cpu_prev	)
+
+		__field( int,		nrg_delta	)
+
+		__field( unsigned,	nrg_next	)
+		__field( unsigned,	nrg_prev	)
+	),
+
+	TP_fast_assign(
+		memcpy(__entry->comm,	  eenv->p->comm, TASK_COMM_LEN);
+		__entry->pid		= eenv->p->pid;
+		__entry->util_delta	= eenv->util_delta;
+
+		__entry->cpu_next	= eenv->cpu[cpu_next].cpu_id;
+		__entry->cpu_prev	= eenv->cpu[cpu_prev].cpu_id;
+
+		__entry->nrg_delta	= eenv->cpu[cpu_next].nrg_delta;
+
+		__entry->nrg_next	= eenv->cpu[cpu_next].energy;
+		__entry->nrg_prev	= eenv->cpu[cpu_prev].energy;
+	),
+
+	TP_printk("pid=%d comm=%s util_delta=%d "
+		  "cpu_next=%d cpu_prev=%d "
+		  "nrg_delta=%d "
+		  "nrg_next=%u nrg_prev=%u",
+		__entry->pid, __entry->comm, __entry->util_delta,
+		__entry->cpu_next, __entry->cpu_prev,
+		__entry->nrg_delta,
+		__entry->nrg_next, __entry->nrg_prev)
+
+);
+
+/*
  * Tracepoint for schedtune_tasks_update
  */
 TRACE_EVENT(sched_tune_filter,

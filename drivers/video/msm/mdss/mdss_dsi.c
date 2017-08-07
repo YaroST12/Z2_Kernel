@@ -2547,7 +2547,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 #ifdef CONFIG_STATE_NOTIFIER
 		state_suspend();
 #endif
-		mutex_unlock(&ctrl_pdata->dsi_ctrl_mutex);
 		break;
 	case MDSS_EVENT_CONT_SPLASH_FINISH:
 		if (ctrl_pdata->off_cmds.link_state == DSI_LP_MODE)

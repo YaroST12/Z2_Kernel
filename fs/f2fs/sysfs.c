@@ -174,6 +174,10 @@ static ssize_t f2fs_sbi_store(struct f2fs_attr *a,
 		*ui = t;
 		return count;
 	}
+	if (!strcmp(a->attr.name, "gc_urgent") && t == 1 && sbi->gc_thread) {
+		sbi->gc_thread->gc_wake = 1;
+		wake_up_interruptible_all(&sbi->gc_thread->gc_wait_queue_head);
+	}
 
 	*ui = t;
 

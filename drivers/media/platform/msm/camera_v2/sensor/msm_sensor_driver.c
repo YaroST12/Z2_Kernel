@@ -915,14 +915,6 @@ CSID_TG:
 	pr_err("%s probe succeeded", slave_info->sensor_name);
 
 	/*
-	 * Update the subdevice id of flash-src based on availability in kernel.
-	 */
-	if (strlen(slave_info->flash_name) == 0) {
-		s_ctrl->sensordata->sensor_info->
-			subdev_id[SUB_MODULE_LED_FLASH] = -1;
-	}
-
-	/*
 	 * Create /dev/videoX node, comment for now until dummy /dev/videoX
 	 * node is created and used by HAL
 	 */

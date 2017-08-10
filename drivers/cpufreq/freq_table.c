@@ -18,7 +18,6 @@
  *                     FREQUENCY TABLE HELPERS                       *
  *********************************************************************/
 
-extern unsigned int overfreq_enable;
 bool policy_has_boost_freq(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *pos, *table = policy->freq_table;
@@ -62,11 +61,7 @@ int cpufreq_frequency_table_cpuinfo(struct cpufreq_policy *policy,
 	}
 
 	policy->min = policy->cpuinfo.min_freq = min_freq;
-	if (overfreq_enable){
-		policy->max = policy->cpuinfo.max_freq = max_freq;
-	} else {
-		policy->max = policy->cpuinfo.max_freq = nax_freq;
-	}
+	policy->max = policy->cpuinfo.max_freq = nax_freq;
 
 	if (policy->min == ~0)
 		return -EINVAL;

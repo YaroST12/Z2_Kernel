@@ -6069,6 +6069,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	int target_cpu = -1;
 	unsigned long target_util = prefer_idle ? ULONG_MAX : 0;
 	unsigned long backup_capacity = ULONG_MAX;
+	int best_idle_cpu = -1;
 	int backup_cpu = -1;
 	unsigned long min_util = boosted_task_util(p);
 	unsigned long target_capacity = ULONG_MAX;

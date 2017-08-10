@@ -4,7 +4,7 @@ rm -rf modules
 export CONFIG_FILE="n7x-caf_z2_plus_defconfig"
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-linux-android-"
-export TOOL_CHAIN_PATH="${HOME}/build/z2/aarch64-linux-android-4.9-linaro/bin"
+export TOOL_CHAIN_PATH="${HOME}/build/z2/aarch64-linux-android-4.9/bin"
 export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
 export CONFIG_ABS_PATH="arch/${ARCH}/configs/${CONFIG_FILE}"
 export PATH=$PATH:${TOOL_CHAIN_PATH}

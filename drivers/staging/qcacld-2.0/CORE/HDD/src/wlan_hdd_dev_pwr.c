@@ -69,21 +69,7 @@
  * So TX sleep must be less than 100msec
  * Every 20msec TX frame will goes out.
  * 10 frame means 2seconds TX operation */
-static const hdd_tmLevelAction_t thermalMigrationAction[WLAN_HDD_TM_LEVEL_MAX] =
-{
-   /* TM Level 0, Do nothing, just normal operation */
-   {1, 0, 0, 0, 0xFFFFF},
-   /* Tm Level 1, disable TX AMPDU */
-   {0, 0, 0, 0, 0xFFFFF},
-   /* TM Level 2, disable AMDPU,
-    * TX sleep 100msec if TX frame count is larger than 16 during 300msec */
-   {0, 0, 100, 300, 16},
-   /* TM Level 3, disable AMDPU,
-    * TX sleep 500msec if TX frame count is larger than 11 during 500msec */
-   {0, 0, 500, 500, 11},
-   /* TM Level 4, MAX TM level, enter IMPS */
-   {0, 1, 1000, 500, 10}
-};
+
 #ifdef HAVE_WCNSS_SUSPEND_RESUME_NOTIFY
 static bool suspend_notify_sent;
 #endif

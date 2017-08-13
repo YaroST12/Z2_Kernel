@@ -8,7 +8,7 @@ export TOOL_CHAIN_PATH="${HOME}/build/z2/Custom_Toolchains/bin"
 export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
 export CONFIG_ABS_PATH="arch/${ARCH}/configs/${CONFIG_FILE}"
 export PATH=$PATH:${TOOL_CHAIN_PATH}
-export objdir="${sourcedir}../out/"
+export objdir="${sourcedir}/../out/"
 export sourcedir="${HOME}/KERNELS/Z2EAS"
 cd $sourcedir
 compile() {
@@ -28,9 +28,9 @@ dtbuild(){
   ./tools/dtbToolCM -2 -o $objdir/arch/arm64/boot/dt.img -s 4096 -p $objdir/scripts/dtc/ $objdir/arch/arm64/boot/dts/
 }
 compile 
-cd ${HOME}/obj
+cd ${objdir}
 module
-cd ${HOME}/Z2EAS
+cd ${sourcedir}
 #dtbuild
 #cp $objdir/arch/arm64/boot/zImage $sourcedir/zImage
 #cp $objdir/arch/arm64/boot/dt.img.lz4 $sourcedir/dt.img

@@ -9,7 +9,7 @@ export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
 export CONFIG_ABS_PATH="arch/${ARCH}/configs/${CONFIG_FILE}"
 export PATH=$PATH:${TOOL_CHAIN_PATH}
 export objdir="${sourcedir}/../out/"
-export sourcedir="${HOME}/KERNELS/Z2EAS"
+export sourcedir="${HOME}/KERNELS/AOSPExtended/kernel/zuk/msm8996/"
 cd $sourcedir
 compile() {
   make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j9

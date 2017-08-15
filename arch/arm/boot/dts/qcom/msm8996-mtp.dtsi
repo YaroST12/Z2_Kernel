@@ -55,6 +55,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart_console_active>;
 };
+#endif
 
 &sdhc_1 {
 	vdd-supply = <&pm8994_l20>;

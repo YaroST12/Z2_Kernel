@@ -86,7 +86,7 @@ static int state_notifier_callback(struct notifier_block *this,
 		 */
 		if (delayed_work_pending(&restore_prev))
 			cancel_delayed_work_sync(&restore_prev);
-		schedule_delayed_work(&sleep_sched,
+		queue_delayed_work(system_power_efficient_wq, &sleep_sched,
 				msecs_to_jiffies(RESTORE_DELAY_MS));
 	}
 

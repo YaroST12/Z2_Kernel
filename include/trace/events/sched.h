@@ -858,133 +858,56 @@ TRACE_EVENT(sched_boost_task,
  */
 TRACE_EVENT(sched_energy_diff,
 
-	TP_PROTO(struct energy_env *eenv),
+	TP_PROTO(struct task_struct *tsk, int scpu, int dcpu, int udelta,
+		int nrgb, int nrga, int nrgd, int capb, int capa, int capd,
+		int nrgn, int nrgp),
 
-	TP_ARGS(eenv),
+	TP_ARGS(tsk, scpu, dcpu, udelta,
+		nrgb, nrga, nrgd, capb, capa, capd,
+		nrgn, nrgp),
 
 	TP_STRUCT__entry(
 		__array( char,	comm,	TASK_COMM_LEN	)
 		__field( pid_t,	pid	)
-		__field( int,	s_cpu	)
-		__field( int,	d_cpu	)
-		__field( int,	utl_d	)
-
-		__field( int,	cap_b	)
-		__field( int,	nrg_b	)
-		__field( int,	prf_b	)
-
-		__field( int,	cap_a	)
-		__field( int,	nrg_a	)
-		__field( int,	prf_a	)
-
-		__field( int,	nrg_d	)
-		__field( int,	prf_d	)
-
-		__field( int,	payoff	)
+		__field( int,	scpu	)
+		__field( int,	dcpu	)
+		__field( int,	udelta	)
+		__field( int,	nrgb	)
+		__field( int,	nrga	)
+		__field( int,	nrgd	)
+		__field( int,	capb	)
+		__field( int,	capa	)
+		__field( int,	capd	)
+		__field( int,	nrgn	)
+		__field( int,	nrgp	)
 	),
 
 	TP_fast_assign(
-		memcpy(__entry->comm,	  eenv->task->comm, TASK_COMM_LEN);
-		__entry->pid	= eenv->task->pid;
-		__entry->s_cpu 	= eenv->src_cpu;
-		__entry->d_cpu 	= eenv->dst_cpu;
-		__entry->utl_d  = eenv->util_delta;
-
-		__entry->cap_b  = eenv->before.capacity;
-		__entry->nrg_b 	= eenv->before.energy;
-		__entry->prf_b 	= eenv->before.perf_idx;
-
-		__entry->cap_a 	= eenv->after.capacity;
-		__entry->nrg_a 	= eenv->after.energy;
-		__entry->prf_a 	= eenv->after.perf_idx;
-
-		__entry->nrg_d	= eenv->nrg_delta;
-		__entry->prf_d	= eenv->prf_delta;
-
-		__entry->payoff	= eenv->payoff;
+		memcpy(__entry->comm, tsk->comm, TASK_COMM_LEN);
+		__entry->pid		= tsk->pid;
+		__entry->scpu 		= scpu;
+		__entry->dcpu 		= dcpu;
+		__entry->udelta 	= udelta;
+		__entry->nrgb 		= nrgb;
+		__entry->nrga 		= nrga;
+		__entry->nrgd 		= nrgd;
+		__entry->capb 		= capb;
+		__entry->capa 		= capa;
+		__entry->capd 		= capd;
+		__entry->nrgn 		= nrgn;
+		__entry->nrgp 		= nrgp;
 	),
 
-	TP_printk("pid=%d comm=%s s_cpu=%d d_cpu=%d utl_d=%d "
-		  "cap_b=%d cap_a=%d "
-		  "nrg_b=%u nrg_a=%u nrg_d=%d "
-		  "prf_b=%u prf_a=%u prf_d=%d "
-		  "payoff=%d",
-		__entry->pid,   __entry->comm,
-		__entry->s_cpu, __entry->d_cpu,
-		__entry->utl_d,
-		__entry->cap_b, __entry->cap_a,
-		__entry->nrg_b, __entry->nrg_a,
-		__entry->nrg_d,
-		__entry->prf_b, __entry->prf_a,
-		__entry->prf_d,
-		__entry->payoff)
-
-);
-
-TRACE_EVENT(sched_energy_perf_deltas,
-
-
-	TP_PROTO(struct energy_env *eenv),
-
-	TP_ARGS(eenv),
-
-	TP_STRUCT__entry(
-		__array( char,	comm,	TASK_COMM_LEN	)
-		__field( pid_t,		pid	)
-		__field( int,		s_cpu	)
-		__field( int,		d_cpu	)
-		__field( int,		utl_d	)
-
-		__field( unsigned,	cap_b	)
-		__field( unsigned,	cpu_b	)
-		__field( unsigned,	spi_b	)
-		__field( unsigned,	dli_b	)
-
-		__field( unsigned,	cap_a	)
-		__field( unsigned,	cpu_a	)
-		__field( unsigned,	spi_a	)
-		__field( unsigned,	dli_a	)
-
-		__field( int,		nrg_d	)
-		__field( int,		prf_d	)
-	),
-
-	TP_fast_assign(
-		memcpy(__entry->comm,	eenv->task->comm, TASK_COMM_LEN);
-		__entry->pid	= eenv->task->pid;
-		__entry->s_cpu 	= eenv->src_cpu;
-		__entry->d_cpu 	= eenv->dst_cpu;
-		__entry->utl_d 	= eenv->util_delta;
-
-		__entry->cap_b  = eenv->before.capacity;
-		__entry->cpu_b 	= eenv->before.utilization;
-		__entry->spi_b 	= eenv->before.speedup_idx;
-		__entry->dli_b 	= eenv->before.delay_idx;
-
-		__entry->cap_a  = eenv->after.capacity;
-		__entry->cpu_a 	= eenv->after.utilization;
-		__entry->spi_a 	= eenv->after.speedup_idx;
-		__entry->dli_a 	= eenv->after.delay_idx;
-
-		__entry->prf_d	= eenv->prf_delta;
-		__entry->nrg_d	= eenv->nrg_delta;
-	),
-
-	TP_printk("pid=%d comm=%s s_cpu=%d d_cpu=%d utl_d=%d "
-			"cap_b=%u cap_a=%u "
-			"cpu_b=%u cpu_a=%u "
-			"spi_b=%u spi_a=%u "
-			"dli_b=%u dli_a=%u "
-			"prf_d=%d nrg_d=%d",
-		__entry->pid,   __entry->comm,
-		__entry->s_cpu, __entry->d_cpu,
-		__entry->utl_d,
-		__entry->cap_b, __entry->cap_a,
-		__entry->cpu_b, __entry->cpu_a,
-		__entry->spi_b, __entry->spi_a,
-		__entry->dli_b, __entry->dli_a,
-		__entry->prf_d, __entry->nrg_d)
-
+	TP_printk("pid=%d comm=%s "
+			"src_cpu=%d dst_cpu=%d usage_delta=%d "
+			"nrg_before=%d nrg_after=%d nrg_diff=%d "
+			"cap_before=%d cap_after=%d cap_delta=%d "
+			"nrg_delta=%d nrg_payoff=%d",
+		__entry->pid, __entry->comm,
+		__entry->scpu, __entry->dcpu, __entry->udelta,
+		__entry->nrgb, __entry->nrga, __entry->nrgd,
+		__entry->capb, __entry->capa, __entry->capd,
+		__entry->nrgn, __entry->nrgp)
 );
 
 /*

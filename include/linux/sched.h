@@ -344,6 +344,9 @@ extern void show_regs(struct pt_regs *);
  */
 extern void show_stack(struct task_struct *task, unsigned long *sp);
 
+void io_schedule(void);
+long io_schedule_timeout(long timeout);
+
 extern void cpu_init (void);
 extern void trap_init(void);
 extern void update_process_times(int user);
@@ -399,13 +402,6 @@ extern signed long schedule_timeout_killable(signed long timeout);
 extern signed long schedule_timeout_uninterruptible(signed long timeout);
 asmlinkage void schedule(void);
 extern void schedule_preempt_disabled(void);
-
-extern long io_schedule_timeout(long timeout);
-
-static inline void io_schedule(void)
-{
-	io_schedule_timeout(MAX_SCHEDULE_TIMEOUT);
-}
 
 struct nsproxy;
 struct user_namespace;
@@ -1136,32 +1132,6 @@ typedef const struct cpumask *(*sched_domain_mask_f)(int cpu);
 typedef int (*sched_domain_flags_f)(void);
 typedef
 const struct sched_group_energy * const(*sched_domain_energy_f)(int cpu);
-
-struct energy_env {
-	struct sched_group	*sg_top;
-	struct sched_group	*sg_cap;
-	struct sched_group 	*sg;
-
-	int			src_cpu;
-	int			dst_cpu;
-	int			util_delta;
-	struct task_struct	*task;
-
-	int			cap_idx;
-	int			payoff;
-
-	int nrg_delta;
-	int prf_delta;
-	struct {
-		unsigned int energy;
-		unsigned int capacity;
-		unsigned int utilization;
-
-		int speedup_idx;
-		int delay_idx;
-		int perf_idx;
-	} before, after;
-};
 
 #define SDTL_OVERLAP	0x01
 

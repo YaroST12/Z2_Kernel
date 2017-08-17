@@ -5003,6 +5003,29 @@ static inline bool energy_aware(void)
 	return sched_feat(ENERGY_AWARE);
 }
 
+struct energy_env {
+	struct sched_group	*sg_top;
+	struct sched_group	*sg_cap;
+	int			cap_idx;
+	int			util_delta;
+	int			src_cpu;
+	int			dst_cpu;
+	int			energy;
+	int			payoff;
+	struct task_struct	*task;
+	struct {
+		int before;
+		int after;
+		int delta;
+		int diff;
+	} nrg;
+	struct {
+		int before;
+		int after;
+		int delta;
+	} cap;
+};
+
 /*
  * __cpu_norm_util() returns the cpu util relative to a specific capacity,
  * i.e. it's busy ratio, in the range [0..SCHED_LOAD_SCALE] which is useful for
@@ -5060,11 +5083,10 @@ unsigned long group_max_util(struct energy_env *eenv)
  * estimate (more busy).
  */
 static unsigned
-long group_norm_util(struct energy_env *eenv)
+long group_norm_util(struct energy_env *eenv, struct sched_group *sg)
 {
 	int i, delta;
 	unsigned long util_sum = 0;
-	struct sched_group *sg = eenv->sg;
 	unsigned long capacity = sg->sge->cap_states[eenv->cap_idx].cap;
 
 	for_each_cpu(i, sched_group_cpus(sg)) {
@@ -5077,62 +5099,20 @@ long group_norm_util(struct energy_env *eenv)
 	return util_sum;
 }
 
-#ifdef CONFIG_SCHED_TUNE
-static inline unsigned long boosted_task_util(struct task_struct *task);
-
-static inline int
-find_min_capacity(struct energy_env *eenv)
+static int find_new_capacity(struct energy_env *eenv,
+	const struct sched_group_energy const *sge)
 {
-	const struct sched_group_energy const *sge = eenv->sg->sge;
-	unsigned long min_capacity, cur_capacity;
-	int min_cap_idx, cap_idx;
-	unsigned long min_util;
-
-	/* Non boosted tasks do not affect the minimum capacity */
-	if (!schedtune_task_boost(eenv->task))
-		return eenv->cap_idx;
-
-	/* Find minimum capacity to satify the task boost value */
-	min_util = boosted_task_util(eenv->task);
-	for (min_cap_idx = 0; min_cap_idx < (sge->nr_cap_states-1); min_cap_idx++) {
-		if (sge->cap_states[min_cap_idx].cap >= min_util)
-			break;
-	}
-	min_capacity = sge->cap_states[min_cap_idx].cap;
-
-	/* The current capacity is the one computed by the caller */
-	cur_capacity = sge->cap_states[eenv->cap_idx].cap;
-
-	/*
-	 * Compute the minumum CPU capacity required to support task boosting
-	 * within this SG.
-	 */
-	cur_capacity = max(min_capacity, cur_capacity);
-	cap_idx = max(eenv->cap_idx, min_cap_idx);
-
-	return cap_idx;
-}
-#else
-#define find_min_capacity(eenv) eenv->cap_idx
-#endif /* CONFIG_SCHED_TUNE */
-
-static int find_new_capacity(struct energy_env *eenv)
-{
-	const struct sched_group_energy const *sge = eenv->sg->sge;
-	unsigned long util = group_max_util(eenv);
 	int idx;
+	unsigned long util = group_max_util(eenv);
 
 	for (idx = 0; idx < sge->nr_cap_states; idx++) {
 		if (sge->cap_states[idx].cap >= util)
 			break;
 	}
-	/* Keep track of SG's capacity index */
+
 	eenv->cap_idx = idx;
 
-	/* Update SG's capacity based on boost value of the current task */
-	eenv->cap_idx = find_min_capacity(eenv);
-
-	return eenv->cap_idx;
+	return idx;
 }
 
 static int group_idle_state(struct energy_env *eenv, struct sched_group *sg)
@@ -5207,75 +5187,6 @@ static unsigned long capacity_spare_wake(int cpu, struct task_struct *p)
 }
 
 /*
- * Compute energy for the eenv's SG (i.e. eenv->sg).
- *
- * This works in two iterations:
- * first iteration, before moving the utilization, i.e.
- *   util_delta == 0
- * second iteration, after moving the utilization, i.e.
- *   util_delta != 0
- */
-static void before_after_energy(struct energy_env *eenv)
-{
-
-	int sg_busy_energy, sg_idle_energy;
-	struct sched_group *sg = eenv->sg;
-	unsigned long util_delta;
-	unsigned long group_util;
-	int cap_idx, idle_idx;
-	int total_energy = 0;
-	unsigned int cap;
-	bool after;
-
-	util_delta = eenv->util_delta;
-	eenv->util_delta = 0;
-	after = false;
-
-compute_after:
-
-	idle_idx = group_idle_state(sg);
-
-	cap_idx = find_new_capacity(eenv);
-	group_util = group_norm_util(eenv);
-	cap = sg->sge->cap_states[cap_idx].cap;
-
-	sg_busy_energy   = group_util * sg->sge->cap_states[cap_idx].power;
-	sg_busy_energy >>= SCHED_CAPACITY_SHIFT;
-
-	sg_idle_energy   = SCHED_CAPACITY_SCALE - group_util;
-	sg_idle_energy  *= sg->sge->idle_states[idle_idx].power;
-	sg_idle_energy >>= SCHED_CAPACITY_SHIFT;
-
-	total_energy = sg_busy_energy + sg_idle_energy;
-
-	/* Account for "after" metrics */
-	if (after) {
-		if (sg->group_weight == 1 &&
-		    cpumask_test_cpu(eenv->dst_cpu, sched_group_cpus(sg))) {
-			eenv->after.utilization = group_util;
-			eenv->after.capacity = cap;
-		}
-		eenv->after.energy += total_energy;
-		return;
-	}
-
-	/* Account for "before" metrics */
-	if (sg->group_weight == 1 &&
-	    cpumask_test_cpu(eenv->src_cpu, sched_group_cpus(sg))) {
-		eenv->after.utilization = group_util;
-		eenv->before.capacity = cap;
-	}
-	eenv->before.energy += total_energy;
-
-	/* Setup eenv for the "after" case */
-	eenv->util_delta = util_delta;
-	after = true;
-
-	goto compute_after;
-
-}
-
-/*
  * sched_group_energy(): Computes the absolute energy consumption of cpus
  * belonging to the sched_group including shared resources shared only by
  * members of the group. Iterates over all cpus in the hierarchy below the
@@ -5288,9 +5199,9 @@ compute_after:
 static int sched_group_energy(struct energy_env *eenv)
 {
 	struct sched_domain *sd;
+	int cpu, total_energy = 0;
 	struct cpumask visit_cpus;
 	struct sched_group *sg;
-	int cpu;
 
 	WARN_ON(!eenv->sg_top->sge);
 
@@ -5306,6 +5217,7 @@ static int sched_group_energy(struct energy_env *eenv)
 		 * sched_group?
 		 */
 		sd = rcu_dereference(per_cpu(sd_scs, cpu));
+
 		if (sd && sd->parent)
 			sg_shared_cap = sd->parent->groups;
 
@@ -5317,9 +5229,14 @@ static int sched_group_energy(struct energy_env *eenv)
 				break;
 
 			do {
-				eenv->sg_cap = sg;
+				unsigned long group_util;
+				int sg_busy_energy, sg_idle_energy;
+				int cap_idx, idle_idx;
+
 				if (sg_shared_cap && sg_shared_cap->group_weight >= sg->group_weight)
 					eenv->sg_cap = sg_shared_cap;
+				else
+					eenv->sg_cap = sg;
 
 				cap_idx = find_new_capacity(eenv, sg->sge);
 
@@ -5370,6 +5287,7 @@ next_cpu:
 		continue;
 	}
 
+	eenv->energy = total_energy;
 	return 0;
 }
 
@@ -5378,55 +5296,6 @@ static inline bool cpu_in_sg(struct sched_group *sg, int cpu)
 	return cpu != -1 && cpumask_test_cpu(cpu, sched_group_cpus(sg));
 }
 
-#ifdef CONFIG_SCHED_TUNE
-static inline int normalize_energy(int energy_diff);
-
-#define eenv_before(__X) eenv->before.__X
-#define eenv_after(__X)  eenv->after.__X
-#define eenv_delta(__X)  eenv->after.__X - eenv->before.__X
-
-static inline void
-__update_perf_energy_deltas(struct energy_env *eenv)
-{
-	unsigned long task_util = eenv->util_delta;
-
-	/*
-	 * SpeedUp Index
-	 *
-	 *   SPI := cpu_capacity - task_util
-	 *
-	 * which estimate how sooner a task will complete when running
-	 * on an higher OPP wrt the minimum required.
-	 */
-	eenv_before(speedup_idx) = eenv_before(capacity) - task_util;
-	eenv_after(speedup_idx)  = eenv_after(capacity) - task_util;
-
-	/*
-	 * Delay Index
-	 *
-	 *   DLI := 1024 * (cpu_util - task_util) / cpu_util
-	 *
-	 * which represents the "fraction" of CPU bandwidth consumed by other
-	 * tasks in the worst case, i.e. assuming all other tasks runs before.
-	 *
-	 * NOTE: in the above formula we assume that "cpu_util" includes
-	 *       already the task utilization.
-	 */
-	eenv_before(delay_idx)  =  SCHED_CAPACITY_SCALE;
-	eenv_before(delay_idx) *= (eenv_before(utilization) - task_util);
-	eenv_before(delay_idx) /=  eenv_before(utilization);
-	eenv_after(delay_idx)   =  SCHED_CAPACITY_SCALE;
-	eenv_after(delay_idx)  *= (eenv_after(utilization) - task_util);
-	eenv_after(delay_idx)  /=  eenv_after(utilization);
-
-	/* Performance Variation */
-	eenv->prf_delta = eenv_delta(speedup_idx) - eenv_delta(delay_idx);
-
-	/* Energy Variation */
-	eenv->nrg_delta = normalize_energy(eenv_delta(energy));
-
-}
-#endif
 /*
  * energy_diff(): Estimate the energy impact of changing the utilization
  * distribution. eenv specifies the change: utilisation amount, source, and
@@ -5438,59 +5307,68 @@ static inline int __energy_diff(struct energy_env *eenv)
 {
 	struct sched_domain *sd;
 	struct sched_group *sg;
-	int sd_cpu = -1;
-	int margin;
+	int sd_cpu = -1, energy_before = 0, energy_after = 0;
+	int diff, margin;
+
+	struct energy_env eenv_before = {
+		.util_delta	= 0,
+		.src_cpu	= eenv->src_cpu,
+		.dst_cpu	= eenv->dst_cpu,
+		.nrg		= { 0, 0, 0, 0},
+		.cap		= { 0, 0, 0 },
+	};
 
 	if (eenv->src_cpu == eenv->dst_cpu)
 		return 0;
 
 	sd_cpu = (eenv->src_cpu != -1) ? eenv->src_cpu : eenv->dst_cpu;
 	sd = rcu_dereference(per_cpu(sd_ea, sd_cpu));
+
 	if (!sd)
 		return 0; /* Error */
 
 	sg = sd->groups;
+
 	do {
-		if (!cpu_in_sg(sg, eenv->src_cpu) &&
-		    !cpu_in_sg(sg, eenv->dst_cpu))
-			continue;
+		if (cpu_in_sg(sg, eenv->src_cpu) || cpu_in_sg(sg, eenv->dst_cpu)) {
+			eenv_before.sg_top = eenv->sg_top = sg;
 
-		eenv->sg_top = sg;
-		if (sched_group_energy(eenv))
-			return 0; /* Invalid result abort */
+			if (sched_group_energy(&eenv_before))
+				return 0; /* Invalid result abort */
+			energy_before += eenv_before.energy;
 
+			/* Keep track of SRC cpu (before) capacity */
+			eenv->cap.before = eenv_before.cap.before;
+			eenv->cap.delta = eenv_before.cap.delta;
+
+			if (sched_group_energy(eenv))
+				return 0; /* Invalid result abort */
+			energy_after += eenv->energy;
+		}
 	} while (sg = sg->next, sg != sd->groups);
 
-	/*
-	 * Use absolute E variations for dead-zone filtering
-	 */
-	eenv->nrg_delta = eenv->before.energy - eenv->after.energy;
-
+	eenv->nrg.before = energy_before;
+	eenv->nrg.after = energy_after;
+	eenv->nrg.diff = eenv->nrg.after - eenv->nrg.before;
+	eenv->payoff = 0;
+#ifndef CONFIG_SCHED_TUNE
+	trace_sched_energy_diff(eenv->task,
+			eenv->src_cpu, eenv->dst_cpu, eenv->util_delta,
+			eenv->nrg.before, eenv->nrg.after, eenv->nrg.diff,
+			eenv->cap.before, eenv->cap.after, eenv->cap.delta,
+			eenv->nrg.delta, eenv->payoff);
+#endif
 	/*
 	 * Dead-zone margin preventing too many migrations.
 	 */
-	margin = eenv->before.energy >> 6; /* ~1.56% */
-	if (abs(eenv->nrg_delta) < margin)
-		eenv->nrg_delta = 0;
 
-#ifdef CONFIG_SCHED_TUNE
-	/*
-	 * Normalize E and P variations
-	 */
-	__update_perf_energy_deltas(eenv);
-#else
-	/*
-	 * When SCHED_TUNE is enabled, we trace this elsewhere
-	 * to get more information about performance indices.
-	 * Thus, without SCHED_TUNE, the payoff is reported to be
-	 * undefined, which means task placement decisions will be
-	 * based purely on energy_diff.
-	 */
-	eenv->payoff = 0;
-	trace_sched_energy_diff(eenv);
-#endif
+	margin = eenv->nrg.before >> 6; /* ~1.56% */
 
-	return eenv->nrg_delta;
+	diff = eenv->nrg.after - eenv->nrg.before;
+
+	eenv->nrg.diff = (abs(diff) < margin) ? 0 : eenv->nrg.diff;
+
+	return eenv->nrg.diff;
 }
 
 #ifdef CONFIG_SCHED_TUNE
@@ -5535,35 +5413,38 @@ normalize_energy(int energy_diff)
 	return (energy_diff < 0) ? -normalized_nrg : normalized_nrg;
 }
 
-static inline bool filter_energy(void)
-{
-	return sched_feat(ENERGY_FILTER);
-}
-
 static inline int
 energy_diff(struct energy_env *eenv)
 {
 	int boost;
-	int ret;
+	int nrg_delta;
 
 	/* Conpute "absolute" energy diff */
 	__energy_diff(eenv);
-	if (!filter_energy()) {
-		ret = eenv->nrg_delta;
-		goto out;
-	}
 
 	/* Return energy diff when boost margin is 0 */
+#ifdef CONFIG_CGROUP_SCHEDTUNE
 	boost = schedtune_task_boost(eenv->task);
-	if (boost == 0) {
-		ret = eenv->nrg_delta;
-		goto out;
-	}
+#else
+	boost = get_sysctl_sched_cfs_boost();
+#endif
+	if (boost == 0)
+		return eenv->nrg.diff;
+
+	/* Compute normalized energy diff */
+	nrg_delta = normalize_energy(eenv->nrg.diff);
+	eenv->nrg.delta = nrg_delta;
 
 	eenv->payoff = schedtune_accept_deltas(
-			eenv->nrg_delta,
-			eenv->prf_delta,
+			eenv->nrg.delta,
+			eenv->cap.delta,
 			eenv->task);
+
+	trace_sched_energy_diff(eenv->task,
+			eenv->src_cpu, eenv->dst_cpu, eenv->util_delta,
+			eenv->nrg.before, eenv->nrg.after, eenv->nrg.diff,
+			eenv->cap.before, eenv->cap.after, eenv->cap.delta,
+			eenv->nrg.delta, eenv->payoff);
 
 	/*
 	 * When SchedTune is enabled, the energy_diff() function will return
@@ -5573,13 +5454,7 @@ energy_diff(struct energy_env *eenv)
 	 * positive payoff, which is the condition for the acceptance of
 	 * a scheduling decision
 	 */
-	ret = -eenv->payoff;
-
-out:
-	trace_sched_energy_diff(eenv);
-	trace_sched_energy_perf_deltas(eenv);
-
-	return ret;
+	return -eenv->payoff;
 }
 #else /* CONFIG_SCHED_TUNE */
 #define energy_diff(eenv) __energy_diff(eenv)
@@ -6146,10 +6021,9 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			 * so prev_cpu will receive a negative bias due to the double
 			 * accounting. However, the blocked utilization may be zero.
 			 */
-
 			wake_util = cpu_util_wake(i, p);
 			new_util = wake_util + task_util(p);
-			
+
 			/*
 			 * Ensure minimum capacity to grant the required boost.
 			 * The target CPU can be already at a capacity level higher
@@ -9044,7 +8918,6 @@ static inline unsigned long
 get_sd_balance_interval(struct sched_domain *sd, int cpu_busy)
 {
 	unsigned long interval = sd->balance_interval;
-	unsigned int cpu;
 
 	if (cpu_busy)
 		interval *= sd->busy_factor;
@@ -9053,27 +8926,6 @@ get_sd_balance_interval(struct sched_domain *sd, int cpu_busy)
 	interval = msecs_to_jiffies(interval);
 	interval = clamp(interval, 1UL, max_load_balance_interval);
 
-	/*
-	 * check if root domain is marked as overutilized
-	 * we ought to only do this on systems which have SD_ASYMCAPACITY
-	 * but we want to do it for all sched domains in those systems
-	 * So for now, just check if overutilized as a proxy.
-	 */
-	/*
-	 * If we are overutilized and we have a misfit task, then
-	 * we want to balance as soon as practically possible, so
-	 * we return an interval of zero.
-	 */
-	if (energy_aware()) {
-		cpu = cpumask_first(sched_domain_span(sd));
-		if (cpu < nr_cpu_ids && cpu_rq(cpu)->rd->overutilized) {
-			/* we know the root is overutilized, let's check for a misfit task */
-			for_each_cpu(cpu, sched_domain_span(sd)) {
-				if (cpu_rq(cpu)->misfit_task)
-					return 0;
-			}
-		}
-	}
 	return interval;
 }
 

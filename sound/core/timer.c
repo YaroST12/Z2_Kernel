@@ -1053,8 +1053,8 @@ static int snd_timer_s_start(struct snd_timer * timer)
 		njiff += timer->sticks - priv->correction;
 		priv->correction = 0;
 	}
-	priv->last_expires = priv->tlist.expires = njiff;
-	add_timer(&priv->tlist);
+	priv->last_expires = njiff;
+	mod_timer(&priv->tlist, njiff);
 	return 0;
 }
 
@@ -1972,6 +1972,7 @@ static ssize_t snd_timer_user_read(struct file *file, char __user *buffer,
 
 		qhead = tu->qhead++;
 		tu->qhead %= tu->queue_size;
+		tu->qused--;
 		spin_unlock_irq(&tu->qlock);
 
 		if (tu->tread) {
@@ -1985,7 +1986,6 @@ static ssize_t snd_timer_user_read(struct file *file, char __user *buffer,
 		}
 
 		spin_lock_irq(&tu->qlock);
-		tu->qused--;
 		if (err < 0)
 			goto _error;
 		result += unit;

@@ -845,7 +845,7 @@ wlan_hdd_extscan_config_policy[QCA_WLAN_VENDOR_ATTR_EXTSCAN_SUBCMD_CONFIG_PARAM_
     [QCA_WLAN_VENDOR_ATTR_EXTSCAN_CONFIGURATION_FLAGS] = { .type = NLA_U32 },
     [QCA_WLAN_VENDOR_ATTR_EXTSCAN_BSSID_HOTLIST_PARAMS_LOST_AP_SAMPLE_SIZE] = { .type = NLA_U32 },
 };
-
+/*
 static const struct nla_policy
 wlan_hdd_pno_config_policy[QCA_WLAN_VENDOR_ATTR_PNO_MAX + 1] = {
     [QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NUM] = {
@@ -889,7 +889,7 @@ wlan_hdd_pno_config_policy[QCA_WLAN_VENDOR_ATTR_PNO_MAX + 1] = {
         .type = NLA_U32
     },
 };
-/*
+
 static const struct nla_policy
 wlan_hdd_extscan_results_policy[QCA_WLAN_VENDOR_ATTR_EXTSCAN_RESULTS_MAX + 1] =
 {
@@ -897,6 +897,7 @@ wlan_hdd_extscan_results_policy[QCA_WLAN_VENDOR_ATTR_EXTSCAN_RESULTS_MAX + 1] =
     [QCA_WLAN_VENDOR_ATTR_EXTSCAN_RESULTS_SCAN_RESULT_CAPABILITY] = { .type = NLA_U16 },
 };
 */
+
 #endif /* FEATURE_WLAN_EXTSCAN */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)) || defined(WITH_BACKPORTS)

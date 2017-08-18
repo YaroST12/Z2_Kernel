@@ -18,11 +18,8 @@ obj-$(CONFIG_BLK_DEV_THROTTLING)	+= blk-throttle.o
 obj-$(CONFIG_IOSCHED_NOOP)	+= noop-iosched.o
 obj-$(CONFIG_IOSCHED_DEADLINE)	+= deadline-iosched.o
 obj-$(CONFIG_IOSCHED_CFQ)	+= cfq-iosched.o
-<<<<<<< HEAD
 obj-$(CONFIG_IOSCHED_MAPLE)     += maple-iosched.o
-=======
 obj-$(CONFIG_IOSCHED_FIOPS)	+= fiops-iosched.o
->>>>>>> 8622cde... block: fiops ioscheduler core
 obj-$(CONFIG_IOSCHED_BFQ)	+= bfq-iosched.o
 obj-$(CONFIG_IOSCHED_TEST)	+= test-iosched.o
 

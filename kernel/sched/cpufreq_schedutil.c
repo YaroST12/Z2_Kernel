@@ -29,8 +29,8 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define SUGOV_KTHREAD_PRIORITY	50
 #define LATENCY_MULTIPLIER			(1000)
+#define SUGOV_KTHREAD_PRIORITY	50
 
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
@@ -299,12 +299,6 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 
 	if (!sugov_should_update_freq(sg_policy, time))
 		return;
-	
-	busy = sugov_cpu_is_busy(sg_cpu);
-
-	busy = sugov_cpu_is_busy(sg_cpu);
-
-	busy = sugov_cpu_is_busy(sg_cpu);
 
 	if (sg_policy->tunables->eval_busy_for_freq)
 		busy = sugov_cpu_is_busy(sg_cpu);
@@ -377,6 +371,12 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 
 	raw_spin_lock(&sg_policy->update_lock);
 
+	/* CPU is entering IDLE, reset flags without triggering an update */
+	if (flags & SCHED_CPUFREQ_IDLE) {
+		sg_cpu->flags = 0;
+		goto done;
+	}
+
 	sg_cpu->util = util;
 	sg_cpu->max = max;
 	sg_cpu->flags = flags;
@@ -393,6 +393,7 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 		sugov_update_commit(sg_policy, time, next_f);
 	}
 
+done:
 	raw_spin_unlock(&sg_policy->update_lock);
 }
 
@@ -808,7 +809,6 @@ static int sugov_exit(struct cpufreq_policy *policy)
 	sugov_policy_free(sg_policy);
 	cpufreq_disable_fast_switch(policy);
 
-	cpufreq_disable_fast_switch(policy);
 	return 0;
 }
 

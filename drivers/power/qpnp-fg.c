@@ -2384,7 +2384,7 @@ static int64_t get_batt_id(unsigned int battery_id_uv, u8 bid_info)
 static int get_sram_prop_now(struct fg_chip *chip, unsigned int type)
 {
 	if (fg_debug_mask & FG_POWER_SUPPLY)
-		pr_info("addr 0x%02X, offset %d value %d\n",
+		pr_debug("addr 0x%02X, offset %d value %d\n",
 			fg_data[type].address, fg_data[type].offset,
 			fg_data[type].value);
 
@@ -2400,7 +2400,7 @@ static int get_sram_prop_now(struct fg_chip *chip, unsigned int type)
 static int get_prop_jeita_temp(struct fg_chip *chip, unsigned int type)
 {
 	if (fg_debug_mask & FG_POWER_SUPPLY)
-		pr_info("addr 0x%02X, offset %d\n", settings[type].address,
+		pr_debug("addr 0x%02X, offset %d\n", settings[type].address,
 			settings[type].offset);
 
 	return settings[type].value;
@@ -2412,7 +2412,7 @@ static int set_prop_jeita_temp(struct fg_chip *chip,
 	int rc = 0;
 
 	if (fg_debug_mask & FG_POWER_SUPPLY)
-		pr_info("addr 0x%02X, offset %d temp%d\n",
+		pr_debug("addr 0x%02X, offset %d temp%d\n",
 			settings[type].address,
 			settings[type].offset, decidegc);
 
@@ -2625,7 +2625,7 @@ static int update_sram_data(struct fg_chip *chip, int *resched_ms)
 		rc = fg_mem_read(chip, reg, fg_data[i].address,
 			fg_data[i].len, fg_data[i].offset, 0);
 		if (rc) {
-			pr_err("Failed to update sram data\n");
+			pr_debug("Failed to update sram data\n");
 			break;
 		}
 

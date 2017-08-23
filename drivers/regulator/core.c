@@ -4397,6 +4397,121 @@ unlock:
 }
 EXPORT_SYMBOL_GPL(regulator_suspend_finish);
 
+/* yangjq, 20130513, Add for vreg debug, START */
+#define VREG_NUM_MAX 128 
+
+int vreg_dump_info(char* buf)
+{
+	char* p = buf;
+	struct regulator_dev *rdev;
+	unsigned on, mv;
+	int id;
+
+	mutex_lock(&regulator_list_mutex);
+
+	id = 0;
+	list_for_each_entry(rdev, &regulator_list, list) {
+		const struct regulator_ops *ops = rdev->desc->ops;
+
+		p += sprintf(p, "[%2d]%10s: ", id++, rdev->desc->name);
+
+		on = mv = 0;
+		mutex_lock(&rdev->mutex);
+
+		if (ops->is_enabled)
+			on = ops->is_enabled(rdev);
+		if (ops->get_voltage)
+			mv = ops->get_voltage(rdev) / 1000;
+
+		mutex_unlock(&rdev->mutex);
+
+		p += sprintf(p, "%s ", on ? "on " : "off");
+		p += sprintf(p, "%4d mv ", mv);
+		p += sprintf(p, "\n");
+	}
+
+	mutex_unlock(&regulator_list_mutex);
+
+	return p - buf;
+}
+
+
+/* save vreg config before sleep */
+static unsigned before_sleep_fetched = 1;
+static unsigned before_sleep_configs[VREG_NUM_MAX];
+void vreg_before_sleep_save_configs(void)
+{
+	struct regulator_dev *rdev;
+	unsigned on, mv;
+	int id;
+
+	//only save vreg configs when it has been fetched
+	if (!before_sleep_fetched)
+		return;
+
+	printk("%s(), before_sleep_fetched=%d\n", __func__, before_sleep_fetched);
+	before_sleep_fetched = false;
+
+	mutex_lock(&regulator_list_mutex);
+
+	id = 0;
+	list_for_each_entry(rdev, &regulator_list, list) {
+		const struct regulator_ops *ops = rdev->desc->ops;
+
+		on = mv = 0;
+		mutex_lock(&rdev->mutex);
+
+		if (ops->is_enabled)
+			on = ops->is_enabled(rdev);
+		if (ops->get_voltage)
+			mv = ops->get_voltage(rdev) / 1000;
+
+		mutex_unlock(&rdev->mutex);
+
+		before_sleep_configs[id] = mv | (on << 31);
+		if (++id >= VREG_NUM_MAX)
+			break;
+	}
+
+	mutex_unlock(&regulator_list_mutex);
+}
+
+int vreg_before_sleep_dump_info(char* buf)
+{
+	char* p = buf;
+
+	p += sprintf(p, "vreg_before_sleep:\n");
+	if (!before_sleep_fetched) {
+		struct regulator_dev *rdev;
+		unsigned on, mv;
+		int id;
+
+		before_sleep_fetched = true;
+
+		mutex_lock(&regulator_list_mutex);
+
+		id = 0;
+		list_for_each_entry(rdev, &regulator_list, list) {
+			p += sprintf(p, "[%2d]%10s: ", id, rdev->desc->name);
+
+			mv = before_sleep_configs[id];
+			on = (mv & 0x80000000) >> 31;
+			mv &= ~0x80000000;
+
+			p += sprintf(p, "%s ", on ? "on " : "off");
+			p += sprintf(p, "%4d mv ", mv);
+			p += sprintf(p, "\n");
+
+			if (++id >= VREG_NUM_MAX)
+				break;
+		}
+
+		mutex_unlock(&regulator_list_mutex);
+	}
+	return p - buf;	
+}
+/* yangjq, 20130513, Add for vreg debug, END */
+
 /**
  * regulator_has_full_constraints - the system has fully specified constraints
  *

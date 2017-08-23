@@ -40,6 +40,7 @@
 #include <asm/sizes.h>
 #include <asm/tlb.h>
 #include <asm/alternative.h>
+#include <linux/le_rkm.h>
 
 #include "mm.h"
 
@@ -179,6 +180,7 @@ void __init arm64_memblock_init(void)
 	dma_contiguous_reserve(dma_phys_limit);
 
 	memblock_allow_resize();
+	arm_rkm_log_backup();
 	memblock_dump_all();
 }
 

@@ -690,6 +690,7 @@ int32_t msm_sensor_driver_probe(void *setting,
 	unsigned long                        mount_pos = 0;
 	uint32_t                             is_yuv;
 
+    return -ENOMEM;
 	/* Validate input parameters */
 	if (!setting) {
 		pr_err("failed: slave_info %pK", setting);

@@ -19,6 +19,9 @@
 
 #include "power_supply.h"
 
+#define SUPPORT_CPU_TEMP_MONITOR
+#define SUPPORT_LENUK_CUSTOM_BATTERY_MONITOR
+
 /*
  * This is because the name "current" breaks the device attr macro.
  * The "current" word resolves to "(get_current())" so instead of
@@ -47,7 +50,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 		"Unknown", "Battery", "UPS", "Mains", "USB", "USB_DCP",
 		"USB_CDP", "USB_ACA", "USB_HVDCP", "USB_HVDCP_3", "USB_PD",
 		"Wireless", "USB_FLOAT", "BMS", "Parallel", "Main", "Wipower",
-		"TYPEC", "TYPEC_UFP", "TYPEC_DFP"
+		"TYPEC", "TYPEC_UFP", "TYPEC_DFP" ,"TSENS_TEMP"
 	};
 	static char *status_text[] = {
 		"Unknown", "Charging", "Discharging", "Not charging", "Full"
@@ -231,6 +234,18 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(scope),
 	POWER_SUPPLY_ATTR(charge_term_current),
 	POWER_SUPPLY_ATTR(calibrate),
+#ifdef SUPPORT_LENUK_CUSTOM_BATTERY_MONITOR
+	POWER_SUPPLY_ATTR(ns_charger),
+	POWER_SUPPLY_ATTR(calling),
+	POWER_SUPPLY_ATTR(screen_on),
+	POWER_SUPPLY_ATTR(ship_mode),
+#endif
+#ifdef SUPPORT_CPU_TEMP_MONITOR
+	POWER_SUPPLY_ATTR(temp_cpu0),
+	POWER_SUPPLY_ATTR(temp_cpu1),
+	POWER_SUPPLY_ATTR(temp_cpu2),
+	POWER_SUPPLY_ATTR(temp_cpu3),
+#endif
 	/* Local extensions */
 	POWER_SUPPLY_ATTR(usb_hc),
 	POWER_SUPPLY_ATTR(usb_otg),

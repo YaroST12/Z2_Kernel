@@ -207,6 +207,14 @@ struct input_keymap_entry {
 #define FF_STATUS_MAX		0x01
 
 /*
+ * Zuk button codes
+*/
+#define KEY_NAVI_RIGHT  249
+#define KEY_NAVI_LEFT   254
+#define KEY_NAVI_LONG   183
+#define KEY_GESTURE_DT 0x21e
+
+/*
  * Structures used in ioctls to upload effects to a device
  * They are pieces of a bigger structure (called ff_effect)
  */

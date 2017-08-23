@@ -47,6 +47,7 @@ arm64-obj-$(CONFIG_HARDEN_BRANCH_PREDICTOR)	+= bpi.o
 endif
 
 obj-y					+= $(arm64-obj-y) vdso/
+obj-y					+= user_sysfs_private.o
 obj-m					+= $(arm64-obj-m)
 head-y					:= head.o
 extra-y					:= $(head-y) vmlinux.lds

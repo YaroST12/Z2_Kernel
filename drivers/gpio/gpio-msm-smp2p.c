@@ -415,6 +415,8 @@ static void msm_summary_irq_handler(struct smp2p_chip_dev *chip,
 	bool trigger_interrrupt;
 	bool irq_rising;
 	bool irq_falling;
+//yangjq, 20130619, Add log to show wakeup interrupts
+	extern int save_irq_wakeup_gpio(int irq, int gpio);
 
 	cur_val = entry->current_value;
 	prev_val = entry->previous_value;
@@ -458,6 +460,8 @@ static void msm_summary_irq_handler(struct smp2p_chip_dev *chip,
 				edge_name_rising[irq_rising],
 				edge_name_falling[irq_falling],
 				edge_names[edge]);
+			//yangjq, 20130619, Add log to show wakeup interrupts
+			save_irq_wakeup_gpio(chip->irq_base + i, i);
 			(void)generic_handle_irq(chip->irq_base + i);
 		}
 

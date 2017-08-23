@@ -606,6 +606,9 @@ static int __qpnpint_handle_irq(struct spmi_controller *spmi_ctrl,
 		       struct qpnp_irq_spec *spec,
 		       bool show)
 {
+//yangjq, 20130619, Add log to show wakeup interrupts
+	extern int save_irq_wakeup_gpio(int irq, int gpio);
+
 	struct irq_domain *domain;
 	unsigned long hwirq, busno;
 	int irq;
@@ -643,6 +646,8 @@ static int __qpnpint_handle_irq(struct spmi_controller *spmi_ctrl,
 				irq, spec->slave, spec->per, spec->irq, name);
 	} else {
 		generic_handle_irq(irq);
+    //yangjq, 20130619, Add log to show wakeup interrupts
+		save_irq_wakeup_gpio(irq, 0);
 	}
 
 	return 0;

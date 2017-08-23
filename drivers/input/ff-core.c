@@ -246,7 +246,12 @@ static int flush_effects(struct input_dev *dev, struct file *file)
 	struct ff_device *ff = dev->ff;
 	int i;
 
-	pr_debug("flushing now\n");
+	pr_info("flushing now\n");
+/*
+ * Workaround: WIFI process call flush_effects in certain scenario,
+ * this cause to vibrator abnormal.
+ */
+	return 0;
 
 	mutex_lock(&ff->mutex);
 

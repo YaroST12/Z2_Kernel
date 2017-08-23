@@ -39,6 +39,7 @@
 #define PS_HOLD_OFFSET 0x820
 #define TLMM_EBI2_EMMC_GPIO_CFG 0x111000
 
+static struct gpio_chip *msm_gpio_chip = NULL;
 /**
  * struct msm_pinctrl - state for a pinctrl-msm device
  * @dev:            device handle.
@@ -494,6 +495,305 @@ static void msm_gpio_free(struct gpio_chip *chip, unsigned offset)
 	return pinctrl_free_gpio(gpio);
 }
 
+/* gulei1, 20160215, Add sysfs for gpio's debug, START */
+static int msm_gpio_dbg_show_one_(
+					char *buf,
+				  struct pinctrl_dev *pctldev,
+				  struct gpio_chip *chip,
+				  unsigned offset,
+				  unsigned gpio)
+{
+	const struct msm_pingroup *g;
+	struct msm_pinctrl *pctrl = container_of(chip, struct msm_pinctrl, chip);
+	char *p = buf;
+	unsigned func;
+	int is_out;
+	int in;
+	int out;
+	int drive;
+	int pull;
+	u32 ctl_reg;
+
+	static const char * const pulls[] = {
+		"n",
+		"d",
+		"k",
+		"u"
+	};
+
+	g = &pctrl->soc->groups[offset];
+	//io_reg
+	ctl_reg = readl(pctrl->regs + g->io_reg);
+	out = (ctl_reg >> g->out_bit) & 1;
+	in = (ctl_reg >> g->in_bit) & 1;
+	//ctl_reg
+	ctl_reg = readl(pctrl->regs + g->ctl_reg);
+	is_out = !!(ctl_reg & BIT(g->oe_bit));
+	func = (ctl_reg >> g->mux_bit) & 7;
+	drive = (ctl_reg >> g->drv_bit) & 7;
+	pull = (ctl_reg >> g->pull_bit) & 3;
+
+	p += sprintf(p, "%-3d: %d %s %s %d i%do%d", offset, func, pulls[pull], is_out ? "o" : "i", msm_regval_to_drive(drive), in, out);
+
+	return p - buf;
+}
+
+void msm_gpio_set_config(
+				  unsigned gpio,
+				  unsigned func,
+				  unsigned pull,
+				  unsigned dir,
+				  unsigned drvstr,
+				  unsigned output_val)
+{
+	const struct msm_pingroup *g;
+	struct msm_pinctrl *pctrl = container_of(msm_gpio_chip, struct msm_pinctrl, chip);
+	//u32 ctl_reg;
+	unsigned long flags;
+	u32 val;
+
+	g = &pctrl->soc->groups[gpio];
+	//printk("set: %-3d: f%d %s %s %d i%do%d", gpio, func, pulls[pull], is_out ? "o" : "i", msm_regval_to_drive(drive), in, out);
+	spin_lock_irqsave(&pctrl->lock, flags);
+	// set 
+	val = readl(pctrl->regs + g->ctl_reg);
+	//func
+	val &= ~(0x7 << g->mux_bit);
+	val |= func << g->mux_bit;
+	//pull
+	val &= ~(0x3 << g->pull_bit);
+	val |= pull << g->pull_bit;
+	//dir
+	val &= ~(0x1 << g->oe_bit);
+	val |= dir << g->oe_bit;
+	//drv
+	val &= ~(0x7 << g->drv_bit);
+	val |= drvstr << g->drv_bit;
+
+	writel(val, pctrl->regs + g->ctl_reg);
+	// output
+	if (dir == 1){ 
+		val = readl(pctrl->regs + g->io_reg);
+		if (output_val)
+			val |= BIT(g->out_bit);
+		else
+			val &= ~BIT(g->out_bit);
+		writel(val, pctrl->regs + g->io_reg);
+	}
+	spin_unlock_irqrestore(&pctrl->lock, flags);
+}
+#define TLMM_NUM_GPIO 150
+
+#define HAL_OUTPUT_VAL(config) (((config)&0x40000000)>>30)
+
+static int tlmm_dump_header(char* buf)
+{
+	char* p = buf;
+	p += sprintf(p, "number dir func value drive pull\n");
+	/*
+	p += sprintf(p, "bit   0~3: function. (0 is GPIO)\n");
+	p += sprintf(p, "bit  4~13: gpio number\n");
+	p += sprintf(p, "bit    14: 0: input, 1: output\n");
+	p += sprintf(p, "bit 15~16: pull: NO_PULL, PULL_DOWN, KEEPER, PULL_UP\n");
+	p += sprintf(p, "bit 17~20: driver strength. \n");
+	p += sprintf(p, "0:GPIO\n");
+	p += sprintf(p, "N:NO_PULL  D:PULL_DOWN  K:KEEPER  U:PULL_UP\n");
+	p += sprintf(p, "I:Input  O:Output\n");
+	p += sprintf(p, "2:2, 4, 6, 8, 10, 12, 14, 16 mA (driver strength)\n\n");
+	*/
+	return p - buf;
+}
+
+int msm_gpio_dump_info(char* buf)
+{
+	struct gpio_chip *chip = msm_gpio_chip;
+	unsigned gpio = chip->base;
+	unsigned i;
+	char* p = buf;
+
+	p += tlmm_dump_header(p);
+
+	for (i = 0; i < chip->ngpio; i++, gpio++) {
+		if((i<85)||(i>88)){
+		    p += msm_gpio_dbg_show_one_(p, NULL, chip, i, gpio);
+		    p += sprintf(p, "\n");
+		} else {
+		    p += sprintf(p, "%-4d: controled by tz\n", i);
+		}
+	}
+	p += sprintf(p, "(%d)\n", (int)(p - buf)); // only for debug reference
+	return p - buf;	
+}
+
+/* save tlmm config before sleep */
+static unsigned before_sleep_fetched = 1;
+static u64 before_sleep_configs[TLMM_NUM_GPIO];
+void msm_gpio_before_sleep_save_configs(void)
+{
+	unsigned i;
+	const struct msm_pingroup *g;
+	struct msm_pinctrl *pctrl = container_of(msm_gpio_chip, struct msm_pinctrl, chip);
+	u64 ctl_reg;
+	u64 io_reg;
+
+	//only save tlmm configs when it has been fetched
+	if (!before_sleep_fetched)
+		return;
+
+	printk("%s(), before_sleep_fetched=%d\n", __func__, before_sleep_fetched);
+	before_sleep_fetched = false;
+	for (i = 0; i < msm_gpio_chip->ngpio; i++) {
+		if((i<85)||(i>88)){
+			g = &pctrl->soc->groups[i];
+			io_reg = readl(pctrl->regs + g->io_reg);
+			ctl_reg = readl(pctrl->regs + g->ctl_reg);
+			before_sleep_configs[i] = (ctl_reg & 0x00000000FFFFFFFF) | (io_reg << 32);
+		} else {
+			before_sleep_configs[i] = 0;
+		}
+	}
+}
+
+int msm_gpio_before_sleep_dump_info(char* buf)
+{
+	unsigned i;
+	char* p = buf;
+	struct msm_pinctrl *pctrl = container_of(msm_gpio_chip, struct msm_pinctrl, chip);
+	const struct msm_pingroup *g;
+	u64 ctl_reg;
+	u64 io_reg;
+	unsigned func;
+	int is_out;
+	int in;
+	int out;
+	int drive;
+	int pull;
+	
+	static const char * const pulls[] = {
+		"n",
+		"d",
+		"k",
+		"u"
+	};
+
+	p += sprintf(p, "msm_gpio_before_sleep:\n");
+	if (!before_sleep_fetched) {
+		before_sleep_fetched = true;
+		p += tlmm_dump_header(p);
+
+		for(i = 0; i < msm_gpio_chip->ngpio; ++i) {
+			if((i<85)||(i>88)){
+				g = &pctrl->soc->groups[i];
+				ctl_reg = before_sleep_configs[i] & 0xFFFFFFFF;
+				io_reg = (before_sleep_configs[i] >> 32) & 0xFFFFFFFF;
+
+				out = (io_reg >> g->out_bit) & 1;
+				in = (io_reg >> g->in_bit) & 1;
+				is_out = !!(ctl_reg & BIT(g->oe_bit));
+				func = (ctl_reg >> g->mux_bit) & 7;
+				drive = (ctl_reg >> g->drv_bit) & 7;
+				pull = (ctl_reg >> g->pull_bit) & 3;
+
+				p += sprintf(p, "%-3d: %d %s %s %d i%do%d\n", i, func, pulls[pull], is_out ? "o" : "i", msm_regval_to_drive(drive), in, out);
+			} else {
+		    p += sprintf(p, "%-4d: controled by tz\n", i);
+			}
+		}
+		p+= sprintf(p, "(%d)\n", (int)(p - buf)); // only for debug reference
+	}
+	return p - buf;	
+}
+
+#if 0
+/* set tlmms config before sleep */
+static unsigned before_sleep_table_enabled;
+static unsigned before_sleep_table_configs[TLMM_NUM_GPIO];
+void msm_gpio_before_sleep_set_configs(void)
+{
+	int res;
+	unsigned i;
+
+	//only set tlmms before sleep when it's enabled
+	if (!before_sleep_table_enabled)
+		return;
+
+	printk("%s(), before_sleep_table_enabled=%d\n", __func__, before_sleep_table_enabled);
+	for(i = 0; i < TLMM_NUM_GPIO; ++i) {
+		unsigned cfg;
+		int gpio;
+		int dir;
+		int func;
+		int output_val = 0;
+
+		cfg = before_sleep_table_configs[i];
+
+		gpio = GPIO_PIN(cfg);
+		if(gpio != i)//(cfg & ~0x20000000) == 0 || 
+			continue;
+
+		output_val = HAL_OUTPUT_VAL(cfg);
+		//Clear the output value
+		//cfg &= ~0x40000000;
+		dir = GPIO_DIR(cfg);
+		func = GPIO_FUNC(cfg);
+
+		printk("%s(), [%d]: 0x%x\n", __func__, i, cfg);
+		res = gpio_tlmm_config((cfg & ~0x40000000), GPIO_CFG_ENABLE);
+		if(res < 0) {
+			printk("Error: Config failed.\n");
+		}
+		
+		if((func == 0) && (dir == 1)) // gpio output
+			__msm_gpio_set_inout(i, output_val);
+	}
+}
+int msm_gpio_before_sleep_table_set_cfg(unsigned gpio, unsigned cfg)
+{
+	//BUG_ON(gpio >= TLMM_NUM_GPIO && GPIO_PIN(cfg) != 0xff);
+	if (gpio >= TLMM_NUM_GPIO && gpio != 255 && gpio != 256) {
+		printk("gpio >= TLMM_NUM_GPIO && gpio != 255 && gpio != 256!\n");
+		return -1;
+	}
+
+	if(gpio < TLMM_NUM_GPIO)
+	{
+		before_sleep_table_configs[gpio] = cfg;// | 0x20000000
+		before_sleep_table_enabled = true;
+	}
+	else if(gpio == 255)
+		before_sleep_table_enabled = true;
+	else if(gpio == 256)
+		before_sleep_table_enabled = false;
+
+	return 0;
+}
+
+int msm_gpio_before_sleep_table_dump_info(char* buf)
+{
+	unsigned i;
+	char* p = buf;
+
+	p += tlmm_dump_header(p);
+	p += sprintf(p, "Format: gpio_num  function  pull  direction  strength [output_value]\n");
+	p += sprintf(p, " e.g.  'echo  20 0 D O 2 1'  ==> set pin 20 as GPIO output and the output = 1 \n");
+	p += sprintf(p, " e.g.  'echo  20'  ==> disable pin 20's setting \n");
+	p += sprintf(p, " e.g.  'echo  255'  ==> enable sleep table's setting \n");
+	p += sprintf(p, " e.g.  'echo  256'  ==> disable sleep table's setting \n");
+
+	for(i = 0; i < TLMM_NUM_GPIO; ++i) {
+		unsigned cfg;
+		int output_val = 0;
+
+		cfg = before_sleep_table_configs[i];
+		output_val = HAL_OUTPUT_VAL(cfg);
+		//cfg &= ~0x40000000;
+		p += tlmm_dump_cfg(p, i, cfg, output_val);
+	}
+	p+= sprintf(p, "(%d)\n", p - buf); // only for debug reference
+	return p - buf;
+}
+#endif
+/* gulei1, 20160215, Add sysfs for gpio's debug, END */
 #ifdef CONFIG_DEBUG_FS
 #include <linux/seq_file.h>
 
@@ -537,11 +837,14 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 	unsigned i;
 
 	for (i = 0; i < chip->ngpio; i++, gpio++) {
-		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
-		seq_puts(s, "\n");
+		if((i<85)||(i>88)){
+		    msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
+		    seq_puts(s, "\n");
+		} else {
+		    seq_printf(s, " gpio%-4d: access controled by tz\n", i);
+		}
 	}
 }
-
 #else
 #define msm_gpio_dbg_show NULL
 #endif
@@ -809,6 +1112,9 @@ bool msm_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 	int i;
 	bool ret;
 
+//yangjq, 20130619, Add log to show wakeup interrupts
+	extern int save_irq_wakeup_gpio(int irq, int gpio);
+
 	chained_irq_enter(chip, desc);
 
 	/*
@@ -820,7 +1126,11 @@ bool msm_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 		val = readl(pctrl->regs + g->intr_status_reg);
 		if (val & BIT(g->intr_status_bit)) {
 			irq_pin = irq_find_mapping(gc->irqdomain, i);
-			handled += generic_handle_irq(irq_pin);
+			generic_handle_irq(irq_pin);
+			//yangjq, 20130619, Add log to show wakeup interrupts
+			//dev_err(pctrl->dev, "msm_gpio irq%d gpio%d handled\n", irq_pin, *g->pins);
+			save_irq_wakeup_gpio(irq_pin, *g->pins);
+			handled++;
 		}
 	}
 
@@ -849,6 +1159,7 @@ struct irq_chip mpm_pinctrl_extn = {
 	.irq_disable	= NULL,
 };
 
+
 static int msm_gpio_init(struct msm_pinctrl *pctrl)
 {
 	struct gpio_chip *chip;
@@ -865,6 +1176,8 @@ static int msm_gpio_init(struct msm_pinctrl *pctrl)
 	chip->dev = pctrl->dev;
 	chip->owner = THIS_MODULE;
 	chip->of_node = pctrl->dev->of_node;
+
+	msm_gpio_chip = chip;
 
 	ret = gpiochip_add(&pctrl->chip);
 	if (ret) {

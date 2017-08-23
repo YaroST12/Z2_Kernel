@@ -1485,6 +1485,7 @@ config NETFILTER_XT_MATCH_U32
 
 	  Details and examples are in the kernel module source.
 
+
 endif # NETFILTER_XTABLES
 
 endmenu

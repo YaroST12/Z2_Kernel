@@ -526,6 +526,13 @@ config FUELGAUGE_STC3117
 	  This driver source code implemented
 	  all functions for STC3117 fuel gauge.
 
+config QPNP_SMBCHARGER_HW
+	tristate "QPNP SMB Charger driver for HW"
+	depends on QPNP_SMBCHARGER
+	default n
+	help
+	  Say Y here to limit IC and FCC for HW
+
 config QPNP_FG
 	tristate "QPNP fuel gauge driver"
 	depends on SPMI || MSM_SPMI

@@ -556,6 +556,7 @@ config VEXPRESS_SYSCFG
 config UID_SYS_STATS
 	bool "Per-UID statistics"
 	depends on PROFILING
+	default y
 	help
 	  Per UID based cpu time statistics exported to /proc/uid_cputime
 	  Per UID based io statistics exported to /proc/uid_io
@@ -590,6 +591,11 @@ config TI_DRV2667
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called ti_drv2667.
+config FPC1020_REE
+    tristate "FPC1020 fingerprint sensor support"
+    help
+      The FPC1020 is a fingerprint sensor for smartphone, only manage
+      IRQ & HW reset gpio in the REE side.
 
 config QPNP_MISC
 	tristate "QPNP Misc Peripheral"
@@ -613,6 +619,33 @@ config MEMORY_STATE_TIME
 	help
 	  Memory time statistics exported to /sys/kernel/memory_state_time
 
+config SENSORS_SYSFS
+     tristate "Sensors sysfs"
+     default n
+     ---help---
+        Support sysfs for sensors.
+        If you say yes here you get sysfs support for MAX86X00
+        To compile this driver as a module, choose M here: the
+        module will be called sensors_core.
+
+config SENSORS_MAX86X00
+     tristate "Max86x00 Sensor"
+     depends on I2C
+     depends on SENSORS_SYSFS
+     default n
+     ---help---
+        Support Max86x00 sensors.
+        If you say yes here you get support for Max86x00
+        To compile this driver as a module, choose M here: the
+        module will be called sensors_core.
+
+config SENSORS_MAX86X00_LED_POWER
+     tristate "Max86x00 Led"
+     depends on I2C
+     default n
+     ---help---
+       Say Y here if you want to enable LED's regulator control in the driver.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -627,4 +660,5 @@ source "drivers/misc/mic/Kconfig"
 source "drivers/misc/genwqe/Kconfig"
 source "drivers/misc/echo/Kconfig"
 source "drivers/misc/cxl/Kconfig"
+source "drivers/misc/cclogic/Kconfig"
 endmenu

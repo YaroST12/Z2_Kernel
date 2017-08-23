@@ -256,8 +256,11 @@ static inline void msm_mpm_get_irq_a2m(struct irq_data *d, uint16_t *mpm_pins)
 			 * Update the linux irq mapping. No update required for
 			 * bypass interrupts
 			 */
-			if (node->pin != 0xff)
+			if (node->pin != 0xff){
 				msm_mpm_irqs_m2a[node->pin] = d->irq;
+				if (MSM_MPM_DEBUG_PENDING_IRQ & msm_mpm_debug_mask)
+					pr_warn("%s, pin=%d, irq=%d \n",__func__, (int)node->pin,(int)d->irq);
+			}
 			BUG_ON(count >= MAX_MPM_PIN_PER_IRQ);
 			mpm_pins[count] = node->pin;
 			count++;
@@ -599,7 +602,7 @@ void msm_mpm_exit_sleep(bool from_idle)
 		pending &= enabled_intr[i];
 
 		if (MSM_MPM_DEBUG_PENDING_IRQ & msm_mpm_debug_mask)
-			pr_info("%s: enabled_intr.%d pending.%d: 0x%08x 0x%08lx\n",
+			pr_warn("%s: enabled_intr.%d pending.%d: 0x%08x 0x%08lx\n",
 				__func__, i, i, enabled_intr[i], pending);
 
 		k = find_first_bit(&pending, 32);

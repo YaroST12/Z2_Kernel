@@ -620,7 +620,7 @@ int main(int ac, char **av)
 		case randconfig:	name = "allrandom.config"; break;
 		default: break;
 		}
-		if (conf_read_simple(name, S_DEF_USER) &&
+		if (conf_read_simple(name, (int)S_DEF_USER) &&
 		    conf_read_simple("all.config", S_DEF_USER)) {
 			fprintf(stderr,
 				_("*** KCONFIG_ALLCONFIG set, but no \"%s\" or \"all.config\" file found\n"),

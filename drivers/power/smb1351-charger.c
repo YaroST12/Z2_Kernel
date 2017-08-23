@@ -36,6 +36,11 @@
 		_SMB1351_MASK((LEFT_BIT_POS) - (RIGHT_BIT_POS) + 1, \
 				(RIGHT_BIT_POS))
 
+#include <linux/proc_fs.h>
+#ifdef CONFIG_PROC_FS
+#define SUPPORT_SMB1351_PROC_FS
+#endif
+
 /* Configuration registers */
 #define CHG_CURRENT_CTRL_REG			0x0
 #define FAST_CHG_CURRENT_MASK			SMB1351_MASK(7, 4)
@@ -671,6 +676,12 @@ static void smb1351_wakeup_src_init(struct smb1351_charger *chip)
 	spin_lock_init(&chip->smb1351_ws.ws_lock);
 	wakeup_source_init(&chip->smb1351_ws.source, "smb1351");
 }
+
+static int smb1351_version = 0;
+module_param_named(
+	smb1351_version, smb1351_version,
+	int, S_IRUSR | S_IWUSR
+);
 
 static int smb1351_read_reg(struct smb1351_charger *chip, int reg, u8 *val)
 {
@@ -1340,6 +1351,7 @@ static int smb_chip_get_version(struct smb1351_charger *chip)
 			chip->version = SMB1350;
 		else
 			chip->version = SMB1351;
+		smb1351_version = chip->version;
 	}
 
 	return rc;
@@ -4045,6 +4057,49 @@ static const struct file_operations status_debugfs_ops = {
 	.release	= single_release,
 };
 
+static int show_registers_regs(struct seq_file *m, void *data)
+{
+	struct smb1351_charger *chip = m->private;
+	int rc;
+	u8 reg;
+	u8 addr;
+
+	for (addr = 0; addr <= LAST_CNFG_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(m, "%02x,", reg);
+	}
+
+	for (addr = FIRST_CMD_REG; addr <= LAST_CMD_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(m, "%02x,", reg);
+	}
+
+	for (addr = FIRST_STATUS_REG; addr <= LAST_STATUS_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(m, "%02x,", reg);
+	}
+
+	return 0;
+}
+
+static int registers_debugfs_open(struct inode *inode, struct file *file)
+{
+	struct smb1351_charger *chip = inode->i_private;
+
+	return single_open(file, show_registers_regs, chip);
+}
+
+static const struct file_operations registers_debugfs_ops = {
+	.owner		= THIS_MODULE,
+	.open		= registers_debugfs_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int show_irq_count(struct seq_file *m, void *data)
 {
 	int i, j, total = 0;
@@ -4453,6 +4508,12 @@ static int create_debugfs_entries(struct smb1351_charger *chip)
 		if (!ent)
 			pr_err("Couldn't create cmd debug file\n");
 
+		ent = debugfs_create_file("smb1351_registers", S_IFREG | S_IRUGO,
+					  chip->debug_root, chip,
+					  &registers_debugfs_ops);
+		if (!ent)
+			pr_err("Couldn't create registers debug file\n");
+
 		ent = debugfs_create_x32("address", S_IFREG | S_IWUSR | S_IRUGO,
 					chip->debug_root,
 					&(chip->peek_poke_address));
@@ -4656,6 +4717,62 @@ trash_ws:
 	return rc;
 }
 
+#ifdef SUPPORT_SMB1351_PROC_FS
+static int smb1351_read_regs(struct smb1351_charger *chip,
+			struct seq_file *p)
+{
+	int rc;
+	u8 reg;
+	u8 addr;
+
+	for (addr = 0; addr <= LAST_CNFG_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(p, "%02x,", reg);
+	}
+
+	for (addr = FIRST_CMD_REG; addr <= LAST_CMD_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(p, "%02x,", reg);
+	}
+
+	for (addr = FIRST_STATUS_REG; addr <= LAST_STATUS_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(p, "%02x,", reg);
+	}
+
+	return 0;
+}
+
+static int smb1351_regs_show(struct seq_file *p, void *v)
+{
+	struct smb1351_charger *chip = p->private;
+
+	smb1351_read_regs(chip, p);
+
+	return 0;
+}
+
+static int smb1351_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, smb1351_regs_show, PDE_DATA(file_inode(file)));
+}
+
+static const struct file_operations proc_smb1351_operations = {
+        .open           = smb1351_open,
+        .read           = seq_read,
+        .llseek         = seq_lseek,
+        .release        = single_release,
+};
+
+static void smb1351_init_procfs(struct smb1351_charger *chip)
+{
+	proc_create_data("smb1351_regs", 0644, NULL, &proc_smb1351_operations, chip);
+}
+#endif
+
 static int smb1351_parallel_slave_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
@@ -4719,6 +4836,9 @@ static int smb1351_parallel_slave_probe(struct i2c_client *client,
 	chip->resume_completed = true;
 	create_debugfs_entries(chip);
 
+#ifdef SUPPORT_SMB1351_PROC_FS
+	smb1351_init_procfs(chip);
+#endif
 	pr_info("smb1351 parallel successfully probed.\n");
 
 	return 0;

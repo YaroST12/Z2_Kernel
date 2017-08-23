@@ -32,6 +32,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/i2c.h>
 #include <linux/regmap.h>
+#include <linux/reboot.h>
 #include <sound/soc.h>
 #include "wcd9xxx-regmap.h"
 
@@ -3088,6 +3089,7 @@ static int wcd9xxx_slim_probe(struct slim_device *slim)
 		pr_err("%s: failed to get slimbus %s logical address: %d\n",
 		       __func__, wcd9xxx->slim->name, ret);
 		ret = -EPROBE_DEFER;
+		machine_restart("wcd9xxx_slim_probe");
 		goto err_reset;
 	}
 	wcd9xxx->read_dev = wcd9xxx_slim_read_device;

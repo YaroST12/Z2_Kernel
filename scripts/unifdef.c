@@ -328,6 +328,9 @@ main(int argc, char *argv[])
 		output = stdout;
 	} else {
 		struct stat ist, ost;
+                memset(&ist, 0, sizeof(struct stat));
+                memset(&ost, 0, sizeof(struct stat));
+
 		if (stat(ofilename, &ost) == 0 &&
 		    fstat(fileno(input), &ist) == 0)
 			overwriting = (ist.st_dev == ost.st_dev
@@ -450,7 +453,7 @@ static void Idrop (void) { Fdrop();  ignoreon(); }
 static void Itrue (void) { Ftrue();  ignoreon(); }
 static void Ifalse(void) { Ffalse(); ignoreon(); }
 /* modify this line */
-static void Mpass (void) { strncpy(keyword, "if  ", 4); Pelif(); }
+static void Mpass (void) { strncpy(keyword, "if ", 4); Pelif(); }
 static void Mtrue (void) { keywordedit("else");  state(IS_TRUE_MIDDLE); }
 static void Melif (void) { keywordedit("endif"); state(IS_FALSE_TRAILER); }
 static void Melse (void) { keywordedit("endif"); state(IS_FALSE_ELSE); }

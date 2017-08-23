@@ -359,6 +359,8 @@ static int gic_suspend(void)
 
 static void gic_show_resume_irq(struct gic_chip_data *gic)
 {
+	//yangjq, 20130619, Add log to show wakeup interrupts
+	extern int save_irq_wakeup_gpio(int irq, int gpio);
 	unsigned int i;
 	u32 enabled;
 	u32 pending[32];
@@ -386,6 +388,9 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 			name = desc->action->name;
 
 		pr_warn("%s: %d triggered %s\n", __func__, irq, name);
+
+		//yangjq, 20130619, Add log to show wakeup interrupts
+		save_irq_wakeup_gpio(irq, 0);
 	}
 }
 

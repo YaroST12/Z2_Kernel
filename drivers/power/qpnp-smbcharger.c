@@ -514,7 +514,7 @@ enum hvdcp_voters {
 	HVDCP_PULSING_VOTER,
 	NUM_HVDCP_VOTERS,
 };
-static int smbchg_debug_mask = 0xFF;
+static int smbchg_debug_mask = 0;
 module_param_named(
 	debug_mask, smbchg_debug_mask, int, S_IRUSR | S_IWUSR
 );
@@ -584,7 +584,7 @@ module_param_named(
 #define pr_smb(reason, fmt, ...)				\
 	do {							\
 		if (smbchg_debug_mask & (reason))		\
-			pr_info(fmt, ##__VA_ARGS__);		\
+			pr_debug(fmt, ##__VA_ARGS__);		\
 		else						\
 			pr_debug(fmt, ##__VA_ARGS__);		\
 	} while (0)
@@ -592,9 +592,9 @@ module_param_named(
 #define pr_smb_rt(reason, fmt, ...)					\
 	do {								\
 		if (smbchg_debug_mask & (reason))			\
-			pr_info_ratelimited(fmt, ##__VA_ARGS__);	\
+			pr_debug(fmt, ##__VA_ARGS__);	\
 		else							\
-			pr_debug_ratelimited(fmt, ##__VA_ARGS__);	\
+			pr_debug(fmt, ##__VA_ARGS__);	\
 	} while (0)
 
 static int smbchg_read(struct smbchg_chip *chip, u8 *val,
@@ -1928,7 +1928,7 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 	 * order to avoid browning out the device during a hotswap.
 	 */
 	if (!chip->batt_present && current_ma < chip->usb_max_current_ma) {
-		pr_info_ratelimited("Ignoring usb current->%d, battery is absent\n",
+		pr_debug("Ignoring usb current->%d, battery is absent\n",
 				current_ma);
 		return 0;
 	}
@@ -2774,7 +2774,7 @@ static int set_fastchg_current_vote_cb(struct device *dev,
 			pr_err("Can't set FCC fcc_ma=%d rc=%d\n", fcc_ma, rc);
 			return rc;
 		}
-		pr_info("set FCC fcc_ma=%d\n", fcc_ma);
+		pr_debug("set FCC fcc_ma=%d\n", fcc_ma);
 	}
 	/*
 	 * check if parallel charging can be enabled, and if enabled,
@@ -3127,7 +3127,7 @@ static int smbchg_system_temp_level_set(struct smbchg_chip *chip,
 	}
 
 #ifdef SUPPORT_TEHRMAL_MITIGATION_WITH_FCC
-	pr_info("Thermal mitigation level: %d %d %d\n", lvl_sel, chip->therm_lvl_sel, chip->thermal_levels);
+	pr_debug("Thermal mitigation level: %d %d %d\n", lvl_sel, chip->therm_lvl_sel, chip->thermal_levels);
 #endif
 	if (lvl_sel >= chip->thermal_levels) {
 		dev_err(chip->dev, "Unsupported level selected %d forcing %d\n",
@@ -4287,7 +4287,7 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 		ret = rc;
 	} else {
 		if (chip->vfloat_mv != (max_voltage_uv / 1000)) {
-			pr_info("Vfloat changed from %dmV to %dmV for battery-type %s\n",
+			pr_debug("Vfloat changed from %dmV to %dmV for battery-type %s\n",
 				chip->vfloat_mv, (max_voltage_uv / 1000),
 				chip->battery_type);
 			rc = smbchg_float_voltage_set(chip,
@@ -4309,7 +4309,7 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 	} else if (!rc) {
 		if (chip->iterm_ma != (iterm_ua / 1000)
 				&& !chip->iterm_disabled) {
-			pr_info("Term current changed from %dmA to %dmA for battery-type %s\n",
+			pr_debug("Term current changed from %dmA to %dmA for battery-type %s\n",
 				chip->iterm_ma, (iterm_ua / 1000),
 				chip->battery_type);
 			rc = smbchg_iterm_set(chip,
@@ -8903,7 +8903,7 @@ static int reset_max_fcc_ma(struct smbchg_chip *chip, int ma, bool state)
 		return rc;
 	}
 
-	pr_info("reset max fcc to %dmA\n", ma);
+	pr_debug("reset max fcc to %dmA\n", ma);
 	return 0;
 }
 

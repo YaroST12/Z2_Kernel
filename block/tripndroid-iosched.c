@@ -30,8 +30,8 @@ static const int sync_write_expire = 1 * HZ;	/* max time before a sync write is 
 static const int async_read_expire  =  2 * HZ;	/* ditto for async, these limits are SOFT! */
 static const int async_write_expire = 2 * HZ;	/* ditto for async, these limits are SOFT! */
 
-static const int writes_starved = 1;		/* max times reads can starve a write */
-static const int fifo_batch     = 1;		/* # of sequential requests treated as one
+static const int writes_starved = 16;		/* max times reads can starve a write */
+static const int fifo_batch     = 4;		/* # of sequential requests treated as one
 						   by the above parameters. For throughput. */
 
 struct tripndroid_data {

@@ -75,6 +75,12 @@
 #define BLANK_FLAG_LP	FB_BLANK_VSYNC_SUSPEND
 #define BLANK_FLAG_ULP	FB_BLANK_NORMAL
 #endif
+#define MDSS_BRIGHT_TO_BL_DIMMER(out, v) do {\
+			out = ((v) * (v) * 255  / 4095 + (v) * (255 - (v)) / 32);\
+			} while (0)
+
+bool backlight_dimmer = true;
+module_param(backlight_dimmer, bool, 0755);
 
 extern struct panel_effect_data lcd_data;
 struct msm_fb_data_type *mfd_priv;
@@ -274,9 +280,12 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 
 	if (value > mfd->panel_info->brightness_max)
 		value = mfd->panel_info->brightness_max;
-
-	/* This maps android backlight level 0 to 255 into
-	   driver backlight level 0 to bl_max with rounding */
+	
+	if (backlight_dimmer) {
+			MDSS_BRIGHT_TO_BL_DIMMER(bl_lvl, value);
+	} else {
+		/* This maps android backlight level 0 to 255 into
+		   driver backlight level 0 to bl_max with rounding */
 	MDSS_BRIGHT_TO_BL(bl_lvl, value, mfd->panel_info->bl_max,
 				mfd->panel_info->brightness_max);
 

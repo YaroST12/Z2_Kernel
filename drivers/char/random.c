@@ -303,7 +303,7 @@
  * The minimum number of bits of entropy before we wake up a read on
  * /dev/random.  Should be enough to do a significant reseed.
  */
-static int random_read_wakeup_bits = 64;
+static int random_read_wakeup_bits = 128;
 
 /*
  * If the entropy count falls under this number of bits, then we

@@ -243,7 +243,7 @@ enum extscan_report_events_type {
 	EXTSCAN_REPORT_EVENTS_CONTEXT_HUB   = 0x08,
 };
 
-#define WMA_EXTSCAN_CYCLE_WAKE_LOCK_DURATION    (5 * 1000) /* in msec */
+#define WMA_EXTSCAN_CYCLE_WAKE_LOCK_DURATION    (2.5 * 100) /* in msec */
 
 /*
  * Maximum number of entires that could be present in the

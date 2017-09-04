@@ -680,6 +680,16 @@ static long msm_private_ioctl(struct file *file, void *fh,
 	if (!event_data)
 		return -EINVAL;
 
+	switch (cmd) {
+	case MSM_CAM_V4L2_IOCTL_NOTIFY:
+	case MSM_CAM_V4L2_IOCTL_CMD_ACK:
+	case MSM_CAM_V4L2_IOCTL_NOTIFY_DEBUG:
+	case MSM_CAM_V4L2_IOCTL_NOTIFY_ERROR:
+		break;
+	default:
+		return -ENOTTY;
+	}
+
 	session_id = event_data->session_id;
 	stream_id = event_data->stream_id;
 

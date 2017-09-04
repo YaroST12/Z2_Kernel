@@ -395,7 +395,6 @@ static struct cpufreq_frequency_table *cpufreq_parse_dt(struct device *dev,
 					break;
 			}
 		}
-no_cpu_underclock=true;
 #endif
 
 		/*

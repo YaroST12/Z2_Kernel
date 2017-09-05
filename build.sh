@@ -1,16 +1,14 @@
 #!/bin/bash
-cd ..
+kernel_dir=$PWD
 rm -rf modules
 export CONFIG_FILE="n7x-caf_z2_plus_defconfig"
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-Mi5-linux-gnu-"
 export TOOL_CHAIN_PATH="${HOME}/build/z2/Custom_Toolchains/bin"
 export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
-export CONFIG_ABS_PATH="arch/${ARCH}/configs/${CONFIG_FILE}"
 export PATH=$PATH:${TOOL_CHAIN_PATH}
-export sourcedir="${HOME}/KERNELS/AOSPExtended/kernel/zuk/msm8996/"
-export objdir="${sourcedir}/../out"
-cd $sourcedir
+export objdir="${kernel_dir}/../out"
+cd $kernel_dir
 compile() {
   make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j8
   make O=$objdir -j8
@@ -25,13 +23,10 @@ module(){
   cp modules/* ../../../out/target/product/z2_plus/system/lib/modules/
 }
 dtbuild(){
-  cd $sourcedir
+  cd $kernel_dir
   ./tools/dtbToolCM -2 -o $objdir/arch/arm64/boot/dt.img -s 4096 -p $objdir/scripts/dtc/ $objdir/arch/arm64/boot/dts/
 }
 compile 
 cd ${objdir}
 module
-cd ${sourcedir}
-#dtbuild
-#cp $objdir/arch/arm64/boot/zImage $sourcedir/zImage
-#cp $objdir/arch/arm64/boot/dt.img.lz4 $sourcedir/dt.img
+cd ${kernel_dir}

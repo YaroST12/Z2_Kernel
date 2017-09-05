@@ -12,8 +12,8 @@ export sourcedir="${HOME}/KERNELS/AOSPExtended/kernel/zuk/msm8996/"
 export objdir="${sourcedir}/../out"
 cd $sourcedir
 compile() {
-  make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j9
-  make O=$objdir -j9
+  make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j8
+  make O=$objdir -j8
 }
 module(){
   mkdir modules
@@ -22,6 +22,7 @@ module(){
   ${TOOL_CHAIN_PATH}/${CROSS_COMPILE}strip --strip-unneeded modules/*
   #mkdir modules/qca_cld
   #mv modules/wlan.ko modules/qca_cld/qca_cld_wlan.ko
+  cp modules/* ../../../out/target/product/z2_plus/system/lib/modules/
 }
 dtbuild(){
   cd $sourcedir

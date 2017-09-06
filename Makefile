@@ -640,6 +640,10 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning,unused-const-variable,)
 # Kill format truncation warnings
 KBUILD_CFLAGS   += $(call cc-disable-warning,format-truncation,)
 
+# Why do you guys exist?
+KBUILD_CFLAGS   += $(call cc-disable-warning,duplicate-decl-specifier,)
+KBUILD_CFLAGS   += $(call cc-disable-warning,unused-variable,)
+
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
 

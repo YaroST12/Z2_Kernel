@@ -15,12 +15,12 @@ compile() {
 }
 module(){
   mkdir modules
+  mkdir modules/qca_cld
   find . -name '*.ko' -exec cp -av {} modules/ \;
-  # strip modules 
   ${TOOL_CHAIN_PATH}/${CROSS_COMPILE}strip --strip-unneeded modules/*
-  #mkdir modules/qca_cld
-  #mv modules/wlan.ko modules/qca_cld/qca_cld_wlan.ko
-  cp modules/* ../../../out/target/product/z2_plus/system/lib/modules/
+  cp modules/wlan.ko modules/qca_cld/qca_cld_wlan.ko
+  mv modules/wlan.ko ../../../out/target/product/z2_plus/system/lib/modules/qca_cld/qca_cld_wlan.ko
+  
 }
 dtbuild(){
   cd $kernel_dir

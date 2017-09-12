@@ -165,6 +165,9 @@ static ssize_t get_key(struct device* device, struct device_attribute* attribute
 	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->report_key);
 }
 
+static bool longtap = 1;
+module_param_named(longtap, longtap, bool, 0664);
+
 static ssize_t set_key(struct device* device,
 		struct device_attribute* attribute,
 		const char*buffer, size_t count)
@@ -176,8 +179,12 @@ static ssize_t set_key(struct device* device,
 
 	retval = kstrtou64(buffer, 0, &val);
 	if (!retval) {
-		if (val == KEY_HOME)
-			val = KEY_NAVI_LONG;  //Convert to U-touch long press keyValue
+		if (val == KEY_HOME) {
+			if (longtap) 
+				val = KEY_NAVI_LONG;  //Convert to U-touch long press keyValue
+			else
+				return -ENOENT;
+		}
 
 	    home_pressed = home_button_pressed();
 
@@ -359,11 +366,15 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	set_bit(KEY_BACK, fpc1020->input_dev->keybit);
 	set_bit(KEY_LEFT, fpc1020->input_dev->keybit);
 	set_bit(KEY_RIGHT, fpc1020->input_dev->keybit);
-	set_bit(KEY_NAVI_LONG, fpc1020->input_dev->keybit);
+    if (longtap) {
+        set_bit(KEY_NAVI_LONG, fpc1020->input_dev->keybit);
+    }
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LEFT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_RIGHT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_BACK);
-	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LONG);
+    if (longtap) {
+        input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LONG);
+    }
 
 	/* Register the input device */
 	retval = input_register_device(fpc1020->input_dev);

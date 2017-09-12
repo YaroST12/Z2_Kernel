@@ -5414,7 +5414,7 @@ relative_energy(unsigned int nrg_next, unsigned nrg_prev)
 	 *        100          90       -102  we will save 10% energy
 	 *         10         100        921  we will spend 10 times more energy
 	 */
-	int value = SCHED_CAPACITY_SHIFT;
+	int value = SCHED_CAPACITY_SCALE;
 
 	value *= abs((int)nrg_next - (int)nrg_prev);
 	value /= max(nrg_prev, nrg_next);
@@ -5509,6 +5509,25 @@ compute_delta(struct energy_env *eenv, int prev_cpu, int next_cpu)
 #endif
 }
 
+#ifdef CONFIG_SCHED_TUNE
+/* When schedtune is present, nrg_delta is not in raw units
+ * instead it is either relative or normalised, which is
+ * handled in schedtune_pespace_filter however non-boosted
+ * tasks still have only deadzone energy filtering, so we
+ * need to select an appropriate deadzone.
+ *
+ * In Relative mode:
+ * nrg_delta is (+/-) 1024*((next-prev)/max(next,prev))
+ * For a margin of 3% of prev_nrg, use 1024*3% (30).
+ *
+ * In Normalised mode:
+ * nrg_delta is (+/-) 1024*((next-prev)/system_max)
+ * For a margin of 1.5% of max_system_nrg, use 1024*1.5% (15).
+ */
+#define SCHEDTUNE_RELATIVE_NRG_DEADZONE 30
+#define SCHEDTUNE_NORMALIZED_NRG_DEADZONE 15
+#endif
+
 static inline int eas_deadzone_filter(struct energy_env *eenv)
 {
 	int cpu_idx;
@@ -5518,9 +5537,16 @@ static inline int eas_deadzone_filter(struct energy_env *eenv)
 	 * Compute the dead-zone margin used to prevent too many task
 	 * migrations with negligible energy savings.
 	 * An energy saving is considered meaningful if it reduces the energy
-	 * consumption of EAS_CPU_PRV CPU candidate by at least ~1.56%
+	 * consumption of EAS_CPU_PRV CPU candidate by at least ~3.1%
 	 */
-	margin = eenv->cpu[EAS_CPU_PRV].energy >> 6;
+#ifdef CONFIG_SCHED_TUNE
+	if (sched_feat(ENERGY_NORMALIZE))
+		margin = SCHEDTUNE_NORMALIZED_NRG_DEADZONE;
+	else
+		margin = SCHEDTUNE_RELATIVE_NRG_DEADZONE;
+#else
+	margin = eenv->cpu[EAS_CPU_PRV].energy >> 5;
+#endif
 
 	/*
 	 * By default the EAS_CPU_PRV CPU is considered the most energy

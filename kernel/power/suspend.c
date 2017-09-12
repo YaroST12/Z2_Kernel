@@ -30,6 +30,7 @@
 #include <trace/events/power.h>
 #include <linux/compiler.h>
 #include <linux/wakeup_reason.h>
+#include <linux/module.h>
 
 #include "power.h"
 
@@ -480,6 +481,8 @@ static void suspend_finish(void)
  * Fail if that's not the case.  Otherwise, prepare for system suspend, make the
  * system enter the given sleep state and clean up after wakeup.
  */
+static bool sync_before_suspend = 0;
+module_param_named(sync_before_suspend, sync_before_suspend, bool, 0664);
 static int enter_state(suspend_state_t state)
 {
 	int error;
@@ -502,14 +505,15 @@ static int enter_state(suspend_state_t state)
 	if (state == PM_SUSPEND_FREEZE)
 		freeze_begin();
 
-#ifdef CONFIG_PM_SYNC_BEFORE_SUSPEND
+if (sync_before_suspend) {
 	trace_suspend_resume(TPS("sync_filesystems"), 0, true);
 	printk(KERN_INFO "PM: Syncing filesystems ... ");
 	sys_sync();
 	printk("done.\n");
 	trace_suspend_resume(TPS("sync_filesystems"), 0, false);
-#endif
-
+} else {
+	printk(KERN_INFO "PM: Skipping FS sync... ");
+}
 	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state]);
 	error = suspend_prepare(state);
 	if (error)

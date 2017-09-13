@@ -5551,7 +5551,64 @@ static inline int eas_deadzone_filter(struct energy_env *eenv)
 
 	return eenv->next_idx;
 }
+
+#ifdef CONFIG_SCHED_TUNE
+static inline int schedtune_pespace_filter(struct energy_env *eenv)
+{
+	int cpu_idx;
+
+	/* Fall-back to standard deadzone filter */
+	if (!sched_feat(ENERGY_FILTER) ||
+	    !schedtune_task_boost(eenv->p)) {
+		cpu_idx = eas_deadzone_filter(eenv);
+		goto out;
+	}
+
+	/*
+	 * By default the EAS_CPU_PRV CPU is considered the most energy
+	 * efficient, with a 0 energy variation.
+	 */
+	eenv->next_idx = EAS_CPU_PRV;
+	eenv->next_cpu = eenv->cpu[EAS_CPU_PRV].cpu_id;
+	eenv->cpu[EAS_CPU_PRV].nrg_delta = 0;
+	eenv->cpu[EAS_CPU_PRV].prf_delta = 0;
+	eenv->cpu[EAS_CPU_PRV].payoff = 0;
+
+	/*
+	 * Compare the other CPU candidates to find a CPU which has
+	 * the best energy-vs-performance trade-off.
+	 */
+	for (cpu_idx = EAS_CPU_NXT; cpu_idx < EAS_CPU_CNT; ++cpu_idx) {
+
+		if (eenv->cpu[cpu_idx].cpu_id == -1)
+			continue;
+
+		/* filter performance-energy variations within the PESpace */
+		eenv->cpu[cpu_idx].payoff = schedtune_accept_deltas(
+				eenv->cpu[cpu_idx].nrg_delta,
+				eenv->cpu[cpu_idx].prf_delta,
+				eenv->p);
+
+		/* update the schedule candidate with min(payoff) */
+		if (eenv->cpu[cpu_idx].payoff >
+		    eenv->cpu[eenv->next_idx].payoff) {
+			eenv->next_idx = cpu_idx;
+			eenv->next_cpu = eenv->cpu[cpu_idx].cpu_id;
+		}
+
+		trace_sched_perf_delta(eenv, EAS_CPU_PRV, cpu_idx);
+		trace_sched_energy_diff(eenv, EAS_CPU_PRV, cpu_idx);
+	}
+
+out:
+
+	return cpu_idx;
+}
+
+#define filter_delta(eenv) schedtune_pespace_filter(eenv)
+#else
 #define filter_delta(eenv) eas_deadzone_filter(eenv)
+#endif /* CONFIG_SCHED_TUNE */
 
 /*
  * select_energy_cpu_idx(): estimate the energy impact of changing the

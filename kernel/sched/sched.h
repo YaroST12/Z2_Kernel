@@ -957,6 +957,9 @@ struct energy_env {
 
 		/* Estimated performance variation wrt EAS_CPU_PRV */
 		int	prf_delta;
+
+		/* Estimated power-vs-performance trade-off */
+		int	payoff;
 #endif
 	} cpu[EAS_CPU_CNT];
 

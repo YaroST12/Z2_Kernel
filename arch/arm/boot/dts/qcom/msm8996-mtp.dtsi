@@ -940,6 +940,7 @@
         fpc,gpio_reset = <&tlmm 90 0x00>;
 		//Experimental
 		gpio-key,wakeup;
+		fpc,enable-wakeup;
     };
 #endif
 

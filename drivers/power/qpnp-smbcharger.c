@@ -43,6 +43,7 @@
 #include "pmic-voter.h"
 
 #define SUPPORT_JEITA_TEMP_PATCH
+#define SUPPORT_ANDROID_WAKE_LOCK_PATCH
 #define SUPPORT_QPNP_USBIN_MONITOR
 #define SUPPORT_NON_STANDARD_CHARGER
 #define SUPPORT_SOC_100_FORCE_STATUS_FULL
@@ -56,6 +57,9 @@
 
 #ifdef SUPPORT_CALL_POWER_OP
 extern int g_call_status;
+#endif
+#ifdef SUPPORT_ANDROID_WAKE_LOCK_PATCH
+#include <linux/wakelock.h>
 #endif
 #ifdef SUPPORT_SCREEN_ON_FCC_OP
 #include <linux/fb.h>
@@ -327,7 +331,10 @@ struct smbchg_chip {
 	struct votable			*hw_aicl_rerun_enable_indirect_votable;
 	struct votable			*aicl_deglitch_short_votable;
 	struct votable			*hvdcp_enable_votable;
-
+	
+#ifdef SUPPORT_ANDROID_WAKE_LOCK_PATCH
+	struct wake_lock		qpnp_smbcharger_wake_lock;
+#endif
 #ifdef SUPPORT_INVAILD_CHARGER_CHARGE
 	int				is_invalid_charger;
 #endif
@@ -5452,6 +5459,15 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 				chip->usb_present);
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
 	}
+#ifdef SUPPORT_ANDROID_WAKE_LOCK_PATCH
+	if (chip->usb_present && !wake_lock_active(&chip->qpnp_smbcharger_wake_lock)) {
+		pr_smb(PR_MISC, "wake lock\n");
+		wake_lock(&chip->qpnp_smbcharger_wake_lock);
+	} else if (!chip->usb_present && wake_lock_active(&chip->qpnp_smbcharger_wake_lock)) {
+		pr_smb(PR_MISC, "wake unlock\n");
+		wake_unlock(&chip->qpnp_smbcharger_wake_lock);
+	}
+#endif
 	set_usb_psy_dp_dm(chip, POWER_SUPPLY_DP_DM_DPR_DMR);
 	schedule_work(&chip->usb_set_online_work);
 	pr_smb(PR_MISC, "setting usb psy health UNKNOWN\n");
@@ -5520,6 +5536,15 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 				chip->usb_present);
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
 	}
+#ifdef SUPPORT_ANDROID_WAKE_LOCK_PATCH
+	if (chip->usb_present && !wake_lock_active(&chip->qpnp_smbcharger_wake_lock)) {
+		pr_smb(PR_MISC, "wake lock\n");
+		wake_lock(&chip->qpnp_smbcharger_wake_lock);
+	} else if (!chip->usb_present && wake_lock_active(&chip->qpnp_smbcharger_wake_lock)) {
+		pr_smb(PR_MISC, "wake unlock\n");
+		wake_unlock(&chip->qpnp_smbcharger_wake_lock);
+	}
+#endif
 
 	/* Notify the USB psy if OV condition is not present */
 	if (!chip->usb_ov_det) {
@@ -9118,8 +9143,9 @@ static int smbchg_probe(struct spmi_device *spmi)
 		return rc;
 	}
 
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-	init_waitqueue_head(&chip->cclogic_wait_queue);
+#ifdef SUPPORT_ANDROID_WAKE_LOCK_PATCH
+	wake_lock_init(&chip->qpnp_smbcharger_wake_lock, WAKE_LOCK_SUSPEND,
+			"qpnp_smbcharger_lock");
 #endif
 
 	rc = smbchg_hw_init(chip);
@@ -9403,6 +9429,9 @@ static void smbchg_shutdown(struct spmi_device *spmi)
 	msleep(1000);
 	chip->hvdcp_3_det_ignore_uv = false;
 
+#ifdef SUPPORT_ANDROID_WAKE_LOCK_PATCH
+	wake_lock_destroy(&chip->qpnp_smbcharger_wake_lock);
+#endif
 	pr_smb(PR_STATUS, "wrote power off configurations\n");
 }
 

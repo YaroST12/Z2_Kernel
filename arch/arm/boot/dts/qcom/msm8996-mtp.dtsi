@@ -922,8 +922,6 @@
         interrupts = <91 0x1>;
         fpc,gpio_irq = <&tlmm 91 0x00>;
         fpc,gpio_reset = <&tlmm 90 0x00>;
-		fpc,enable-wakeup;
-		gpio-key,wakeup;
     };
 
     gen-vkeys {

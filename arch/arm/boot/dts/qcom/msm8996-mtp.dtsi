@@ -49,13 +49,9 @@
 	status = "ok";
 };
 
-#if 0
 &uartblsp2dm1 {
-	status = "ok";
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart_console_active>;
+	status = "disabled";
 };
-#endif
 
 &sdhc_1 {
 	vdd-supply = <&pm8994_l20>;
@@ -918,18 +914,6 @@
 	};
 #endif
 
-#ifdef CONFIG_PRODUCT_Z2_X
-    goodix_gx5116 {
-        compatible = "goodix,fingerprint";
-		interrupt-parent = <&tlmm>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&fpc_default>;
-		interrupts = <91 0x1>;
-		goodix,gpio_irq = <&tlmm 91 0x00>;
-		goodix,gpio_reset = <&tlmm 90 0x00>;
-		goodix,gpio_pwr =  <&tlmm 76 0x00>;
-	};
-#else
     fpc1020 {
         compatible = "fpc,fpc1020";
         interrupt-parent = <&tlmm>;
@@ -938,8 +922,9 @@
         interrupts = <91 0x1>;
         fpc,gpio_irq = <&tlmm 91 0x00>;
         fpc,gpio_reset = <&tlmm 90 0x00>;
+		fpc,enable-wakeup;
+		gpio-key,wakeup;
     };
-#endif
 
     gen-vkeys {
         compatible = "qcom,gen-vkeys";

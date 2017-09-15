@@ -2051,11 +2051,6 @@ static u8 batt_to_setpoint_8b(int vbatt_mv)
 	return DIV_ROUND_CLOSEST(val, 5);
 }
 
-static int soc_to_setpoint(int soc)
-{
-	return DIV_ROUND_CLOSEST(soc * 255, 100);
-}
-
 static u8 therm_delay_to_setpoint(u32 delay_us)
 {
 	u8 val;

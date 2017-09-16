@@ -165,8 +165,8 @@ static ssize_t get_key(struct device* device, struct device_attribute* attribute
 	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->report_key);
 }
 
-static bool longtap = 1;
-module_param_named(longtap, longtap, bool, 0664);
+static int longtap = 1;
+module_param_named(longtap, longtap, int, 0664);
 
 static ssize_t set_key(struct device* device,
 		struct device_attribute* attribute,

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,7 +29,6 @@
 #include "msm_isp_axi_util.h"
 #include "msm_isp_stats_util.h"
 #include "msm_sd.h"
-#include "msm_isp48.h"
 #include "msm_isp47.h"
 #include "msm_isp46.h"
 #include "msm_isp44.h"
@@ -331,17 +330,6 @@ void msm_isp_update_req_history(uint32_t client, uint64_t ab,
 	spin_unlock(&req_history_lock);
 }
 
-void msm_isp_update_last_overflow_ab_ib(struct vfe_device *vfe_dev)
-{
-	spin_lock(&req_history_lock);
-	vfe_dev->msm_isp_last_overflow_ab =
-	msm_isp_bw_request_history[msm_isp_bw_request_history_idx].total_ab;
-	vfe_dev->msm_isp_last_overflow_ib =
-	msm_isp_bw_request_history[msm_isp_bw_request_history_idx].total_ib;
-	spin_unlock(&req_history_lock);
-}
-
-
 #ifdef CONFIG_COMPAT
 static long msm_isp_dqevent(struct file *file, struct v4l2_fh *vfh, void *arg)
 {
@@ -475,40 +463,66 @@ static int vfe_set_common_data(struct platform_device *pdev)
 
 static int vfe_probe(struct platform_device *pdev)
 {
+	struct vfe_parent_device *vfe_parent_dev;
 	int rc = 0;
 	struct device_node *node;
 	struct platform_device *new_dev = NULL;
 	uint32_t i = 0;
 	char name[10] = "\0";
-	uint32_t num_hw_sd;
 
+	vfe_parent_dev = kzalloc(sizeof(struct vfe_parent_device),
+		GFP_KERNEL);
+	if (!vfe_parent_dev) {
+		rc = -ENOMEM;
+		goto end;
+	}
+
+	vfe_parent_dev->common_sd = kzalloc(
+		sizeof(struct msm_vfe_common_subdev), GFP_KERNEL);
+	if (!vfe_parent_dev->common_sd) {
+		rc = -ENOMEM;
+		goto probe_fail1;
+	}
+
+	vfe_parent_dev->common_sd->common_data = &vfe_common_data;
 	memset(&vfe_common_data, 0, sizeof(vfe_common_data));
 	spin_lock_init(&vfe_common_data.common_dev_data_lock);
-	spin_lock_init(&vfe_common_data.common_dev_axi_lock);
 
-	of_property_read_u32(pdev->dev.of_node, "num_child", &num_hw_sd);
+	of_property_read_u32(pdev->dev.of_node,
+		"num_child", &vfe_parent_dev->num_hw_sd);
 
-	for (i = 0; i < num_hw_sd; i++) {
+	for (i = 0; i < vfe_parent_dev->num_hw_sd; i++) {
 		node = NULL;
 		snprintf(name, sizeof(name), "qcom,vfe%d", i);
 		node = of_find_node_by_name(NULL, name);
 		if (!node) {
 			pr_err("%s: Error! Cannot find node in dtsi %s\n",
 				__func__, name);
-			goto end;
+			goto probe_fail2;
 		}
 		new_dev = of_find_device_by_node(node);
 		if (!new_dev) {
 			pr_err("%s: Failed to find device on bus %s\n",
 				__func__, node->name);
-			goto end;
+			goto probe_fail2;
 		}
-		new_dev->dev.platform_data = &vfe_common_data;
+		vfe_parent_dev->child_list[i] = new_dev;
+		new_dev->dev.platform_data =
+			(void *)vfe_parent_dev->common_sd->common_data;
 		rc = vfe_set_common_data(new_dev);
 		if (rc < 0)
-			goto end;
+			goto probe_fail2;
 	}
 
+	vfe_parent_dev->num_sd = vfe_parent_dev->num_hw_sd;
+	vfe_parent_dev->pdev = pdev;
+
+	return rc;
+
+probe_fail2:
+	kfree(vfe_parent_dev->common_sd);
+probe_fail1:
+	kfree(vfe_parent_dev);
 end:
 	return rc;
 }
@@ -567,7 +581,8 @@ int vfe_hw_probe(struct platform_device *pdev)
 
 	vfe_dev->pdev = pdev;
 
-	rc = vfe_dev->hw_info->vfe_ops.platform_ops.get_platform_data(vfe_dev);
+
+	rc = vfe_dev->hw_info->vfe_ops.core_ops.get_platform_data(vfe_dev);
 	if (rc < 0) {
 		pr_err("%s: failed to get platform resources\n", __func__);
 		rc = -ENOMEM;

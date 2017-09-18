@@ -505,7 +505,7 @@ static void set_fingerprintd_nice(int nice)
 static int fpc1020_resume(struct platform_device *pdev)
 {
 	int retval = 0;
-	set_fingerprintd_nice(-20);
+	set_fingerprintd_nice(-1);
 	return retval;
 }
 

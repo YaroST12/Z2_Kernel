@@ -322,31 +322,6 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.attr		= msm_freq_attr,
 };
 
-#if defined(CONFIG_PRODUCT_Z2_PLUS)|| defined(CONFIG_PRODUCT_Z2_ROW)
-/*
- * Always underclock the power cluster for both MSM8996 and MSM8996pro. There
- * are reproducible crashes with the AnTuTu CPU multithread test when both
- * clusters run at their stock maxfreq. Underclocking the power cluster allows
- * MSM8996 to be stable at its perf cluster's stock maxfreq, and it allows
- * MSM8996pro to be stable at 2150 MHz on its perf cluster.
- *
- * This instability occurs even with a kernel that the OEM compiled.
- * TODO: Investigate why this happens and find a proper fix that allows use of
- * all stock frequencies.
-*/
-#define UNDERCLOCKED_MAX_KHZ_PERFCL	1824000
-#define UNDERCLOCKED_MAX_KHZ_PWRCL	1478400
-static bool no_cpu_underclock;
-
-static int __init get_cpu_underclock(char *unused)
-{
-	no_cpu_underclock = true;
-
-	return 0;
-}
-__setup("no_underclock", get_cpu_underclock);
-#endif
-
 static struct cpufreq_frequency_table *cpufreq_parse_dt(struct device *dev,
 						char *tbl_name, int cpu)
 {
@@ -381,21 +356,6 @@ static struct cpufreq_frequency_table *cpufreq_parse_dt(struct device *dev,
 		if (IS_ERR_VALUE(f))
 			break;
 		f /= 1000;
-
-#if defined(CONFIG_PRODUCT_Z2_PLUS)|| defined(CONFIG_PRODUCT_Z2_ROW)
-		if (i > 0) {
-			/* Always underclock power cluster for stability */
-			if (cpu < 2) {
-				if (ftbl[i - 1].frequency ==
-						UNDERCLOCKED_MAX_KHZ_PWRCL)
-					break;
-			} else if (!no_cpu_underclock) {
-				if (ftbl[i - 1].frequency ==
-						UNDERCLOCKED_MAX_KHZ_PERFCL)
-					break;
-			}
-		}
-#endif
 
 		/*
 		 * Check if this is the last feasible frequency in the table.

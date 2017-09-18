@@ -88,7 +88,7 @@
 #define MDP_TIME_PERIOD_CALC_FPS_US	1000000
 
 #define MDSS_BRIGHT_TO_BL_DIM(out, v) do {\
-			out = (12*v*v+1393*v+3060)/4465;\
+			out = ((v) * (v) * 255  / 4095 + (v) * (255 - (v)) / 32);\
 			} while (0)
 bool backlight_dimmer = false;
 module_param(backlight_dimmer, bool, 0755);
@@ -97,7 +97,11 @@ module_param(backlight_dimmer, bool, 0755);
 extern struct panel_effect_data lcd_data;
 struct msm_fb_data_type *mfd_priv;
 #endif
-int backlight_min = 0;
+int backlight_min = 2;
+/* 
+ * This backlight_min value is needed for Z2_plus,
+ * it's screen disables when brightness goes <2
+ */
 int backlight_max = 255;
 
 module_param(backlight_min, int, 0644);

@@ -45,16 +45,20 @@ struct fpc1020_data {
 	int reset_gpio;
 	int irq_gpio;
 	int irq;
-	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
 	struct work_struct input_report_work;
 	struct workqueue_struct *fpc1020_wq;
+	struct notifier_block fb_notif;
 	u8  report_key;
 	struct wake_lock wake_lock;
 	struct wake_lock fp_wl;
 	int wakeup_status;
 	int screen_on;
+};
+
+static struct notifier_block fb_notif = {
+		.priority = INT_MAX,
 };
 
 /*
@@ -237,15 +241,13 @@ static void fpc1020_report_work_func(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 = NULL;
 	fpc1020 = container_of(work, struct fpc1020_data, input_report_work);
-	if (fpc1020->screen_on == 1) {
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 0);
 		input_sync(fpc1020->input_dev);		
 		fpc1020->report_key = 0;
-	}
 }
-
+/*
 static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 {
 	pr_info("HW reset\n");
@@ -258,7 +260,7 @@ static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 	gpio_set_value(fpc1020->reset_gpio, 1);
 	udelay(FPC1020_RESET_HIGH2_US);
 }
-
+*/
 static int fpc1020_get_pins(struct fpc1020_data *fpc1020)
 {
 	int retval = 0;
@@ -295,8 +297,11 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;
 	pr_info("fpc1020 IRQ interrupt\n");
 	smp_rmb();
-	wake_lock_timeout(&fpc1020->wake_lock, 3*HZ);
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	if (fpc1020->screen_on == 1)
+		return IRQ_HANDLED;
+	
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
 	return IRQ_HANDLED;
 }
 
@@ -418,7 +423,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	struct fpc1020_data *fpc1020 =
 		container_of(work, struct fpc1020_data, input_report_work);
 
-	if (fpc1020->screen_on != 0) {
+	if (fpc1020->screen_on == 1) {
 		set_fingerprintd_nice(0);
 	} else {
 		/*
@@ -426,7 +431,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		 * the fingerprint sensor is responsive and that the haptic
 		 * response on successful verification always fires.
 		 */
-		set_fingerprintd_nice(-1);
+		set_fingerprintd_nice(MIN_NICE);
 	}
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
@@ -473,12 +478,10 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
-	INIT_WORK(&fpc1020->input_report_work, fpc1020_suspend_resume);
-	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
-	fpc1020_hw_reset(fpc1020);
+	//fpc1020_hw_reset(fpc1020);
 
 	fpc1020->fb_notif.notifier_call = fb_notifier_callback;
 	retval = fb_register_client(&fpc1020->fb_notif);
@@ -487,6 +490,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 
+	INIT_WORK(&fpc1020->input_report_work, fpc1020_suspend_resume);
+	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
 

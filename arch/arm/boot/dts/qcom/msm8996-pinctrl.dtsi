@@ -682,7 +682,6 @@
                 config {
 			        pins = "gpio90", "gpio91";
 			        drive-strength = <2>;
-				    bias-disable;
 				};
             };
         };

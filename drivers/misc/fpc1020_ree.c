@@ -244,10 +244,10 @@ static void fpc1020_report_work_func(struct work_struct *work)
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 0);
-		input_sync(fpc1020->input_dev);		
-		fpc1020->report_key = 0;
+		input_sync(fpc1020->input_dev);
+	fpc1020->report_key = 0;
 }
-/*
+
 static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 {
 	pr_info("HW reset\n");
@@ -260,7 +260,7 @@ static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 	gpio_set_value(fpc1020->reset_gpio, 1);
 	udelay(FPC1020_RESET_HIGH2_US);
 }
-*/
+
 static int fpc1020_get_pins(struct fpc1020_data *fpc1020)
 {
 	int retval = 0;
@@ -300,7 +300,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	if (fpc1020->screen_on == 1)
 		return IRQ_HANDLED;
-	
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_wl.attr.name);
 	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
 	return IRQ_HANDLED;
 }
@@ -425,6 +425,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 
 	if (fpc1020->screen_on == 1) {
 		set_fingerprintd_nice(0);
+		pr_info("nice value set to 0");
 	} else {
 		/*
 		 * Elevate fingerprintd priority when screen is off to ensure
@@ -432,6 +433,8 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		 * response on successful verification always fires.
 		 */
 		set_fingerprintd_nice(MIN_NICE);
+		fpc1020_hw_reset(fpc1020);
+		pr_info("nice value set to -20 and H/W reset");
 	}
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
@@ -481,7 +484,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 	
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
-	//fpc1020_hw_reset(fpc1020);
+	fpc1020_hw_reset(fpc1020);
 
 	fpc1020->fb_notif.notifier_call = fb_notifier_callback;
 	retval = fb_register_client(&fpc1020->fb_notif);

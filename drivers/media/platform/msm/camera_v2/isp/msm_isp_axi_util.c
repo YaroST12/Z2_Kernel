@@ -660,7 +660,7 @@ void msm_isp_update_framedrop_reg(struct vfe_device *vfe_dev,
 		 * set to what we want
 		 */
 		if (stream_info->current_framedrop_period !=
-			stream_info->requested_framedrop_period) {
+			stream_info->activated_framedrop_period) {
 			msm_isp_cfg_framedrop_reg(vfe_dev, stream_info);
 		}
 		spin_unlock_irqrestore(&stream_info->lock, flags);
@@ -1049,7 +1049,7 @@ void msm_isp_start_avtimer(void)
 	avcs_core_disable_power_collapse(1);
 }
 
-static inline void msm_isp_get_avtimer_ts(
+void msm_isp_get_avtimer_ts(
 		struct msm_isp_timestamp *time_stamp)
 {
 	int rc = 0;
@@ -1077,7 +1077,7 @@ void msm_isp_start_avtimer(void)
 	pr_err("AV Timer is not supported\n");
 }
 
-static inline void msm_isp_get_avtimer_ts(
+void msm_isp_get_avtimer_ts(
 		struct msm_isp_timestamp *time_stamp)
 {
 	pr_err_ratelimited("%s: Error: AVTimer driver not available\n",
@@ -2228,7 +2228,7 @@ int msm_isp_axi_reset(struct vfe_device *vfe_dev,
 	rc = vfe_dev->hw_info->vfe_ops.core_ops.reset_hw(vfe_dev,
 		0, reset_cmd->blocking);
 
-	msm_isp_get_timestamp(&timestamp);
+	msm_isp_get_timestamp(&timestamp, vfe_dev);
 
 	for (i = 0, j = 0; j < axi_data->num_active_stream &&
 		i < VFE_AXI_SRC_MAX; i++, j++) {
@@ -2677,7 +2677,7 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 		stream_cfg_cmd->num_streams == 0)
 		return -EINVAL;
 
-	msm_isp_get_timestamp(&timestamp);
+	msm_isp_get_timestamp(&timestamp, vfe_dev);
 
 	for (i = 0; i < stream_cfg_cmd->num_streams; i++) {
 		if (HANDLE_TO_IDX(stream_cfg_cmd->stream_handle[i]) >=
@@ -2929,7 +2929,7 @@ static int msm_isp_return_empty_buffer(struct vfe_device *vfe_dev,
 		return rc;
 	}
 
-	msm_isp_get_timestamp(&timestamp);
+	msm_isp_get_timestamp(&timestamp, vfe_dev);
 	buf->buf_debug.put_state[buf->buf_debug.put_state_last] =
 		MSM_ISP_BUFFER_STATE_DROP_REG;
 	buf->buf_debug.put_state_last ^= 1;
@@ -3242,7 +3242,7 @@ int msm_isp_update_axi_stream(struct vfe_device *vfe_dev, void *arg)
 			break;
 		case DISABLE_STREAM_BUF_DIVERT:
 			stream_info->buf_divert = 0;
-			msm_isp_get_timestamp(&timestamp);
+			msm_isp_get_timestamp(&timestamp, vfe_dev);
 			frame_id = vfe_dev->axi_data.src_info[
 				SRC_TO_INTF(stream_info->stream_src)].frame_id;
 			/* set ping pong address to scratch before flush */
@@ -3554,11 +3554,11 @@ void msm_isp_process_axi_irq_stream(struct vfe_device *vfe_dev,
 
 void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
 	uint32_t irq_status0, uint32_t irq_status1,
-	struct msm_isp_timestamp *ts)
+	uint32_t pingpong_status, struct msm_isp_timestamp *ts)
 {
 	int i, rc = 0;
 	uint32_t comp_mask = 0, wm_mask = 0;
-	uint32_t pingpong_status, stream_idx;
+	uint32_t stream_idx;
 	struct msm_vfe_axi_stream *stream_info;
 	struct msm_vfe_axi_composite_info *comp_info;
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
@@ -3572,8 +3572,6 @@ void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
 		return;
 
 	ISP_DBG("%s: status: 0x%x\n", __func__, irq_status0);
-	pingpong_status =
-		vfe_dev->hw_info->vfe_ops.axi_ops.get_pingpong_status(vfe_dev);
 
 	for (i = 0; i < axi_data->hw_info->num_comp_mask; i++) {
 		rc = 0;

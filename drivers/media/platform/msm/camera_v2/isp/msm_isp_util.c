@@ -22,6 +22,7 @@
 #include "cam_smmu_api.h"
 
 #define MAX_ISP_V4l2_EVENTS 100
+#define MAX_ISP_REG_LIST 100
 static DEFINE_MUTEX(bandwidth_mgr_mutex);
 static struct msm_isp_bandwidth_mgr isp_bandwidth_mgr;
 
@@ -306,13 +307,21 @@ int msm_isp_get_clk_info(struct vfe_device *vfe_dev,
 	return 0;
 }
 
-void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp)
+void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp,
+	struct vfe_device *vfe_dev)
 {
 	struct timespec ts;
-	ktime_get_ts(&ts);
-	time_stamp->buf_time.tv_sec    = ts.tv_sec;
-	time_stamp->buf_time.tv_usec   = ts.tv_nsec/1000;
 	do_gettimeofday(&(time_stamp->event_time));
+	if (vfe_dev->vt_enable) {
+		msm_isp_get_avtimer_ts(time_stamp);
+		time_stamp->buf_time.tv_sec    = time_stamp->vt_time.tv_sec;
+		time_stamp->buf_time.tv_usec   = time_stamp->vt_time.tv_usec;
+	} else	{
+		get_monotonic_boottime(&ts);
+		time_stamp->buf_time.tv_sec    = ts.tv_sec;
+		time_stamp->buf_time.tv_usec   = ts.tv_nsec/1000;
+	}
+
 }
 
 static inline u32 msm_isp_evt_mask_to_isp_event(u32 evt_mask)
@@ -791,6 +800,11 @@ static int msm_isp_set_dual_HW_master_slave_mode(
 	}
 	ISP_DBG("%s: vfe %d num_src %d\n", __func__, vfe_dev->pdev->id,
 		dual_hw_ms_cmd->num_src);
+	if (dual_hw_ms_cmd->num_src > VFE_SRC_MAX) {
+		pr_err("%s: Error! Invalid num_src %d\n", __func__,
+			dual_hw_ms_cmd->num_src);
+		return -EINVAL;
+	}
 	/* This for loop is for non-primary intf to be marked with Master/Slave
 	 * in order for frame id sync. But their timestamp is not saved.
 	 * So no sof_info resource is allocated */
@@ -816,6 +830,7 @@ static int msm_isp_set_dual_HW_master_slave_mode(
 static int msm_isp_proc_cmd_list_unlocked(struct vfe_device *vfe_dev, void *arg)
 {
 	int rc = 0;
+	uint32_t count = 0;
 	struct msm_vfe_cfg_cmd_list *proc_cmd =
 		(struct msm_vfe_cfg_cmd_list *)arg;
 	struct msm_vfe_cfg_cmd_list cmd, cmd_next;
@@ -837,6 +852,12 @@ static int msm_isp_proc_cmd_list_unlocked(struct vfe_device *vfe_dev, void *arg)
 			pr_err("%s:%d failed: next size %u != expected %zu\n",
 				__func__, __LINE__, cmd.next_size,
 				sizeof(struct msm_vfe_cfg_cmd_list));
+			break;
+		}
+		if (++count >= MAX_ISP_REG_LIST) {
+			pr_err("%s:%d Error exceeding the max register count:%u\n",
+				__func__, __LINE__, count);
+			rc = -EFAULT;
 			break;
 		}
 		if (copy_from_user(&cmd_next, (void __user *)cmd.next,
@@ -885,6 +906,7 @@ static void msm_isp_compat_to_proc_cmd(struct msm_vfe_cfg_cmd2 *proc_cmd,
 static int msm_isp_proc_cmd_list_compat(struct vfe_device *vfe_dev, void *arg)
 {
 	int rc = 0;
+	uint32_t count = 0;
 	struct msm_vfe_cfg_cmd_list_32 *proc_cmd =
 		(struct msm_vfe_cfg_cmd_list_32 *)arg;
 	struct msm_vfe_cfg_cmd_list_32 cmd, cmd_next;
@@ -907,6 +929,12 @@ static int msm_isp_proc_cmd_list_compat(struct vfe_device *vfe_dev, void *arg)
 			pr_err("%s:%d failed: next size %u != expected %zu\n",
 				__func__, __LINE__, cmd.next_size,
 				sizeof(struct msm_vfe_cfg_cmd_list));
+			break;
+		}
+		if (++count >= MAX_ISP_REG_LIST) {
+			pr_err("%s:%d Error exceeding the max register count:%u\n",
+				__func__, __LINE__, count);
+			rc = -EFAULT;
 			break;
 		}
 		if (copy_from_user(&cmd_next, compat_ptr(cmd.next),
@@ -1949,7 +1977,8 @@ void msm_isp_reset_burst_count_and_frame_drop(
 }
 
 static void msm_isp_enqueue_tasklet_cmd(struct vfe_device *vfe_dev,
-	uint32_t irq_status0, uint32_t irq_status1)
+	uint32_t irq_status0, uint32_t irq_status1,
+	uint32_t ping_pong_status)
 {
 	unsigned long flags;
 	struct msm_vfe_tasklet_queue_cmd *queue_cmd = NULL;
@@ -1965,7 +1994,8 @@ static void msm_isp_enqueue_tasklet_cmd(struct vfe_device *vfe_dev,
 	}
 	queue_cmd->vfeInterruptStatus0 = irq_status0;
 	queue_cmd->vfeInterruptStatus1 = irq_status1;
-	msm_isp_get_timestamp(&queue_cmd->ts);
+	queue_cmd->vfePingPongStatus = ping_pong_status;
+	msm_isp_get_timestamp(&queue_cmd->ts, vfe_dev);
 	queue_cmd->cmd_used = 1;
 	vfe_dev->taskletq_idx = (vfe_dev->taskletq_idx + 1) %
 		MSM_VFE_TASKLETQ_SIZE;
@@ -1977,7 +2007,7 @@ static void msm_isp_enqueue_tasklet_cmd(struct vfe_device *vfe_dev,
 irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 {
 	struct vfe_device *vfe_dev = (struct vfe_device *) data;
-	uint32_t irq_status0, irq_status1;
+	uint32_t irq_status0, irq_status1, ping_pong_status;
 	uint32_t error_mask0, error_mask1;
 
 	vfe_dev->hw_info->vfe_ops.irq_ops.
@@ -1988,7 +2018,8 @@ irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 			__func__, vfe_dev->pdev->id);
 		return IRQ_HANDLED;
 	}
-
+	ping_pong_status = vfe_dev->hw_info->vfe_ops.axi_ops.
+		get_pingpong_status(vfe_dev);
 	msm_isp_process_overflow_irq(vfe_dev,
 		&irq_status0, &irq_status1);
 
@@ -2008,7 +2039,8 @@ irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 		return IRQ_HANDLED;
 	}
 
-	msm_isp_enqueue_tasklet_cmd(vfe_dev, irq_status0, irq_status1);
+	msm_isp_enqueue_tasklet_cmd(vfe_dev, irq_status0, irq_status1,
+					ping_pong_status);
 
 	return IRQ_HANDLED;
 }
@@ -2020,7 +2052,7 @@ void msm_isp_do_tasklet(unsigned long data)
 	struct msm_vfe_irq_ops *irq_ops = &vfe_dev->hw_info->vfe_ops.irq_ops;
 	struct msm_vfe_tasklet_queue_cmd *queue_cmd;
 	struct msm_isp_timestamp ts;
-	uint32_t irq_status0, irq_status1;
+	uint32_t irq_status0, irq_status1, pingpong_status;
 
 	if (vfe_dev->vfe_base == NULL || vfe_dev->vfe_open_cnt == 0) {
 		ISP_DBG("%s: VFE%d open cnt = %d, device closed(base = %pK)\n",
@@ -2043,6 +2075,7 @@ void msm_isp_do_tasklet(unsigned long data)
 		queue_cmd->cmd_used = 0;
 		irq_status0 = queue_cmd->vfeInterruptStatus0;
 		irq_status1 = queue_cmd->vfeInterruptStatus1;
+		pingpong_status = queue_cmd->vfePingPongStatus;
 		ts = queue_cmd->ts;
 		spin_unlock_irqrestore(&vfe_dev->tasklet_lock, flags);
 		ISP_DBG("%s: vfe_id %d status0: 0x%x status1: 0x%x\n",
@@ -2059,9 +2092,11 @@ void msm_isp_do_tasklet(unsigned long data)
 		}
 		msm_isp_process_error_info(vfe_dev);
 		irq_ops->process_stats_irq(vfe_dev,
-			irq_status0, irq_status1, &ts);
+			irq_status0, irq_status1,
+			pingpong_status, &ts);
 		irq_ops->process_axi_irq(vfe_dev,
-			irq_status0, irq_status1, &ts);
+			irq_status0, irq_status1,
+			pingpong_status, &ts);
 		irq_ops->process_camif_irq(vfe_dev,
 			irq_status0, irq_status1, &ts);
 		irq_ops->process_reg_update(vfe_dev,

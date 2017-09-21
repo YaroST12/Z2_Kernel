@@ -1,7 +1,7 @@
 #!/bin/bash
 kernel_dir=$PWD
 rm -rf modules
-export CONFIG_FILE="n7x-caf_z2_plus_defconfig"
+export CONFIG_FILE="z2_plus_defconfig"
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-Mi5-linux-gnu-"
 export TOOL_CHAIN_PATH="${HOME}/build/z2/Custom_Toolchains/bin"

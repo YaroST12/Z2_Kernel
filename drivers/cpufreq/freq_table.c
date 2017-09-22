@@ -19,7 +19,7 @@
  *********************************************************************/
 #if defined CONFIG_PRODUCT_Z2_PLUS || defined CONFIG_PRODUCT_Z2_ROW
 /* Zuk overfreq---- start ---- */
-unsigned int overfreq_enable = 0;
+unsigned int overfreq_enable = 1;/*Restores frequencies to stock (2150/1593) with current dts*/
 extern int cpufreq_overfreq(unsigned int enable);
 static int set_overfreq(const char *buf, const struct kernel_param *kp)
 {

@@ -37,8 +37,6 @@
 #define FPC1020_RESET_HIGH2_US 1250
 #define FPC_TTW_HOLD_TIME 1000
 
-#define KEY_FINGERPRINT 0x2ee
-
 struct fpc1020_data {
 	struct device   *dev;
 	struct pinctrl  *pin;
@@ -47,19 +45,16 @@ struct fpc1020_data {
 	int reset_gpio;
 	int irq_gpio;
 	int irq;
+	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
 	struct work_struct input_report_work;
-	struct notifier_block fb_notif;
+	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
 	struct wake_lock wake_lock;
 	struct wake_lock fp_wl;
 	int wakeup_status;
 	int screen_on;
-};
-
-static struct notifier_block fb_notif = {
-		.priority = INT_MAX,
 };
 
 /*
@@ -158,6 +153,7 @@ static ssize_t set_wakeup_status(struct device* device,
 	}
 	else
 		return -ENOENT;
+
 	return strnlen(buffer, count);
 }
 
@@ -197,7 +193,7 @@ static ssize_t set_key(struct device* device,
 
 		pr_info("home key pressed = %d\n", (int)home_pressed);
 		fpc1020->report_key = (int)val;
-		queue_work(system_highpri_wq, &fpc1020->input_report_work);
+		queue_work(fpc1020->fpc1020_wq, &fpc1020->input_report_work);
 
 		if (!val) {
 			pr_info("calling home key reset");
@@ -242,11 +238,15 @@ static void fpc1020_report_work_func(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 = NULL;
 	fpc1020 = container_of(work, struct fpc1020_data, input_report_work);
+	if (fpc1020->screen_on == 1) {
+		pr_info("Report key value = %d\n", (int)fpc1020->report_key);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
+		mdelay(30);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 0);
 		input_sync(fpc1020->input_dev);
-	fpc1020->report_key = 0;
+		fpc1020->report_key = 0;
+	}
 }
 
 static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
@@ -293,53 +293,13 @@ err:
 	return retval;
 }
 
-static int fpc1020_input_init(struct fpc1020_data * fpc1020)
-{
-	int ret;
-
-	fpc1020->input_dev = input_allocate_device();
-	if (!fpc1020->input_dev) {
-		pr_err("fingerprint input boost allocation is fucked - 1 star\n");
-		ret = -ENOMEM;
-		goto exit;
-	}
-
-	fpc1020->input_dev->name = "fpc1020";
-	fpc1020->input_dev->evbit[0] = BIT(EV_KEY);
-
-	set_bit(KEY_FINGERPRINT, fpc1020->input_dev->keybit);
-
-	ret = input_register_device(fpc1020->input_dev);
-	if (ret) {
-		pr_err("fingerprint boost input registration is fucked - fixpls\n");
-		goto err_free_dev;
-	}
-
-	return 0;
-
-err_free_dev:
-	input_free_device(fpc1020->input_dev);
-exit:
-	return ret;
-}
-
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 	pr_info("fpc1020 IRQ interrupt\n");
-	
-	if (!fpc1020->screen_on) {
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
-		input_sync(fpc1020->input_dev);
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
-		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
-		input_sync(fpc1020->input_dev);
-		return IRQ_HANDLED;
-	}
-	
+	smp_rmb();
+	wake_lock_timeout(&fpc1020->wake_lock, 3*HZ);
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	
 	return IRQ_HANDLED;
 }
 
@@ -408,12 +368,10 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	set_bit(KEY_LEFT, fpc1020->input_dev->keybit);
 	set_bit(KEY_RIGHT, fpc1020->input_dev->keybit);
 	set_bit(KEY_NAVI_LONG, fpc1020->input_dev->keybit);
-	set_bit(KEY_FINGERPRINT, fpc1020->input_dev->keybit);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LEFT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_RIGHT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_BACK);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LONG);
-	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_FINGERPRINT);
 
 	/* Register the input device */
 	retval = input_register_device(fpc1020->input_dev);
@@ -423,20 +381,6 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 		fpc1020->input_dev = NULL;
 	}
 	return retval;
-}
-
-static void set_fingerprintd_nice(int nice)
-{
-	struct task_struct *p;
-
-	read_lock(&tasklist_lock);
-	for_each_process(p) {
-		if (!memcmp(p->comm, "fingerprintd", 13)) {
-			set_user_nice(p, nice);
-			break;
-		}
-	}
-	read_unlock(&tasklist_lock);
 }
 
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
@@ -449,19 +393,10 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
-			fpc1020->screen_on = true;
-			/* When screen is ON use power efficient WQ */
-			queue_work(system_power_efficient_wq, &fpc1020->input_report_work);
-			set_fingerprintd_nice(0);
-			pr_info("nice value set to 0\n");
+			fpc1020->screen_on = 1;
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
-			fpc1020->screen_on = false;
-			/* Use highpriority WQ while screen is OFF */
-			queue_work(system_highpri_wq, &fpc1020->input_report_work);
-			set_fingerprintd_nice(MIN_NICE);
-			fpc1020_hw_reset(fpc1020);
-			pr_info("nice value set to -20 and H/W reset\n");
+			fpc1020->screen_on = 0;
 		}
 	}
 	return 0;
@@ -478,10 +413,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		retval = -ENOMEM;
 		goto error;
 	}
-
-	retval = fpc1020_input_init(fpc1020);
-	if (retval != 0)
-		goto exit;
 
 	fpc1020->dev = &pdev->dev;
 	dev_set_drvdata(dev, fpc1020);
@@ -505,14 +436,24 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Allocate input device failed\n");
 		goto error_remove_sysfs;
 	}
-	
+
+	fpc1020->fpc1020_wq = create_workqueue("fpc1020_wq");
+	if (!fpc1020->fpc1020_wq) {
+		pr_err("Create input workqueue failed\n");
+		goto error_unregister_device;
+	}
+	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
+
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
 	fpc1020_hw_reset(fpc1020);
 
 	fpc1020->fb_notif.notifier_call = fb_notifier_callback;
-
-	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
+	retval = fb_register_client(&fpc1020->fb_notif);
+	if (retval) {
+		pr_err("Unable to register fb_notifier : %d\n", retval);
+		goto error_destroy_workqueue;
+	}
 
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
@@ -527,22 +468,51 @@ static int fpc1020_probe(struct platform_device *pdev)
 	disable_irq(fpc1020->irq);
 
 	return 0;
-	
-exit:
-	return retval;
-	
+
 error_unregister_client:
 	fb_unregister_client(&fpc1020->fb_notif);
-	
+
+error_destroy_workqueue:
+	destroy_workqueue(fpc1020->fpc1020_wq);
+
+error_unregister_device:
+	input_unregister_device(fpc1020->input_dev);
+
 error_remove_sysfs:
 	sysfs_remove_group(&fpc1020->dev->kobj, &attribute_group);
-	if (fpc1020->input_dev != NULL)
-		input_free_device(fpc1020->input_dev);
 
 error:
 	if (fpc1020 != NULL)
 		kzfree(fpc1020);
 
+	return retval;
+}
+
+static void set_fingerprintd_nice(int nice)
+{
+	struct task_struct *p;
+
+	read_lock(&tasklist_lock);
+	for_each_process(p) {
+		if (!memcmp(p->comm, "fingerprintd", 13)) {
+			set_user_nice(p, nice);
+			break;
+		}
+	}
+	read_unlock(&tasklist_lock);
+}
+
+static int fpc1020_resume(struct platform_device *pdev)
+{
+	int retval = 0;
+	set_fingerprintd_nice(-20);
+	return retval;
+}
+
+static int fpc1020_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	int retval = 0;
+	set_fingerprintd_nice(0);
 	return retval;
 }
 
@@ -562,6 +532,8 @@ static struct of_device_id fpc1020_match[] = {
 static struct platform_driver fpc1020_plat_driver = {
 	.probe = fpc1020_probe,
 	.remove = fpc1020_remove,
+	.suspend = fpc1020_suspend,
+	.resume = fpc1020_resume,
 	.driver = {
 		.name = "fpc1020",
 		.owner = THIS_MODULE,

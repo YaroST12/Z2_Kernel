@@ -1187,10 +1187,8 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 			ret = __irq_set_trigger(desc, irq,
 					new->flags & IRQF_TRIGGER_MASK);
 
-			if (ret) {
-				irq_release_resources(desc);
+			if (ret)
 				goto out_mask;
-			}
 		}
 
 		desc->istate &= ~(IRQS_AUTODETECT | IRQS_SPURIOUS_DISABLED | \

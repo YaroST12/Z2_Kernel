@@ -107,9 +107,7 @@ void set_power_on_alarm(void)
 	 * Substract ALARM_DELTA from actual alarm time to
 	 * power up the device before actual alarm expiration
 	*/
-	if (alarm_secs - ALARM_DELTA > wall_time.tv_sec + 1)
-		alarm_secs -= ALARM_DELTA;
-	else
+	if (alarm_secs <= wall_time.tv_sec + 1)
 		goto disable_alarm;
 
 	rtc = alarmtimer_get_rtcdev();

@@ -125,12 +125,8 @@ void set_power_on_alarm(void)
 		alarm_secs = alarm_ts.tv_sec;
 	}
 
-	printk("%s set alarm at %ld\n",__func__,alarm_secs);
-
-	if (!alarm_secs){
-		printk("%s alarm time == 0 , so disable alarm\n",__func__); 
+	if (!alarm_secs)
 		goto disable_alarm;
-	}
 
 	getnstimeofday(&wall_time);
 
@@ -139,10 +135,8 @@ void set_power_on_alarm(void)
 	 * It is to make sure that alarm time will be always
 	 * bigger than wall time.
 	*/
-	if (alarm_secs <= wall_time.tv_sec + 1){
-		printk("%s alarm time < wall_time, so disable alarm\n",__func__); 
+	if (alarm_secs <= wall_time.tv_sec + 1)
 		goto disable_alarm;
-	}
 
 	rtc = alarmtimer_get_rtcdev();
 	if (!rtc)

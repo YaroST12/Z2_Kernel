@@ -89,10 +89,8 @@ static ssize_t irq_set(struct device* device,
 	retval = kstrtou64(buffer, 0, &val);
 	if (val == 1)
 		enable_irq(fpc1020->irq);
-	else if (val == 0)
+	if (val == 0)
 		disable_irq(fpc1020->irq);
-	else
-		return -ENOENT;
 	return strnlen(buffer, count);
 }
 
@@ -208,10 +206,8 @@ static void fpc1020_report_work_func(struct work_struct *work)
 		pr_info("Report key value = %d\n", (int)fpc1020->report_key);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
-		mdelay(30);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 0);
 		input_sync(fpc1020->input_dev);
-		fpc1020->report_key = 0;
 	}
 }
 
@@ -421,7 +417,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 	
-	enable_irq_wake(fpc1020->irq);
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
 

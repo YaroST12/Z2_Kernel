@@ -86,13 +86,17 @@ static ssize_t irq_set(struct device* device,
 		const char* buffer, size_t count)
 {
 	int retval = 0;
-	u64 val;
+	u64 rc;
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	retval = kstrtou64(buffer, 0, &val);
-	if (val == 1)
+	retval = kstrtou64(buffer, 0, &rc);
+	smp_rmb();
+	if (rc == 1) {
+		pr_info("enable_irq\n");
 		enable_irq(fpc1020->irq);
-	if (val == 0)
+	} else {
+		pr_info("disable_irq\n");
 		disable_irq(fpc1020->irq);
+	}
 	return strnlen(buffer, count);
 }
 
@@ -232,17 +236,12 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 	pr_info("fpc1020 IRQ interrupt\n");
-	if (fpc1020->screen_on)
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	
-	if (!fpc1020->screen_on) {
-		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
-		input_sync(fpc1020->input_dev);
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
-		input_sync(fpc1020->input_dev);
-	}
+	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
+	input_sync(fpc1020->input_dev);
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
+	input_sync(fpc1020->input_dev);
 	return IRQ_HANDLED;
 }
 
@@ -272,7 +271,7 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 		pr_err("gpio_to_irq(%d) failed\n", fpc1020->irq_gpio);
 		return -EINVAL;
 	}
-
+	
 	retval = devm_request_threaded_irq(fpc1020->dev, fpc1020->irq, NULL, fpc1020_irq_handler,
 			IRQF_TRIGGER_RISING | IRQF_ONESHOT, dev_name(fpc1020->dev), fpc1020);
 	if (retval) {
@@ -417,7 +416,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Unable to register fb_notifier : %d\n", retval);
 		goto error_destroy_workqueue;
 	}
-	
+	fpc1020->irq = true;
+	enable_irq_wake(fpc1020->irq);
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
 
@@ -451,12 +451,6 @@ error:
 	return retval;
 }
 
-static int fpc1020_remove(struct platform_device *pdev)
-{
-	int retval = 0;
-	return retval;
-}
-
 static struct of_device_id fpc1020_match[] = {
 	{
 		.compatible = "fpc,fpc1020",
@@ -466,7 +460,6 @@ static struct of_device_id fpc1020_match[] = {
 
 static struct platform_driver fpc1020_plat_driver = {
 	.probe = fpc1020_probe,
-	.remove = fpc1020_remove,
 	.driver = {
 		.name = "fpc1020",
 		.owner = THIS_MODULE,

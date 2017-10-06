@@ -261,19 +261,17 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 	pr_info("fpc1020 IRQ interrupt\n");
-	if (fpc1020->screen_on == 1) {
+	if (fpc1020->screen_on == 1)
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	} 
-	if (fpc1020->screen_on != 1) {
+	
+	if (fpc1020->screen_on == 0) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(100));
+		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
-		return IRQ_HANDLED;
 	}
-	/* More IRQ_HANDLEDs to the god of... Wait, what? Ah, GCC7 warns about it, OK*/
 	return IRQ_HANDLED;
 }
 

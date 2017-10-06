@@ -357,6 +357,20 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	return retval;
 }
 
+static void set_fingerprintd_nice(int nice)
+{
+	struct task_struct *p;
+
+	read_lock(&tasklist_lock);
+	for_each_process(p) {
+		if (!memcmp(p->comm, "fingerprintd", 13)) {
+			set_user_nice(p, nice);
+			break;
+		}
+	}
+	read_unlock(&tasklist_lock);
+}
+
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
 	int *blank;
@@ -368,9 +382,13 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
 			fpc1020->screen_on = 1;
+			set_fingerprintd_nice(0);
+			pr_info("fingerprintd nice is 0\n");
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = 0;
+			set_fingerprintd_nice(-20);
+			pr_info("fingerprintd nice is -20\n");
 		}
 	}
 	return 0;
@@ -462,34 +480,6 @@ error:
 	return retval;
 }
 
-static void set_fingerprintd_nice(int nice)
-{
-	struct task_struct *p;
-
-	read_lock(&tasklist_lock);
-	for_each_process(p) {
-		if (!memcmp(p->comm, "fingerprintd", 13)) {
-			set_user_nice(p, nice);
-			break;
-		}
-	}
-	read_unlock(&tasklist_lock);
-}
-
-static int fpc1020_resume(struct platform_device *pdev)
-{
-	int retval = 0;
-	set_fingerprintd_nice(-20);
-	return retval;
-}
-
-static int fpc1020_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	int retval = 0;
-	set_fingerprintd_nice(0);
-	return retval;
-}
-
 static int fpc1020_remove(struct platform_device *pdev)
 {
 	int retval = 0;
@@ -506,8 +496,6 @@ static struct of_device_id fpc1020_match[] = {
 static struct platform_driver fpc1020_plat_driver = {
 	.probe = fpc1020_probe,
 	.remove = fpc1020_remove,
-	.suspend = fpc1020_suspend,
-	.resume = fpc1020_resume,
 	.driver = {
 		.name = "fpc1020",
 		.owner = THIS_MODULE,

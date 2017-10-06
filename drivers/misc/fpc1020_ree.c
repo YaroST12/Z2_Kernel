@@ -57,6 +57,7 @@ struct fpc1020_data {
 	struct wake_lock fp_wl;
 	int wakeup_status;
 	bool screen_on;
+	struct work_struct pm_work;
 };
 
 /*
@@ -341,6 +342,21 @@ static void set_fingerprintd_nice(int nice)
 	read_unlock(&tasklist_lock);
 }
 
+static void fpc1020_suspend_resume(struct work_struct *work)
+{
+	struct fpc1020_data *fpc1020 =
+		container_of(work, typeof(*fpc1020), pm_work);
+
+	/* Escalate fingerprintd priority when screen is off */
+	if (fpc1020->screen_on)
+		set_fingerprintd_nice(0);
+	else
+		set_fingerprintd_nice(MIN_NICE);
+
+	sysfs_notify(&fpc1020->dev->kobj, NULL,
+				dev_attr_screen.attr.name);
+}
+
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
 	int *blank;
@@ -352,13 +368,11 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
 			fpc1020->screen_on = true;
-			set_fingerprintd_nice(0);
-			pr_info("fingerprintd nice is 0\n");
+			queue_work(system_highpri_wq, &fpc1020->pm_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = false;
-			set_fingerprintd_nice(-20);
-			pr_info("fingerprintd nice is -20\n");
+			queue_work(system_highpri_wq, &fpc1020->pm_work);
 		}
 	}
 	return 0;
@@ -404,8 +418,10 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
+	
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
-
+	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
+	
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
 	fpc1020_hw_reset(fpc1020);

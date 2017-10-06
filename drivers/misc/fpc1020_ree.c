@@ -56,7 +56,7 @@ struct fpc1020_data {
 	struct wake_lock wake_lock;
 	struct wake_lock fp_wl;
 	int wakeup_status;
-	int screen_on;
+	bool screen_on;
 };
 
 /*
@@ -204,7 +204,7 @@ static void fpc1020_report_work_func(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 = NULL;
 	fpc1020 = container_of(work, struct fpc1020_data, input_report_work);
-	if (fpc1020->screen_on == 1) {
+	if (fpc1020->screen_on) {
 		pr_info("Report key value = %d\n", (int)fpc1020->report_key);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
@@ -261,10 +261,10 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 	pr_info("fpc1020 IRQ interrupt\n");
-	if (fpc1020->screen_on == 1)
+	if (fpc1020->screen_on)
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	
-	if (fpc1020->screen_on == 0) {
+	if (!fpc1020->screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
@@ -381,12 +381,12 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
-			fpc1020->screen_on = 1;
+			fpc1020->screen_on = true;
 			set_fingerprintd_nice(0);
 			pr_info("fingerprintd nice is 0\n");
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
-			fpc1020->screen_on = 0;
+			fpc1020->screen_on = false;
 			set_fingerprintd_nice(-20);
 			pr_info("fingerprintd nice is -20\n");
 		}

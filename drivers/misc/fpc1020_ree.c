@@ -98,34 +98,6 @@ static ssize_t irq_set(struct device* device,
 
 static DEVICE_ATTR(irq, S_IRUSR | S_IWUSR, irq_get, irq_set);
 
-static ssize_t fp_wl_get(struct device* device,
-		struct device_attribute* attribute,
-		char * buffer)
-{
-	//struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	return 0;
-}
-
-static ssize_t fp_wl_set(struct device* device,
-		struct device_attribute* attribute,
-		const char* buffer, size_t count)
-{
-	int retval = 0;
-	u64 val;
-	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	retval = kstrtou64(buffer, 0, &val);
-	if (val == 1 && !wake_lock_active(&fpc1020->fp_wl))
-		wake_lock(&fpc1020->fp_wl);
-	else if (val == 0 && wake_lock_active(&fpc1020->fp_wl))
-		wake_unlock(&fpc1020->fp_wl);
-	else {
-		pr_err("HAL wakelock request fail, val = %d\n", (int)val);
-	}
-	return strnlen(buffer, count);
-}
-
-static DEVICE_ATTR(wl, S_IRUSR | S_IWUSR, fp_wl_get, fp_wl_set);
-
 static ssize_t get_key(struct device* device, struct device_attribute* attribute, char* buffer)
 {
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
@@ -191,7 +163,6 @@ static DEVICE_ATTR(screen, S_IRUSR | S_IWUSR, get_screen_stat, set_screen_stat);
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
-	&dev_attr_wl.attr,
 	&dev_attr_screen.attr,
 	NULL
 };

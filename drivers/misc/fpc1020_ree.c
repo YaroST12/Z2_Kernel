@@ -58,6 +58,8 @@ struct fpc1020_data {
 	int wakeup_status;
 	bool screen_on;
 	struct work_struct pm_work;
+	struct workqueue_struct *fpc_irq_wq;
+	struct work_struct irq_work;
 };
 
 /*
@@ -233,10 +235,16 @@ err:
 	return retval;
 }
 
-static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
+static void fpc1020_irq_work(struct work_struct *work)
 {
-	struct fpc1020_data *fpc1020 = _fpc1020;
-	pr_info("fpc1020 IRQ interrupt\n");
+	struct fpc1020_data *fpc1020 =
+		container_of(work, typeof(*fpc1020), irq_work);
+
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+
+	if (fpc1020->screen_on)
+		return;
+
 	if (!fpc1020->screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
@@ -244,8 +252,16 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
-	} else
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	}
+}
+
+static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
+{
+	struct fpc1020_data *fpc1020 = _fpc1020;
+	pr_info("fpc1020 IRQ interrupt\n");
+	
+	queue_work(fpc1020->fpc_irq_wq, &fpc1020->irq_work);
+
 	return IRQ_HANDLED;
 }
 
@@ -351,13 +367,10 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), pm_work);
 
 	/* Escalate fingerprintd priority when screen is off */
-	if (fpc1020->screen_on) {
-		wake_unlock(&fpc1020->wake_lock);
+	if (fpc1020->screen_on)
 		set_fingerprintd_nice(0);
-	} else {
-		wake_lock(&fpc1020->wake_lock);
+	else
 		set_fingerprintd_nice(MIN_NICE);
-	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }
@@ -418,12 +431,18 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_remove_sysfs;
 	}
 
+	fpc1020->fpc_irq_wq = create_singlethread_workqueue("fpc_irq_wq");
+	if (!fpc1020->fpc_irq_wq) {
+		pr_err("Create input workqueue failed\n");
+		goto error_unregister_device;
+	}
+	
 	fpc1020->fpc1020_wq = create_workqueue("fpc1020_wq");
 	if (!fpc1020->fpc1020_wq) {
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
-	
+	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	
@@ -437,11 +456,12 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Unable to register fb_notifier : %d\n", retval);
 		goto error_destroy_workqueue;
 	}
-	fpc1020->irq = true;
+
 	enable_irq_wake(fpc1020->irq);
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
-
+	device_init_wakeup(fpc1020->dev, 1);
+	
 	retval = fpc1020_initial_irq(fpc1020);
 	if (retval != 0) {
 		pr_err("IRQ initialized failure\n");

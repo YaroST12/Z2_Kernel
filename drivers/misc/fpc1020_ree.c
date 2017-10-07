@@ -57,7 +57,6 @@ struct fpc1020_data {
 	struct wake_lock fp_wl;
 	int wakeup_status;
 	bool screen_on;
-	int screen;
 	struct work_struct pm_work;
 };
 
@@ -237,21 +236,13 @@ err:
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
-	bool screen = true;
-	fpc1020->screen_on = screen;
-
-	if (!screen) {
-		pr_info("fpc1020 IRQ interrupt on screen_off\n");
-		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
-		input_sync(fpc1020->input_dev);
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
-		input_sync(fpc1020->input_dev);
-	} else {
-		pr_info("fpc1020 IRQ interrupt on screen_on\n");
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	}
+	pr_info("fpc1020 IRQ interrupt\n");
+	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
+	input_sync(fpc1020->input_dev);
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
+	input_sync(fpc1020->input_dev);
 	return IRQ_HANDLED;
 }
 
@@ -357,11 +348,11 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), pm_work);
 
 	/* Escalate fingerprintd priority when screen is off */
-	pr_info("fingerprintd priority changed\n");
 	if (fpc1020->screen_on)
 		set_fingerprintd_nice(0);
 	else
 		set_fingerprintd_nice(MIN_NICE);
+
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }
@@ -441,7 +432,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Unable to register fb_notifier : %d\n", retval);
 		goto error_destroy_workqueue;
 	}
-
+	fpc1020->irq = true;
+	enable_irq_wake(fpc1020->irq);
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
 

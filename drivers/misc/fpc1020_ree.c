@@ -237,12 +237,15 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 	pr_info("fpc1020 IRQ interrupt\n");
-	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
-	input_sync(fpc1020->input_dev);
-	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
-	input_sync(fpc1020->input_dev);
+	if (!fpc1020->screen_on) {
+		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
+		input_sync(fpc1020->input_dev);
+		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
+		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
+		input_sync(fpc1020->input_dev);
+	} else
+		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	return IRQ_HANDLED;
 }
 
@@ -348,11 +351,13 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), pm_work);
 
 	/* Escalate fingerprintd priority when screen is off */
-	if (fpc1020->screen_on)
+	if (fpc1020->screen_on) {
+		wake_unlock(&fpc1020->wake_lock);
 		set_fingerprintd_nice(0);
-	else
+	} else {
+		wake_lock(&fpc1020->wake_lock);
 		set_fingerprintd_nice(MIN_NICE);
-
+	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }

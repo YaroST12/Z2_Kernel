@@ -2802,7 +2802,7 @@ static void check_sanity_work(struct work_struct *work)
 	rc = read_beat(chip, &beat_count);
 	if (rc == 0 && chip->last_beat_count != beat_count) {
 		chip->last_beat_count = beat_count;
-		schedule_delayed_work(
+		queue_delayed_work(system_power_efficient_wq,
 			&chip->check_sanity_work,
 			msecs_to_jiffies(SANITY_CHECK_PERIOD_MS));
 		return;
@@ -2965,14 +2965,14 @@ wait:
 #ifdef CONFIG_PRODUCT_Z2_PLUS
 #define TEMP_FLOAT_LOW_THRESHOLD		80
 #define TEMP_FLOAT_HIGH_THRESHOLD		100
-#define UPDATE_JEITA_DELAY_MS			200
+#define UPDATE_JEITA_DELAY_MS			500
 			if (temp > TEMP_FLOAT_HIGH_THRESHOLD) {
 				if (settings[FG_MEM_SOFT_COLD + 0].value != 170) {
 					settings[FG_MEM_SOFT_COLD + 0].value = 170;
 					settings[FG_MEM_SOFT_COLD + 1].value = 470;
 					settings[FG_MEM_SOFT_COLD + 2].value = 20;
 					settings[FG_MEM_SOFT_COLD + 3].value = 520;
-					schedule_delayed_work(
+					queue_delayed_work(system_power_efficient_wq,
 						&chip->update_jeita_setting,
 						msecs_to_jiffies(UPDATE_JEITA_DELAY_MS));
 				}
@@ -2983,7 +2983,7 @@ wait:
 					settings[FG_MEM_SOFT_COLD + 1].value = 460;
 					settings[FG_MEM_SOFT_COLD + 2].value = 10;
 					settings[FG_MEM_SOFT_COLD + 3].value = 510;
-					schedule_delayed_work(
+					queue_delayed_work(system_power_efficient_wq,
 						&chip->update_jeita_setting,
 						msecs_to_jiffies(UPDATE_JEITA_DELAY_MS));
 				}
@@ -5019,11 +5019,11 @@ static void cpu_temp_monitor_work(struct work_struct *work)
 				|| (chip->temp_cpu[3] >= tsens_tz_temp_threshold))
 			power_supply_changed(&chip->temp_psy);
 
-		schedule_delayed_work(
+		queue_delayed_work(system_power_efficient_wq,
 				&chip->cpu_temp_work,
 				msecs_to_jiffies(tsens_tz_temp_poll_interval));
 	} else
-		schedule_delayed_work(
+		queue_delayed_work(system_power_efficient_wq,
 				&chip->cpu_temp_work,
 				msecs_to_jiffies(CPU_TEMP_MONITOR_DEFAULT_INTERVAL_MS));
 }
@@ -9010,7 +9010,7 @@ static void delayed_init_work(struct work_struct *work)
 			msecs_to_jiffies(1000));
 
 #ifdef SUPPORT_CPU_TEMP_MONITOR
-	schedule_delayed_work(
+	queue_delayed_work(system_power_efficient_wq,
 			&chip->cpu_temp_work, 0);
 #endif
 

@@ -17,7 +17,7 @@ bool schedtune_initialized = false;
 
 int sysctl_sched_cfs_boost __read_mostly;
 
-extern struct reciprocal_value schedtune_spc_rdiv;
+struct reciprocal_value schedtune_spc_rdiv;
 
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 unsigned int top_app_idx = 0;
@@ -541,6 +541,51 @@ int schedtune_task_boost(struct task_struct *p)
 	rcu_read_unlock();
 
 	return task_boost;
+}
+
+long schedtune_margin(unsigned long signal, long boost)
+{
+	long long margin = 0;
+
+	/*
+	 * Signal proportional compensation (SPC)
+	 *
+	 * The Boost (B) value is used to compute a Margin (M) which is
+	 * proportional to the complement of the original Signal (S):
+	 *   M = B * (SCHED_CAPACITY_SCALE - S)
+	 * The obtained M could be used by the caller to "boost" S.
+	 */
+	if (boost >= 0) {
+		margin  = SCHED_CAPACITY_SCALE - signal;
+		margin *= boost;
+	} else
+		margin = -signal * boost;
+
+	margin  = reciprocal_divide(margin, schedtune_spc_rdiv);
+
+	if (boost < 0)
+		margin *= -1;
+	return margin;
+}
+
+long schedtune_cpu_margin(unsigned long util, int cpu)
+{
+	int boost = schedtune_cpu_boost(cpu);
+
+	if (boost == 0)
+		return 0;
+
+	return schedtune_margin(util, boost);
+}
+
+long schedtune_task_margin(unsigned long util, struct task_struct *p)
+{
+	int boost = schedtune_task_boost(p);
+
+	if (boost == 0)
+		return 0;
+
+	return schedtune_margin(util, boost);
 }
 
 int schedtune_prefer_idle(struct task_struct *p)

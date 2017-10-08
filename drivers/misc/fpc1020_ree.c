@@ -50,16 +50,16 @@ struct fpc1020_data {
 	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
-	struct work_struct input_report_work;
-	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
 	struct wake_lock wake_lock;
 	struct wake_lock fp_wl;
 	int wakeup_status;
 	bool screen_on;
-	struct work_struct pm_work;
+	struct workqueue_struct *fpc1020_wq;
 	struct workqueue_struct *fpc_irq_wq;
+	struct work_struct input_report_work;
 	struct work_struct irq_work;
+	struct work_struct pm_work;
 };
 
 /*
@@ -239,7 +239,6 @@ static void fpc1020_irq_work(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
-
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 
 	if (fpc1020->screen_on)
@@ -386,11 +385,11 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
 			fpc1020->screen_on = true;
-			queue_work(system_highpri_wq, &fpc1020->pm_work);
+			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = false;
-			queue_work(system_highpri_wq, &fpc1020->pm_work);
+			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}
 	}
 	return 0;

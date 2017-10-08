@@ -44,9 +44,7 @@ static DECLARE_WAIT_QUEUE_HEAD(suspend_freeze_wait_head);
 enum freeze_state __read_mostly suspend_freeze_state;
 static DEFINE_SPINLOCK(suspend_freeze_lock);
 
-#ifdef CONFIG_PRODUCT_Z2_PLUS
 extern void thaw_fingerprintd(void);
-#endif
 
 void freeze_set_ops(const struct platform_freeze_ops *ops)
 {
@@ -391,9 +389,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 
  Platform_wake:
 	platform_resume_noirq(state);
-#ifdef CONFIG_PRODUCT_Z2_PLUS
 	thaw_fingerprintd();
-#endif
 	dpm_resume_noirq(PMSG_RESUME);
 
  Platform_early_resume:
@@ -507,9 +503,9 @@ if (sync_before_suspend) {
 	sys_sync();
 	printk("done.\n");
 	trace_suspend_resume(TPS("sync_filesystems"), 0, false);
-} else {
-	printk(KERN_INFO "PM: Skipping FS sync...\n");
-}
+} else
+	printk(KERN_INFO "PM: Skipping fs sync...\n");
+	
 	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state]);
 	error = suspend_prepare(state);
 	if (error)

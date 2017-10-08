@@ -213,7 +213,6 @@ int freeze_kernel_threads(void)
 	return error;
 }
 
-#ifdef CONFIG_PRODUCT_Z2_PLUS
 void thaw_fingerprintd(void)
 {
 	struct task_struct *p;
@@ -233,7 +232,6 @@ void thaw_fingerprintd(void)
 	pm_freezing = true;
 	pm_nosig_freezing = true;
 }
-#endif
 
 void thaw_processes(void)
 {

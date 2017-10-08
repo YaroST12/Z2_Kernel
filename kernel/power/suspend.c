@@ -48,10 +48,6 @@ static DEFINE_SPINLOCK(suspend_freeze_lock);
 extern void thaw_fingerprintd(void);
 #endif
 
-#ifdef CONFIG_PRODUCT_Z2_PLUS
-extern void thaw_fingerprintd(void);
-#endif
-
 void freeze_set_ops(const struct platform_freeze_ops *ops)
 {
 	lock_system_sleep();

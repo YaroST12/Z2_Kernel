@@ -676,6 +676,7 @@ struct fg_chip {
 	int64_t			last_cc_soc;
 	/* Sanity check */
 	struct delayed_work	check_sanity_work;
+	struct fg_wakeup_source	sanity_wakeup_source;
 	u8			last_beat_count;
 	/* Batt_info restore */
 	int			batt_info[BATT_INFO_MAX];
@@ -2807,6 +2808,8 @@ static void check_sanity_work(struct work_struct *work)
 		return;
 	}
 
+	fg_stay_awake(&chip->sanity_wakeup_source);
+
 try_again:
 	rc = fg_read(chip, &beat_count,
 			chip->mem_base + MEM_INTF_FG_BEAT_COUNT, 1);
@@ -2838,7 +2841,7 @@ resched:
 		&chip->check_sanity_work,
 		msecs_to_jiffies(SANITY_CHECK_PERIOD_MS));
 out:
-	pr_err("Relaxed anyway...");
+	fg_relax(&chip->sanity_wakeup_source);
 }
 
 #define SRAM_TIMEOUT_MS			3000
@@ -7853,6 +7856,7 @@ static void fg_cleanup(struct fg_chip *chip)
 	wakeup_source_trash(&chip->dischg_gain_wakeup_source.source);
 	wakeup_source_trash(&chip->fg_reset_wakeup_source.source);
 	wakeup_source_trash(&chip->cc_soc_wakeup_source.source);
+	wakeup_source_trash(&chip->sanity_wakeup_source.source);
 }
 
 static int fg_remove(struct spmi_device *spmi)
@@ -9079,6 +9083,8 @@ static int fg_probe(struct spmi_device *spmi)
 			"qpnp_fg_reset");
 	wakeup_source_init(&chip->cc_soc_wakeup_source.source,
 			"qpnp_fg_cc_soc");
+	wakeup_source_init(&chip->sanity_wakeup_source.source,
+			"qpnp_fg_sanity_check");
 	spin_lock_init(&chip->sec_access_lock);
 	mutex_init(&chip->rw_lock);
 	mutex_init(&chip->cyc_ctr.lock);
@@ -9313,6 +9319,7 @@ of_init_fail:
 	wakeup_source_trash(&chip->dischg_gain_wakeup_source.source);
 	wakeup_source_trash(&chip->fg_reset_wakeup_source.source);
 	wakeup_source_trash(&chip->cc_soc_wakeup_source.source);
+	wakeup_source_trash(&chip->sanity_wakeup_source.source);
 	return rc;
 }
 

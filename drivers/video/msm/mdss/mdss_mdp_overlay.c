@@ -6313,7 +6313,7 @@ static void __vsync_retire_handle_vsync(struct mdss_mdp_ctl *ctl, ktime_t t)
 	}
 
 	mdp5_data = mfd_to_mdp5_data(mfd);
-	queue_kthread_work(&mdp5_data->worker, &mdp5_data->vsync_work);
+	schedule_work(&mdp5_data->retire_work);
 }
 
 static void __vsync_retire_work_handler(struct kthread_work *work)

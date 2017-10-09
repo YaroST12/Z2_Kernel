@@ -3,8 +3,8 @@ kernel_dir=$PWD
 rm -rf modules
 export CONFIG_FILE="z2_plus_defconfig"
 export ARCH="arm64"
-export CROSS_COMPILE="aarch64-Mi5-linux-gnu-"
-export TOOL_CHAIN_PATH="${HOME}/build/z2/Custom_Toolchains/bin"
+export CROSS_COMPILE="aarch64-linux-gnu-"
+export TOOL_CHAIN_PATH="${HOME}/build/z2/gcc-arter/bin"
 export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
 export PATH=$PATH:${TOOL_CHAIN_PATH}
 export objdir="${kernel_dir}/../out"

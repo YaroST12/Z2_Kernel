@@ -18,7 +18,8 @@ module(){
   find . -name '*.ko' -exec cp -av {} modules/ \;
   ${TOOL_CHAIN_PATH}/${CROSS_COMPILE}strip --strip-unneeded modules/*
   cp modules/wlan.ko ../../../out/target/product/z2_plus/system/lib/modules/wlan.ko
-  
+  cp modules/wlan.ko ../build/modules/
+  cp arch/arm64/boot/Image.gz-dtb ../build/Image.gz-dtb
 }
 dtbuild(){
   cd $kernel_dir

@@ -36,8 +36,9 @@
 		qcom,mdss-dsi-color-order = <0>;
 		qcom,mdss-dsi-underflow-color = <0x00>;
 		qcom,mdss-dsi-border-color = <0>;
+		qcom,suspend-ulps-enabled;
 //		qcom,mdss-dsi-panel-broadcast-mode;
-		qcom,mdss-dsi-lp11-init;
+//		qcom,mdss-dsi-lp11-init;
 
 		qcom,mdss-dsi-on-command = [
 //init code
@@ -133,5 +134,7 @@ D5 fa 43 f9 44 f8 45 f7 46 f6 47 f5 48 f4 49 f3 4a f2 4c f1 4d f0 4d ef 4f ee 50
 		qcom,mdss-dsi-reset-sequence = <1 2>, <0 1>, <1 5>;
 		qcom,mdss-pan-physical-width-dimension = <62>;
 		qcom,mdss-pan-physical-height-dimension = <110>;
+		qcom,ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 	};
 };

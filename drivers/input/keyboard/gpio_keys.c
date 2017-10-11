@@ -378,7 +378,7 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 void reset_home_button(void)
 {
 	home_button_status = false;
-	pr_info("key home button reset ok, home_button_status=%d", home_button_status);
+	pr_info("key home button reset ok, home_button_status=%d\n", home_button_status);
 }
 
 /*

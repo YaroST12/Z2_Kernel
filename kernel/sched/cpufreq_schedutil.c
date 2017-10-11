@@ -725,6 +725,7 @@ static void get_tunables_data(struct sugov_tunables *tunables,
 	}
 
 initialize:
+	tunables->iowait_boost_enable = true;
 	tunables->up_rate_limit_us = LATENCY_MULTIPLIER;
 	tunables->down_rate_limit_us = LATENCY_MULTIPLIER;
 	lat = policy->cpuinfo.transition_latency / NSEC_PER_USEC;

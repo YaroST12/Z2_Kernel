@@ -52,13 +52,11 @@ struct fpc1020_data {
 	struct input_dev *input_dev;
 	u8  report_key;
 	struct wake_lock wake_lock;
-	struct wake_lock fp_wl;
 	int wakeup_status;
 	bool screen_on;
 	struct workqueue_struct *fpc1020_wq;
 	struct workqueue_struct *fpc_irq_wq;
 	struct work_struct input_report_work;
-	struct work_struct irq_work;
 	struct work_struct pm_work;
 };
 
@@ -74,8 +72,6 @@ extern void reset_home_button(void);
 bool reset;
 
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
-
-static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020);
 	
 static ssize_t irq_get(struct device* device,
 		struct device_attribute* attribute,
@@ -237,21 +233,6 @@ err:
 	return retval;
 }
 
-static void fpc1020_irq_work(struct work_struct *work)
-{
-	struct fpc1020_data *fpc1020 =
-		container_of(work, typeof(*fpc1020), irq_work);
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-
-	if (fpc1020->screen_on)
-		return;
-
-	if (!fpc1020->screen_on) {
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	}
-}
-
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
@@ -259,8 +240,9 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 	input_sync(fpc1020->input_dev);
 	
-	queue_work(fpc1020->fpc_irq_wq, &fpc1020->irq_work);
-
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	
 	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 	input_sync(fpc1020->input_dev);
 	return IRQ_HANDLED;
@@ -443,7 +425,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
-	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	
@@ -459,8 +440,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 	}
 
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
-	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
-	device_init_wakeup(fpc1020->dev, 1);
 	
 	retval = fpc1020_initial_irq(fpc1020);
 	if (retval != 0) {

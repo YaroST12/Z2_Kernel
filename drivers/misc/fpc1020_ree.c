@@ -54,6 +54,7 @@ struct fpc1020_data {
 	struct wake_lock wake_lock;
 	int wakeup_status;
 	bool screen_on;
+	bool home_pressed;
 	struct workqueue_struct *fpc1020_wq;
 	struct workqueue_struct *fpc_irq_wq;
 	struct work_struct input_report_work;
@@ -236,15 +237,22 @@ err:
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
+	bool home_pressed = home_button_pressed();
 	pr_info("fpc1020 IRQ interrupt\n");
-	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
-	input_sync(fpc1020->input_dev);
 	
-	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	if (!fpc1020->screen_on) {
+		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
+		input_sync(fpc1020->input_dev);
+		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
+	}
 	
-	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
-	input_sync(fpc1020->input_dev);
+	if (!home_pressed)
+		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	
+	if (!fpc1020->screen_on) {
+		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
+		input_sync(fpc1020->input_dev);
+	}
 	return IRQ_HANDLED;
 }
 

@@ -75,6 +75,8 @@ bool reset;
 
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
 
+static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020);
+	
 static ssize_t irq_get(struct device* device,
 		struct device_attribute* attribute,
 		char* buffer)
@@ -92,14 +94,14 @@ static ssize_t irq_set(struct device* device,
 	u64 rc;
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
 	retval = kstrtou64(buffer, 0, &rc);
-	smp_rmb();
+	/*
 	if (rc == 1) {
 		pr_info("enable_irq\n");
 		enable_irq(fpc1020->irq);
 	} else {
 		pr_info("disable_irq\n");
 		disable_irq(fpc1020->irq);
-	}
+	}*/
 	return strnlen(buffer, count);
 }
 
@@ -364,12 +366,12 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), pm_work);
-
+	
 	/* Escalate fingerprintd priority when screen is off */
 	if (fpc1020->screen_on)
 		set_fingerprintd_nice(0);
 	else
-		set_fingerprintd_nice(MIN_NICE);
+		set_fingerprintd_nice(-1);
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }
@@ -456,7 +458,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 
-	enable_irq_wake(fpc1020->irq);
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	wake_lock_init(&fpc1020->fp_wl, WAKE_LOCK_SUSPEND, "fp_hal_wl");
 	device_init_wakeup(fpc1020->dev, 1);
@@ -467,8 +468,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_unregister_client;
 	}
 
-	//Disable IRQ
-	disable_irq(fpc1020->irq);
+	//Enable wake IRQ
+	enable_irq_wake(fpc1020->irq);
 
 	return 0;
 

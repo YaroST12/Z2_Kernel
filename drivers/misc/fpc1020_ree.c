@@ -248,11 +248,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	
 	if (!home_pressed)
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	
-	if (!fpc1020->screen_on) {
-		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
-		input_sync(fpc1020->input_dev);
-	}
+
 	return IRQ_HANDLED;
 }
 

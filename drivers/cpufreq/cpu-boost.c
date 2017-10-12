@@ -43,7 +43,7 @@ static unsigned int input_boost_ms = 0;
 module_param(input_boost_ms, uint, 0644);
 
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
-static int dynamic_stune_boost = 10;
+static int dynamic_stune_boost = 15;
 module_param(dynamic_stune_boost, uint, 0644);
 
 int sched_dynamic_stune_boost = 0;

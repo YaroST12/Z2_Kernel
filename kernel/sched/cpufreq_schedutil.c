@@ -733,7 +733,7 @@ initialize:
 		tunables->up_rate_limit_us *= lat;
 		tunables->down_rate_limit_us *= lat;
 	}
-	tunables->eval_busy_for_freq = false;
+	tunables->eval_busy_for_freq = true;
 	
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:

@@ -52,13 +52,14 @@ struct fpc1020_data {
 	struct input_dev *input_dev;
 	u8  report_key;
 	struct wake_lock wake_lock;
-	int wakeup_status;
+	bool tap_enabled;
 	bool screen_on;
 	bool home_pressed;
 	struct workqueue_struct *fpc1020_wq;
 	struct workqueue_struct *fpc_irq_wq;
 	struct work_struct input_report_work;
 	struct work_struct pm_work;
+	struct work_struct irq_work;
 };
 
 /*
@@ -91,14 +92,15 @@ static ssize_t irq_set(struct device* device,
 	u64 rc;
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
 	retval = kstrtou64(buffer, 0, &rc);
-	/*
-	if (rc == 1) {
-		pr_info("enable_irq\n");
-		enable_irq(fpc1020->irq);
-	} else {
-		pr_info("disable_irq\n");
-		disable_irq(fpc1020->irq);
-	}*/
+	if (fpc1020->screen_on) {
+		if (rc == 1) {
+			pr_info("tap_enabled\n");
+			fpc1020->tap_enabled = 1;
+		} else {
+			pr_info("tap_disabled\n");
+			fpc1020->tap_enabled = 0;
+		}
+	}
 	return strnlen(buffer, count);
 }
 
@@ -234,21 +236,34 @@ err:
 	return retval;
 }
 
-static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
+static void fpc1020_irq_work(struct work_struct *work)
 {
-	struct fpc1020_data *fpc1020 = _fpc1020;
+	struct fpc1020_data *fpc1020 =
+		container_of(work, typeof(*fpc1020), irq_work);
 	bool home_pressed = home_button_pressed();
-	pr_info("fpc1020 IRQ interrupt\n");
 	
 	if (!fpc1020->screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
+		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+		if (home_pressed)
+			reset_home_button();
 	}
 	
-	if (!home_pressed)
+	if (fpc1020->screen_on && fpc1020->tap_enabled)
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	else
+		return;
+}
 
+static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
+{
+	struct fpc1020_data *fpc1020 = _fpc1020;
+	pr_info("fpc1020 IRQ interrupt\n");
+
+	queue_work(fpc1020->fpc_irq_wq, &fpc1020->irq_work);
+	
 	return IRQ_HANDLED;
 }
 
@@ -429,6 +444,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
+	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	

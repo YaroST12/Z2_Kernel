@@ -1045,7 +1045,7 @@ static enum hrtimer_restart goodix_ts_timer_handler(struct hrtimer *timer)
 
     GTP_DEBUG_FUNC();
 
-    queue_work(system_power_efficient_wq, &ts->work);
+    queue_work(goodix_wq, &ts->work);
     hrtimer_start(&ts->timer, ktime_set(0, (GTP_POLL_TIME+6)*1000000), HRTIMER_MODE_REL);
     return HRTIMER_NORESTART;
 }
@@ -1068,7 +1068,7 @@ static irqreturn_t goodix_ts_irq_handler(int irq, void *dev_id)
  
     gtp_irq_disable(ts);
 
-    queue_work(system_power_efficient_wq, &ts->work);
+    queue_work(goodix_wq, &ts->work);
     
     return IRQ_HANDLED;
 }

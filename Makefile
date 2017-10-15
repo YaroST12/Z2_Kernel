@@ -407,7 +407,8 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 # Optimization for Kryo
 KBUILD_CFLAGS	+= -pipe -fno-pic -O2 -march=armv8.1-a+crc+crypto
 
-KBUILD_CFLAGS	+= -faggressive-loop-optimizations -fno-gcse -fpredictive-commoning
+KBUILD_CFLAGS	+= -faggressive-loop-optimizations -fno-gcse
+
 # Kryo doesn't need 835769/843419 erratum fixes.
 # Some toolchains enable those fixes automatically, so opt-out.
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)

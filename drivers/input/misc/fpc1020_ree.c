@@ -256,8 +256,8 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(100));
-
-	queue_work(fpc1020->fpc_irq_wq, &fpc1020->irq_work);
+	/* CPU0 never sleeps, use it for our advantage */
+	queue_work_on(0, fpc1020->fpc_irq_wq, &fpc1020->irq_work);
 	
 	return IRQ_HANDLED;
 }

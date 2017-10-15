@@ -340,7 +340,7 @@ static int msm_fd_vbif_error_handler(void *handle, uint32_t error)
 	int ret;
 
 	if (NULL == handle) {
-		dev_err(fd->dev, "FD Ctx is null, Cannot recover\n");
+		pr_err("FD Ctx is null, Cannot recover\n");
 		return 0;
 	}
 	ctx = (struct fd_ctx *)handle;
@@ -755,9 +755,9 @@ static int msm_fd_reqbufs(struct file *file,
 	int ret;
 	struct fd_ctx *ctx = msm_fd_ctx_from_fh(fh);
 
-	mutex_lock(&ctx->fd_device->recovery_lock);
+	mutex_lock(&ctx->lock);
 	ret = vb2_reqbufs(&ctx->vb2_q, req);
-	mutex_unlock(&ctx->fd_device->recovery_lock);
+	mutex_unlock(&ctx->lock);
 	return ret;
 }
 
@@ -773,9 +773,9 @@ static int msm_fd_qbuf(struct file *file, void *fh,
 	int ret;
 	struct fd_ctx *ctx = msm_fd_ctx_from_fh(fh);
 
-	mutex_lock(&ctx->fd_device->recovery_lock);
+	mutex_lock(&ctx->lock);
 	ret = vb2_qbuf(&ctx->vb2_q, pb);
-	mutex_unlock(&ctx->fd_device->recovery_lock);
+	mutex_unlock(&ctx->lock);
 	return ret;
 
 }
@@ -792,9 +792,9 @@ static int msm_fd_dqbuf(struct file *file,
 	int ret;
 	struct fd_ctx *ctx = msm_fd_ctx_from_fh(fh);
 
-	mutex_lock(&ctx->fd_device->recovery_lock);
+	mutex_lock(&ctx->lock);
 	ret = vb2_dqbuf(&ctx->vb2_q, pb, file->f_flags & O_NONBLOCK);
-	mutex_unlock(&ctx->fd_device->recovery_lock);
+	mutex_unlock(&ctx->lock);
 	return ret;
 }
 

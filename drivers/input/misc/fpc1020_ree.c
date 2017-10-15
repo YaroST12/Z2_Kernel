@@ -241,7 +241,9 @@ static void fpc1020_irq_work(struct work_struct *work)
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
 	bool home_pressed = home_button_pressed();
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
 	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
+	input_sync(fpc1020->input_dev);
 	
 	if (fpc1020->tap_enabled) {
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
@@ -255,7 +257,6 @@ static void fpc1020_irq_work(struct work_struct *work)
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;	
-	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(100));
 	/* CPU0 never sleeps, use it for our advantage */
 	queue_work_on(0, fpc1020->fpc_irq_wq, &fpc1020->irq_work);
 	

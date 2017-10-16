@@ -405,7 +405,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -std=gnu89
 		   
 # Optimization for Kryo
-KBUILD_CFLAGS	+= -pipe -fno-pic -O2 -march=armv8.1-a+crc+crypto
+KBUILD_CFLAGS	+= -pipe -fno-pic -O2 -mcpu=cortex-a57+crypto+crc
 
 KBUILD_CFLAGS	+= -faggressive-loop-optimizations -fno-gcse
 

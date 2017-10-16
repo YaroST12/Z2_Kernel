@@ -56,10 +56,8 @@ struct fpc1020_data {
 	bool screen_on;
 	bool home_pressed;
 	struct workqueue_struct *fpc1020_wq;
-	struct workqueue_struct *fpc_irq_wq;
 	struct work_struct input_report_work;
 	struct work_struct pm_work;
-	struct work_struct irq_work;
 };
 
 /*
@@ -236,29 +234,23 @@ err:
 	return retval;
 }
 
-static void fpc1020_irq_work(struct work_struct *work)
+static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
-	struct fpc1020_data *fpc1020 =
-		container_of(work, typeof(*fpc1020), irq_work);
+	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool home_pressed = home_button_pressed();
-	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
+	bool tap = fpc1020->tap_enabled;
+	
 	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 	input_sync(fpc1020->input_dev);
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
 	
-	if (fpc1020->tap_enabled) {
+	if (tap) {
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 		if (home_pressed)
 			reset_home_button();
 	}
-}
-
-static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
-{
-	struct fpc1020_data *fpc1020 = _fpc1020;	
-	/* CPU0 never sleeps, use it for our advantage */
-	queue_work_on(0, fpc1020->fpc_irq_wq, &fpc1020->irq_work);
 	
 	return IRQ_HANDLED;
 }
@@ -291,7 +283,8 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 	}
 	
 	retval = devm_request_threaded_irq(fpc1020->dev, fpc1020->irq, NULL, fpc1020_irq_handler,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT, dev_name(fpc1020->dev), fpc1020);
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_FORCE_RESUME | IRQF_NO_SUSPEND, 
+									   dev_name(fpc1020->dev), fpc1020);
 	if (retval) {
 		pr_err("request irq %i failed.\n", fpc1020->irq);
 		fpc1020->irq = -EINVAL;
@@ -428,19 +421,12 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Allocate input device failed\n");
 		goto error_remove_sysfs;
 	}
-
-	fpc1020->fpc_irq_wq = create_singlethread_workqueue("fpc_irq_wq");
-	if (!fpc1020->fpc_irq_wq) {
-		pr_err("Create input workqueue failed\n");
-		goto error_unregister_device;
-	}
 	
 	fpc1020->fpc1020_wq = create_workqueue("fpc1020_wq");
 	if (!fpc1020->fpc1020_wq) {
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
-	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	

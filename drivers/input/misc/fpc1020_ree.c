@@ -238,11 +238,18 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool home_pressed = home_button_pressed();
-	bool tap = fpc1020->tap_enabled;
+	int tap = fpc1020->tap_enabled;
+	int screen_on = fpc1020->screen_on;
+	smp_mb();
+	
+	if (!tap)
+		return IRQ_HANDLED;
 	
 	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 	input_sync(fpc1020->input_dev);
-	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
+	
+	if (!screen_on)
+		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
 	
 	if (tap) {
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
@@ -251,7 +258,6 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 		if (home_pressed)
 			reset_home_button();
 	}
-	
 	return IRQ_HANDLED;
 }
 

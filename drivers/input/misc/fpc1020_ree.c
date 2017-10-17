@@ -93,10 +93,11 @@ static ssize_t irq_set(struct device* device,
 	if (fpc1020->screen_on) {
 		if (rc == 1) {
 			pr_info("tap_enabled\n");
-			fpc1020->tap_enabled = 1;
-		} else {
+			fpc1020->tap_enabled = true;
+		}
+		if (rc == 0) {
 			pr_info("tap_disabled\n");
-			fpc1020->tap_enabled = 0;
+			fpc1020->tap_enabled = false; 
 		}
 	}
 	return strnlen(buffer, count);
@@ -193,6 +194,7 @@ static void fpc1020_report_work_func(struct work_struct *work)
 static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 {
 	pr_info("HW reset\n");
+	fpc1020->tap_enabled = false;
 	gpio_set_value(fpc1020->reset_gpio, 1);
 	udelay(FPC1020_RESET_HIGH1_US);
 
@@ -200,7 +202,8 @@ static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 	udelay(FPC1020_RESET_LOW_US);
 
 	gpio_set_value(fpc1020->reset_gpio, 1);
-	udelay(FPC1020_RESET_HIGH2_US);
+	udelay(FPC1020_RESET_HIGH1_US);
+	fpc1020->tap_enabled = true;
 }
 
 static int fpc1020_get_pins(struct fpc1020_data *fpc1020)
@@ -238,7 +241,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool home_pressed = home_button_pressed();
-	int tap = fpc1020->tap_enabled;
+	bool tap = fpc1020->tap_enabled;
 	int screen_on = fpc1020->screen_on;
 	smp_mb();
 	
@@ -368,6 +371,8 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		set_fingerprintd_nice(0);
 	else
 		set_fingerprintd_nice(-1);
+	
+	fpc1020_hw_reset(fpc1020);
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }

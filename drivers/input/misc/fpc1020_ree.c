@@ -379,22 +379,23 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
-	int *blank;
-	struct fb_event *evdata = data;
 	struct fpc1020_data *fpc1020 = container_of(self, struct fpc1020_data, fb_notif);
-	blank = evdata->data;
-	if (evdata && evdata->data && event == FB_EVENT_BLANK && fpc1020) {
-		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK) {
-			pr_err("ScreenOn\n");
-			fpc1020->screen_on = true;
-			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
-		} else if (*blank == FB_BLANK_POWERDOWN) {
-			pr_err("ScreenOff\n");
-			fpc1020->screen_on = false;
-			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
-		}
+	struct fb_event *evdata = data;
+	int *blank = evdata->data;
+
+	if (event != FB_EARLY_EVENT_BLANK)
+		return 0;
+
+	if (*blank == FB_BLANK_UNBLANK) {
+		fpc1020->screen_on = 1;
+		pr_err("ScreenOn\n");
+		queue_work(system_highpri_wq, &fpc1020->pm_work);
+	} else if (*blank == FB_BLANK_POWERDOWN) {
+		fpc1020->screen_on = 0;
+		pr_err("ScreenOff\n");
+		queue_work(system_highpri_wq, &fpc1020->pm_work);
 	}
+
 	return 0;
 }
 

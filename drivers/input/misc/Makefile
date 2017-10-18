@@ -73,5 +73,4 @@ obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
 obj-$(CONFIG_SENSORS_HALL)		+= hall_switch.o
 obj-$(CONFIG_FPC1020_REE) += fpc1020_ree.o
-ccflags-y := -Ofast
 obj-$(CONFIG_DRV2605L_HAPTICS)		+= vibrator/

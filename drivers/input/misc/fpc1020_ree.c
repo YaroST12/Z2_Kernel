@@ -243,6 +243,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	bool home_pressed = home_button_pressed();
 	bool tap = fpc1020->tap_enabled;
 	int screen_on = fpc1020->screen_on;
+	/* Wew, looks like this barrier really improves unlock speed...*/
 	smp_mb();
 	
 	if (!tap)

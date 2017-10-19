@@ -94,10 +94,12 @@ static ssize_t irq_set(struct device* device,
 		if (rc == 1) {
 			pr_info("tap_enabled\n");
 			fpc1020->tap_enabled = true;
+			smp_wmb();
 		}
 		if (rc == 0) {
 			pr_info("tap_disabled\n");
-			fpc1020->tap_enabled = false; 
+			fpc1020->tap_enabled = false;
+			smp_wmb();
 		}
 	}
 	return strnlen(buffer, count);
@@ -242,7 +244,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool home_pressed = home_button_pressed();
 	bool tap = fpc1020->tap_enabled;
-	int screen_on = fpc1020->screen_on;
+	bool screen_off = !fpc1020->screen_on;
 	/* Wew, looks like this barrier really improves unlock speed...*/
 	smp_mb();
 	
@@ -252,11 +254,10 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 	input_sync(fpc1020->input_dev);
 	
-	if (!screen_on)
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
-	
 	if (tap) {
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+		if (!screen_off)
+			wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 		if (home_pressed)

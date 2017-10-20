@@ -20,7 +20,7 @@
 #include <linux/gpio.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
-#include <linux/state_notifier.h>
+#include <linux/fb.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/platform_device.h>
@@ -47,11 +47,13 @@ struct fpc1020_data {
 	int reset_gpio;
 	int irq_gpio;
 	int irq;
+	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
 	u8  report_key;
 	struct wake_lock wake_lock;
 	bool tap_enabled;
+	bool screen_on;
 	bool home_pressed;
 	struct workqueue_struct *fpc1020_wq;
 	struct work_struct input_report_work;
@@ -68,6 +70,8 @@ extern bool home_button_pressed(void);
 extern void reset_home_button(void);
 
 bool reset;
+
+static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
 	
 static ssize_t irq_get(struct device* device,
 		struct device_attribute* attribute,
@@ -86,6 +90,7 @@ static ssize_t irq_set(struct device* device,
 	u64 rc;
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
 	retval = kstrtou64(buffer, 0, &rc);
+	if (fpc1020->screen_on) {
 		if (rc == 1) {
 			pr_info("tap_enabled\n");
 			fpc1020->tap_enabled = true;
@@ -96,6 +101,7 @@ static ssize_t irq_set(struct device* device,
 			fpc1020->tap_enabled = false;
 			smp_wmb();
 		}
+	}
 	return strnlen(buffer, count);
 }
 
@@ -148,9 +154,25 @@ static ssize_t set_key(struct device* device,
 
 static DEVICE_ATTR(key, S_IRUSR | S_IWUSR, get_key, set_key);
 
+static ssize_t get_screen_stat(struct device* device, struct device_attribute* attribute, char* buffer)
+{
+	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
+	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->screen_on);
+}
+
+static ssize_t set_screen_stat(struct device* device,
+		struct device_attribute* attribute,
+		const char*buffer, size_t count)
+{
+	return 1;
+}
+
+static DEVICE_ATTR(screen, S_IRUSR | S_IWUSR, get_screen_stat, set_screen_stat);
+
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
+	&dev_attr_screen.attr,
 	NULL
 };
 
@@ -162,7 +184,7 @@ static void fpc1020_report_work_func(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 = NULL;
 	fpc1020 = container_of(work, struct fpc1020_data, input_report_work);
-	if (!state_suspended) {
+	if (fpc1020->screen_on) {
 		pr_info("Report key value = %d\n", (int)fpc1020->report_key);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
@@ -222,6 +244,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool home_pressed = home_button_pressed();
 	bool tap = fpc1020->tap_enabled;
+	bool screen_off = !fpc1020->screen_on;
 	/* Wew, looks like this barrier really improves unlock speed...*/
 	smp_mb();
 	
@@ -233,7 +256,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	
 	if (tap) {
 		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-		if (state_suspended)
+		if (!screen_off)
 			wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
@@ -346,12 +369,36 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), pm_work);
 	
 	/* Escalate fingerprintd priority when screen is off */
-	if (!state_suspended)
+	if (fpc1020->screen_on)
 		set_fingerprintd_nice(0);
 	else
 		set_fingerprintd_nice(-1);
 	
 	fpc1020_hw_reset(fpc1020);
+	sysfs_notify(&fpc1020->dev->kobj, NULL,
+				dev_attr_screen.attr.name);
+}
+
+static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+{
+	struct fpc1020_data *fpc1020 = container_of(self, struct fpc1020_data, fb_notif);
+	struct fb_event *evdata = data;
+	int *blank = evdata->data;
+
+	if (event != FB_EARLY_EVENT_BLANK)
+		return 0;
+
+	if (*blank == FB_BLANK_UNBLANK) {
+		fpc1020->screen_on = 1;
+		pr_err("ScreenOn\n");
+		queue_work(system_highpri_wq, &fpc1020->pm_work);
+	} else if (*blank == FB_BLANK_POWERDOWN) {
+		fpc1020->screen_on = 0;
+		pr_err("ScreenOff\n");
+		queue_work(system_highpri_wq, &fpc1020->pm_work);
+	}
+
+	return 0;
 }
 
 static int fpc1020_probe(struct platform_device *pdev)
@@ -401,18 +448,28 @@ static int fpc1020_probe(struct platform_device *pdev)
 	/*Do HW reset*/
 	fpc1020_hw_reset(fpc1020);
 
+	fpc1020->fb_notif.notifier_call = fb_notifier_callback;
+	retval = fb_register_client(&fpc1020->fb_notif);
+	if (retval) {
+		pr_err("Unable to register fb_notifier : %d\n", retval);
+		goto error_destroy_workqueue;
+	}
+
 	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
 	
 	retval = fpc1020_initial_irq(fpc1020);
 	if (retval != 0) {
 		pr_err("IRQ initialized failure\n");
-		goto error_unregister_device;
+		goto error_unregister_client;
 	}
 
 	//Enable wake IRQ
 	enable_irq_wake(fpc1020->irq);
 
 	return 0;
+
+error_unregister_client:
+	fb_unregister_client(&fpc1020->fb_notif);
 
 error_destroy_workqueue:
 	destroy_workqueue(fpc1020->fpc1020_wq);
@@ -425,7 +482,7 @@ error_remove_sysfs:
 
 error:
 	if (fpc1020 != NULL)
-		kvfree(fpc1020);
+		kzfree(fpc1020);
 
 	return retval;
 }

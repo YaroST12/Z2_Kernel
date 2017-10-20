@@ -229,9 +229,10 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool screen_on = fpc1020->screen_on;
 	smp_mb();
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
+
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	if (!screen_on) {
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);

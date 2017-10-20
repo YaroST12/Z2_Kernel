@@ -42,6 +42,11 @@ module_param(input_boost_enabled, uint, 0644);
 static unsigned int input_boost_ms = 50;
 module_param(input_boost_ms, uint, 0644);
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+static int dynamic_stune_boost = 0;
+module_param(dynamic_stune_boost, uint, 0644);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
+
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
@@ -183,6 +188,11 @@ static void do_input_boost_rem(struct work_struct *work)
 		i_sync_info->input_boost_min = 0;
 	}
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	/* Reset dynamic stune boost value to the default value */
+        dynamic_boost_write(topapp_css, default_topapp_boost);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
+
 	/* Update policies for all online CPUs */
 	update_policy_online();
 
@@ -215,6 +225,12 @@ static void do_input_boost(struct work_struct *work)
 
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 	}
+
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	/* Set dynamic stune boost value */
+        if (dynamic_stune_boost > default_topapp_boost)
+                dynamic_boost_write(topapp_css, dynamic_stune_boost);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 	/* Update policies for all online CPUs */
 	update_policy_online();
@@ -274,6 +290,11 @@ err2:
 
 static void cpuboost_input_disconnect(struct input_handle *handle)
 {
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	/* Reset dynamic stune boost value to the default value */
+        dynamic_boost_write(topapp_css, default_topapp_boost);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
+
 	input_close_device(handle);
 	input_unregister_handle(handle);
 	kfree(handle);

@@ -52,7 +52,6 @@ struct fpc1020_data {
 	struct input_dev *input_dev;
 	u8  report_key;
 	struct wake_lock wake_lock;
-	bool tap_enabled;
 	bool screen_on;
 	bool home_pressed;
 	struct workqueue_struct *fpc1020_wq;
@@ -90,18 +89,6 @@ static ssize_t irq_set(struct device* device,
 	u64 rc;
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
 	retval = kstrtou64(buffer, 0, &rc);
-	if (fpc1020->screen_on) {
-		if (rc == 1) {
-			pr_info("tap_enabled\n");
-			fpc1020->tap_enabled = true;
-			smp_wmb();
-		}
-		if (rc == 0) {
-			pr_info("tap_disabled\n");
-			fpc1020->tap_enabled = false;
-			smp_wmb();
-		}
-	}
 	return strnlen(buffer, count);
 }
 
@@ -196,7 +183,6 @@ static void fpc1020_report_work_func(struct work_struct *work)
 static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 {
 	pr_info("HW reset\n");
-	fpc1020->tap_enabled = false;
 	gpio_set_value(fpc1020->reset_gpio, 1);
 	udelay(FPC1020_RESET_HIGH1_US);
 
@@ -205,7 +191,6 @@ static void fpc1020_hw_reset(struct fpc1020_data *fpc1020)
 
 	gpio_set_value(fpc1020->reset_gpio, 1);
 	udelay(FPC1020_RESET_HIGH1_US);
-	fpc1020->tap_enabled = true;
 }
 
 static int fpc1020_get_pins(struct fpc1020_data *fpc1020)
@@ -242,26 +227,15 @@ err:
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;	
-	bool home_pressed = home_button_pressed();
-	bool tap = fpc1020->tap_enabled;
-	bool screen_off = !fpc1020->screen_on;
-	/* Wew, looks like this barrier really improves unlock speed...*/
+	bool screen_on = fpc1020->screen_on;
 	smp_mb();
-	
-	if (!tap)
-		return IRQ_HANDLED;
-	
-	input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
-	input_sync(fpc1020->input_dev);
-	
-	if (tap) {
-		sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-		if (!screen_off)
-			wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(1000));
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	if (!screen_on) {
+		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
+		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
+		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
-		if (home_pressed)
-			reset_home_button();
 	}
 	return IRQ_HANDLED;
 }
@@ -369,10 +343,15 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), pm_work);
 	
 	/* Escalate fingerprintd priority when screen is off */
-	if (fpc1020->screen_on)
+	if (fpc1020->screen_on) {
 		set_fingerprintd_nice(0);
-	else
+		pr_err("nice 0\n");
+	}
+	
+	if (!fpc1020->screen_on) {
 		set_fingerprintd_nice(-1);
+		pr_err("nice -1\n");
+	}
 	
 	fpc1020_hw_reset(fpc1020);
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
@@ -391,13 +370,11 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 	if (*blank == FB_BLANK_UNBLANK) {
 		fpc1020->screen_on = 1;
 		pr_err("ScreenOn\n");
-		queue_work(system_highpri_wq, &fpc1020->pm_work);
 	} else if (*blank == FB_BLANK_POWERDOWN) {
 		fpc1020->screen_on = 0;
 		pr_err("ScreenOff\n");
-		queue_work(system_highpri_wq, &fpc1020->pm_work);
 	}
-
+	queue_work(system_highpri_wq, &fpc1020->pm_work);
 	return 0;
 }
 

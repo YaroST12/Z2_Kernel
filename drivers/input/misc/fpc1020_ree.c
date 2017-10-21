@@ -229,15 +229,24 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool screen_on = fpc1020->screen_on;
 	smp_mb();
-	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
-
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	
 	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
+		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
+	}
+	
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	
+	if (screen_on)
+		/* Undreaks long_press */
+		return IRQ_HANDLED;
+	
+	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 	}
+	
 	return IRQ_HANDLED;
 }
 
@@ -312,7 +321,6 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_RIGHT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_BACK);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LONG);
-	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_FINGERPRINT);
 
 	/* Register the input device */
 	retval = input_register_device(fpc1020->input_dev);
@@ -354,7 +362,6 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		pr_err("nice -1\n");
 	}
 	
-	fpc1020_hw_reset(fpc1020);
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }
@@ -375,7 +382,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		fpc1020->screen_on = 0;
 		pr_err("ScreenOff\n");
 	}
-	queue_work(system_highpri_wq, &fpc1020->pm_work);
+	queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 	return 0;
 }
 

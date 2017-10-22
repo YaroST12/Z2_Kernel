@@ -128,7 +128,7 @@ static ssize_t set_key(struct device* device,
 
 		pr_info("home key pressed = %d\n", (int)home_pressed);
 		fpc1020->report_key = (int)val;
-		queue_work(fpc1020->fpc1020_wq, &fpc1020->input_report_work);
+		queue_work_on(0, fpc1020->fpc1020_wq, &fpc1020->input_report_work);
 
 		if (!val) {
 			pr_info("calling home key reset");
@@ -239,14 +239,13 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	
 	if (screen_on)
-		/* Undreaks long_press */
+		/* Unbreaks long_press */
 		return IRQ_HANDLED;
 	
 	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 	}
-	
 	return IRQ_HANDLED;
 }
 
@@ -382,7 +381,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		fpc1020->screen_on = 0;
 		pr_err("ScreenOff\n");
 	}
-	queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
+	queue_work_on(0, fpc1020->fpc1020_wq, &fpc1020->pm_work);
 	return 0;
 }
 

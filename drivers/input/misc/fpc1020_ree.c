@@ -76,20 +76,24 @@ static ssize_t irq_get(struct device* device,
 		struct device_attribute* attribute,
 		char* buffer)
 {
+
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	int irq = gpio_get_value(fpc1020->irq_gpio);
-	return scnprintf(buffer, PAGE_SIZE, "%i\n", irq);
+	int irq;
+	ssize_t count;
+
+	irq = gpio_get_value(fpc1020->irq_gpio);
+	count = scnprintf(buffer, PAGE_SIZE, "%i\n", irq);
+
+	return count;
 }
 
 static ssize_t irq_set(struct device* device,
 		struct device_attribute* attribute,
 		const char* buffer, size_t count)
 {
-	int retval = 0;
-	u64 rc;
 	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	retval = kstrtou64(buffer, 0, &rc);
-	return strnlen(buffer, count);
+	dev_dbg(fpc1020->dev, "%s\n", __func__);
+	return count;
 }
 
 static DEVICE_ATTR(irq, S_IRUSR | S_IWUSR, irq_get, irq_set);

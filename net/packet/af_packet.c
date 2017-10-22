@@ -1429,7 +1429,6 @@ static int fanout_add(struct sock *sk, u16 id, u16 type_flags)
 		return -EINVAL;
 	}
 
-<<<<<<< HEAD
 	mutex_lock(&fanout_mutex);
 
 	err = -EINVAL;
@@ -1437,8 +1436,7 @@ static int fanout_add(struct sock *sk, u16 id, u16 type_flags)
 		goto out;
 
 	err = -EALREADY;
-=======
->>>>>>> 9d6dbbb... packet: hold bind lock when rebinding to fanout hook
+
 	if (po->fanout)
 		goto out;
 

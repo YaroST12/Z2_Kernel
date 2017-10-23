@@ -8892,7 +8892,9 @@ static void rerun_hvdcp_det_if_necessary(struct smbchg_chip *chip)
 }
 
 #ifdef SUPPORT_SCREEN_ON_FCC_OP
-#define SCREEN_ON_MAX_FCC_MA			1100
+static unsigned int screen_on_charging = 1000;
+module_param(screen_on_charging, int, 0644);
+	
 static int reset_max_fcc_ma(struct smbchg_chip *chip, int ma, bool state)
 {
 	int rc = 0;
@@ -8918,7 +8920,11 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
 			chip->screen_on = 1;
-			reset_max_fcc_ma(chip, SCREEN_ON_MAX_FCC_MA, true);
+			if (screen_on_charging > 1500)
+				screen_on_charging = 1500;
+			if (screen_on_charging < 500)
+				screen_on_charging = 500;
+			reset_max_fcc_ma(chip, screen_on_charging, true);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			chip->screen_on = 0;

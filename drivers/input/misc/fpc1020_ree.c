@@ -181,6 +181,7 @@ static void fpc1020_report_work_func(struct work_struct *work)
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 0);
 		input_sync(fpc1020->input_dev);
+		fpc1020->report_key = 0;
 	}
 }
 
@@ -232,7 +233,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool screen_on = fpc1020->screen_on;
-	smp_mb();
+	smp_rmb();
 	
 	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
@@ -281,7 +282,7 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 	}
 	
 	retval = devm_request_threaded_irq(fpc1020->dev, fpc1020->irq, NULL, fpc1020_irq_handler,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_FORCE_RESUME | IRQF_NO_SUSPEND, 
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_FORCE_RESUME, 
 									   dev_name(fpc1020->dev), fpc1020);
 	if (retval) {
 		pr_err("request irq %i failed.\n", fpc1020->irq);

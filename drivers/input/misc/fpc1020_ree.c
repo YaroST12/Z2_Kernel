@@ -233,7 +233,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;	
 	bool screen_on = fpc1020->screen_on;
-	smp_rmb();
+	smp_mb();
 	
 	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);

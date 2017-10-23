@@ -200,14 +200,14 @@ static void do_input_boost(struct work_struct *work)
 	for_each_possible_cpu(i) {
 		i_sync_info = &per_cpu(sync_info, i);
 
-		// cpu 0-3 -> silver cluster
-		// cpu 4-7 -> gold cluster
+		// cpu 0-1 -> silver cluster
+		// cpu 2-3 -> gold cluster
 		// to save power there's no point in boosting the
 		// gold cluster core if it doesn't have any runnable
 		// thread at this point in time
 		// since inputs are fairly common we might save some
 		// juice in the long run
-		if (i >= 4 && cpu_rq(i)->nr_running == 0)
+		if (i >= 1 && cpu_rq(i)->nr_running == 0)
 			continue;
 
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;

@@ -6,7 +6,7 @@ SMP=$3
 PREEMPT=$4
 CC=$5
 
-vecho() { [ "${quiet}" = "silent_" ] || echo "@" ; }
+vecho() { [ "${quiet}" = "silent_" ] || echo "$@" ; }
 
 # If compile.h exists already and we don't own autoconf.h
 # (i.e. we're not the same user who did make *config), don't

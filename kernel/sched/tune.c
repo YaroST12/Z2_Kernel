@@ -620,7 +620,11 @@ dynamic_boost_write(struct cgroup_subsys_state *css, int boost)
 	/* Update CPU boost */
 	schedtune_boostgroup_update(st->idx, st->boost);
 
-	trace_sched_tune_config(st->boost);
+	trace_sched_tune_config(st->boost,
+			threshold_gains[st->perf_boost_idx].nrg_gain,
+			threshold_gains[st->perf_boost_idx].cap_gain,
+			threshold_gains[st->perf_constrain_idx].nrg_gain,
+			threshold_gains[st->perf_constrain_idx].cap_gain);
 
 	return 0;
 }

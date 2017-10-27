@@ -239,18 +239,12 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
-	}
-	
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	
-	if (screen_on)
-		/* Unbreaks long_press */
-		return IRQ_HANDLED;
-	
-	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 	}
+	
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+
 	return IRQ_HANDLED;
 }
 

@@ -137,7 +137,9 @@ const char *migrate_type_names[] = {"GROUP_TO_RQ", "RQ_TO_GROUP",
 ATOMIC_NOTIFIER_HEAD(migration_notifier_head);
 ATOMIC_NOTIFIER_HEAD(load_alert_notifier_head);
 
+#ifdef CONFIG_SMP
 static bool have_sched_energy_data(void);
+#endif
 
 DEFINE_MUTEX(sched_domains_mutex);
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
@@ -241,10 +243,11 @@ static int sched_feat_set(char *cmp)
 				sysctl_sched_features &= ~(1UL << i);
 				sched_feat_disable(i);
 			} else {
+#ifdef CONFIG_SMP
 				if (i == __SCHED_FEAT_ENERGY_AWARE)
 					WARN(!have_sched_energy_data(),
 					     "Missing sched energy data\n");
-
+#endif
 				sysctl_sched_features |= (1UL << i);
 				sched_feat_enable(i);
 			}

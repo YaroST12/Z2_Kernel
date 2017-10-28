@@ -122,7 +122,7 @@
 
 			qcom,speed-bin = <0>;
 
-			qcom,initial-pwrlevel = <6>;
+			qcom,initial-pwrlevel = <5>;
 
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
@@ -195,7 +195,7 @@
 
 			qcom,speed-bin = <1>;
 
-			qcom,initial-pwrlevel = <4>;
+			qcom,initial-pwrlevel = <3>;
 
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
@@ -268,7 +268,7 @@
 
 			qcom,speed-bin = <2>;
 
-			qcom,initial-pwrlevel = <5>;
+			qcom,initial-pwrlevel = <4>;
 
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;

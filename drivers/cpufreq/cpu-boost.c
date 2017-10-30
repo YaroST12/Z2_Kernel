@@ -25,6 +25,7 @@
 
 #include "../../kernel/sched/sched.h"
 
+#define MHZ_REJECTION 300000
 struct cpu_sync {
 	int cpu;
 	unsigned int input_boost_min;
@@ -134,7 +135,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 
 		ib_min = min(ib_min, policy->max);
 
-		if (policy->cur >= ib_min)
+		if (policy->cur >= (ib_min - MHZ_REJECTION))
 			break;
 
 		pr_debug("CPU%u policy min before boost: %u kHz\n",

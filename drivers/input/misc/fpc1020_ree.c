@@ -57,6 +57,7 @@ struct fpc1020_data {
 	struct workqueue_struct *fpc1020_wq;
 	struct work_struct input_report_work;
 	struct work_struct pm_work;
+	struct work_struct irq_work;
 };
 
 /*
@@ -229,22 +230,31 @@ err:
 	return retval;
 }
 
-static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
+static void fpc1020_irq_work(struct work_struct *work)
 {
-	struct fpc1020_data *fpc1020 = _fpc1020;	
+	struct fpc1020_data *fpc1020 =
+		container_of(work, typeof(*fpc1020), irq_work);
 	bool screen_on = fpc1020->screen_on;
 	smp_mb();
+	
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
 	
 	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 	}
 	
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-
+}
+	
+static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
+{
+	struct fpc1020_data *fpc1020 = _fpc1020;
+	
+	queue_work_on(0, fpc1020->fpc1020_wq, &fpc1020->irq_work);
+	
 	return IRQ_HANDLED;
 }
 
@@ -419,11 +429,12 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_remove_sysfs;
 	}
 	
-	fpc1020->fpc1020_wq = create_workqueue("fpc1020_wq");
+	fpc1020->fpc1020_wq = create_singlethread_workqueue("fpc1020_wq");
 	if (!fpc1020->fpc1020_wq) {
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
+	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	

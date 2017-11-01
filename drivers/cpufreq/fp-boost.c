@@ -145,9 +145,11 @@ static void cpu_fp_input_event(struct input_handle *handle, unsigned int type,
 {
 	struct boost_policy *b = boost_policy_g;
 	struct fp_config *fp = &b->fp;
+	bool display_on = is_display_on();
 	uint32_t state;
+	smp_mb();
 	
-	if (is_display_on())
+	if (display_on)
 		return;
 
 	state = get_boost_state(b);

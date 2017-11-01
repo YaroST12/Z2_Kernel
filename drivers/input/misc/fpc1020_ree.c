@@ -247,7 +247,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 	
-	queue_work(system_power_efficient_wq, &fpc1020->irq_work);
+	queue_work(fpc1020->fpc1020_wq, &fpc1020->irq_work);
 	
 	return IRQ_HANDLED;
 }
@@ -423,6 +423,12 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_remove_sysfs;
 	}
 	
+	fpc1020->fpc1020_wq = create_workqueue("fpc1020_wq");
+	if (!fpc1020->fpc1020_wq) {
+		pr_err("Create input workqueue failed\n");
+		goto error_unregister_device;
+	}
+	
 	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
@@ -459,6 +465,9 @@ error_destroy_workqueue:
 
 error_remove_sysfs:
 	sysfs_remove_group(&fpc1020->dev->kobj, &attribute_group);
+
+error_unregister_device:
+	input_unregister_device(fpc1020->input_dev);
 
 error:
 	if (fpc1020 != NULL)

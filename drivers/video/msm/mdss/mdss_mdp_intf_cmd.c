@@ -1114,7 +1114,7 @@ static void mdss_mdp_cmd_pingpong_done(void *arg)
 		if (!ctl->commit_in_progress)
 			schedule_work(&ctx->pp_done_work);
 
-			mdss_mdp_resource_control(ctl,
+		mdss_mdp_resource_control(ctl,
 				MDP_RSRC_CTL_EVENT_PP_DONE);
 		}
 		wake_up_all(&ctx->pp_waitq);

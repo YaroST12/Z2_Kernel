@@ -335,7 +335,7 @@ retry:
 			err = do_write_data_page(&fio);
 			if (err) {
 				if (err == -ENOMEM) {
-					congestion_wait(BLK_RW_ASYNC, HZ/50);
+					congestion_wait(BLK_RW_ASYNC, HZ_f2fs/50);
 					cond_resched();
 					goto retry;
 				}

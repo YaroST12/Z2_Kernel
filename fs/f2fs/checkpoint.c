@@ -923,7 +923,7 @@ retry:
 		iput(inode);
 		/* We need to give cpu to another writers. */
 		if (ino == cur_ino) {
-			congestion_wait(BLK_RW_ASYNC, HZ/50);
+			congestion_wait(BLK_RW_ASYNC, HZ_f2fs/50);
 			cond_resched();
 		} else {
 			ino = cur_ino;
@@ -1069,7 +1069,7 @@ static void wait_on_all_pages_writeback(struct f2fs_sb_info *sbi)
 		if (!get_pages(sbi, F2FS_WB_CP_DATA))
 			break;
 
-		io_schedule_timeout(5*HZ);
+		io_schedule_timeout(5*HZ_f2fs);
 	}
 	finish_wait(&sbi->cp_wait, &wait);
 }

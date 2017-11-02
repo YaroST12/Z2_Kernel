@@ -117,6 +117,7 @@ D5 fa 43 f9 44 f8 45 f7 46 f6 47 f5 48 f4 49 f3 4a f2 4c f1 4d f0 4d ef 4f ee 50
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 		qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 02 0A 08];
 		qcom,esd-check-enabled;
+		qcom,partial-update-enabled;
 		qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 		qcom,mdss-dsi-panel-status-value = <0x9c>;

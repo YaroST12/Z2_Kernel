@@ -2670,7 +2670,7 @@ static void smbchg_parallel_usb_en_work(struct work_struct *work)
 	return;
 
 recheck:
-	queue_delayed_work(system_power_efficient_wq,
+	queue_delayed_work(system_power_efficient_wq, 
 		&chip->parallel_en_work, 0);
 }
 
@@ -2682,7 +2682,7 @@ static void smbchg_parallel_usb_check_ok(struct smbchg_chip *chip)
 		return;
 
 	smbchg_stay_awake(chip, PM_PARALLEL_CHECK);
-	queue_delayed_work(system_power_efficient_wq,
+	queue_delayed_work(system_power_efficient_wq, 
 		&chip->parallel_en_work, 0);
 }
 
@@ -3390,7 +3390,7 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 static void smbchg_request_ns_charger_monitor(struct smbchg_chip *chip)
 {
 	cancel_delayed_work_sync(&chip->ns_charger_monitor_work);
-	schedule_delayed_work(&chip->ns_charger_monitor_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 						msecs_to_jiffies(NS_CHARGER_MONITOR_MS));
 }
 
@@ -3499,7 +3499,7 @@ static void smbchg_ns_charger_monitor_work(struct work_struct *work)
 		delta_kt = ktime_sub(now_kt, chip->boot_kt);
 		delta_ms = (int)div64_s64(ktime_to_ns(delta_kt), 1000000);
 		if (delta_ms < SMBCHG_BOOT_MS) {
-			schedule_delayed_work(&chip->ns_charger_monitor_work,
+			queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 						msecs_to_jiffies(NS_CHARGER_BOOT_MS));
 			goto nsc_work_exit;
 		}
@@ -3508,7 +3508,7 @@ static void smbchg_ns_charger_monitor_work(struct work_struct *work)
 
 	if (smbchg_check_ns_charger(chip)) {
 		if (chip->nsc_check_done) {
-			schedule_delayed_work(&chip->ns_charger_monitor_work,
+			queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 						msecs_to_jiffies(NS_CHARGER_USBIN_CHECK_MS));
 			goto nsc_work_exit;
 		}
@@ -3526,7 +3526,7 @@ static void smbchg_ns_charger_monitor_work(struct work_struct *work)
 					POWER_SUPPLY_TYPE_USB);
 
 		chip->nsc_check_done = 1;
-		schedule_delayed_work(&chip->ns_charger_monitor_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 					msecs_to_jiffies(NS_CHARGER_USBIN_CHECK_MS));
 #if 0
 		if (smbchg_check_charger_usbin(chip) < NSC_USBIN_UV) {
@@ -3550,12 +3550,12 @@ static void smbchg_ns_charger_monitor_work(struct work_struct *work)
 							POWER_SUPPLY_TYPE_USB_DCP);
 			}
 			chip->nsc_check_done = 1;
-			schedule_delayed_work(&chip->ns_charger_monitor_work,
+			queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 						msecs_to_jiffies(NS_CHARGER_USBIN_CHECK_MS));
 		} else {
 			if (chip->nsc_check_count >= NSC_MAX_CURRENT_LEVEL) {
 				chip->nsc_check_count = 4;
-				schedule_delayed_work(&chip->ns_charger_monitor_work,
+				queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 							msecs_to_jiffies(NS_CHARGER_BOOT_MS));
 				chip->nsc_check_done = 1;
 				goto nsc_work_exit;
@@ -3571,7 +3571,7 @@ static void smbchg_ns_charger_monitor_work(struct work_struct *work)
 						chip->nsc_icl_ma, fcc_ma, usb_icl_ma, icl_voter_id, usb_suspend, battchg_suspend, chip->nsc_check_count);
 
 			if ((((chip->nsc_icl_ma >= usb_icl_ma) && (icl_voter_id != NSC_ICL_VOTER)) || usb_suspend || battchg_suspend) && chip->nsc_check_count)
-				schedule_delayed_work(&chip->ns_charger_monitor_work,
+				queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 							msecs_to_jiffies(NS_CHARGER_USBIN_CHECK_MS));
 			else {
 				rc = vote(chip->usb_icl_votable, NSC_ICL_VOTER, true, chip->nsc_icl_ma);
@@ -3585,7 +3585,7 @@ static void smbchg_ns_charger_monitor_work(struct work_struct *work)
 								POWER_SUPPLY_TYPE_USB_DCP);
 				}
 				chip->nsc_check_count++;
-				schedule_delayed_work(&chip->ns_charger_monitor_work,
+				queue_delayed_work(system_power_efficient_wq, &chip->ns_charger_monitor_work,
 							msecs_to_jiffies(NS_CHARGER_USBIN_CHECK_MS));
 			}
 		}
@@ -3719,7 +3719,7 @@ static void smbchg_jeita_temp_monitor_work(struct work_struct *work)
 		pr_smb(PR_STATUS, "set vfloat_comp to %d\n", chip->float_voltage_comp);
 	}
 
-	schedule_delayed_work(&chip->jeita_temp_monitor_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->jeita_temp_monitor_work,
 					msecs_to_jiffies(JEITA_RECHARGE_MONITOR_MS));
 }
 #endif
@@ -3984,7 +3984,7 @@ static void smbchg_vfloat_adjust_check(struct smbchg_chip *chip)
 
 	smbchg_stay_awake(chip, PM_REASON_VFLOAT_ADJUST);
 	pr_smb(PR_STATUS, "Starting vfloat adjustments\n");
-	queue_delayed_work(system_power_efficient_wq,
+	queue_delayed_work(system_power_efficient_wq, 
 		&chip->vfloat_adjust_work, 0);
 }
 
@@ -5124,7 +5124,7 @@ stop:
 	return;
 
 reschedule:
-	queue_delayed_work(system_power_efficient_wq,
+	queue_delayed_work(system_power_efficient_wq, 
 		&chip->vfloat_adjust_work,
 		msecs_to_jiffies(VFLOAT_RESAMPLE_DELAY_MS));
 	return;
@@ -5571,7 +5571,7 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 			(usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)) {
 		cancel_delayed_work_sync(&chip->hvdcp_det_work);
 		smbchg_stay_awake(chip, PM_DETECT_HVDCP);
-		queue_delayed_work(system_power_efficient_wq,
+		queue_delayed_work(system_power_efficient_wq, 
 			&chip->hvdcp_det_work,
 			msecs_to_jiffies(HVDCP_NOTIFY_MS));
 	}
@@ -5916,7 +5916,7 @@ static void smbchg_handle_hvdcp3_disable(struct smbchg_chip *chip)
 		read_usb_type(chip, &usb_type_name, &usb_supply_type);
 		smbchg_change_usb_supply_type(chip, usb_supply_type);
 		if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)
-			queue_delayed_work(system_power_efficient_wq,
+			queue_delayed_work(system_power_efficient_wq, 
 				&chip->hvdcp_det_work,
 				msecs_to_jiffies(HVDCP_NOTIFY_MS));
 	} else {
@@ -8885,7 +8885,7 @@ static void rerun_hvdcp_det_if_necessary(struct smbchg_chip *chip)
 		if (!chip->hvdcp_not_supported) {
 			cancel_delayed_work_sync(&chip->hvdcp_det_work);
 			smbchg_stay_awake(chip, PM_DETECT_HVDCP);
-			schedule_delayed_work(&chip->hvdcp_det_work,
+			queue_delayed_work(system_power_efficient_wq, &chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_NOTIFY_MS));
 		}
 	}
@@ -9281,7 +9281,7 @@ static int smbchg_probe(struct spmi_device *spmi)
 	create_debugfs_entries(chip);
 
 #ifdef SUPPORT_JEITA_TEMP_PATCH
-	schedule_delayed_work(&chip->jeita_temp_monitor_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->jeita_temp_monitor_work,
 					msecs_to_jiffies(20000));
 #endif
 	dev_info(chip->dev,

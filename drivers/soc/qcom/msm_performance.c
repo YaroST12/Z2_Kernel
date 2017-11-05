@@ -2283,6 +2283,7 @@ static struct notifier_block perf_cputransitions_nb = {
  */
 static int __ref rm_high_pwr_cost_cpus(struct cluster *cl)
 {
+#if 0
 	unsigned int cpu, i;
 	struct cpu_pwr_stats *per_cpu_info = get_cpu_pwr_stats();
 	struct cpu_pstate_pwr *costs;
@@ -2347,6 +2348,7 @@ end:
 	if (num_online_managed(cl->cpus) > cl->max_cpu_request)
 		return -EAGAIN;
 	else
+#endif
 		return 0;
 }
 

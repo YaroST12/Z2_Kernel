@@ -336,11 +336,6 @@ int register_ipcrtr_af_notifier(struct notifier_block *nb)
 	return -ENODEV;
 }
 
-int register_ipcrtr_af_notifier(struct notifier_block *nb)
-{
-	return -ENODEV;
-}
-
 #endif
 
 #endif

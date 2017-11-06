@@ -832,7 +832,6 @@ struct tsens_mtc_sysfs {
 
 struct tsens_tm_device {
 	struct platform_device		*pdev;
-	struct workqueue_struct		*tsens_critical_wq;
 	struct list_head		list;
 	bool				is_ready;
 	bool				prev_reading_avail;
@@ -5763,13 +5762,6 @@ static int tsens_tm_probe(struct platform_device *pdev)
 
 	tmdev->pdev = pdev;
 
-	tmdev->tsens_critical_wq = alloc_workqueue("tsens_critical_wq",
-							WQ_HIGHPRI, 0);
-	if (!tmdev->tsens_critical_wq) {
-		rc = -ENOMEM;
-		goto fail;
-	}
-
 	rc = tsens_calib_sensors(tmdev);
 	if (rc < 0) {
 		pr_err("Calibration failed\n");
@@ -5798,8 +5790,6 @@ static int tsens_tm_probe(struct platform_device *pdev)
 
 	return 0;
 fail:
-	if (tmdev->tsens_critical_wq)
-		destroy_workqueue(tmdev->tsens_critical_wq);
 	if (tmdev->tsens_calib_addr)
 		iounmap(tmdev->tsens_calib_addr);
 	if (tmdev->tsens_addr)
@@ -6024,8 +6014,6 @@ static int tsens_tm_remove(struct platform_device *pdev)
 	if (tmdev->res_tsens_mem)
 		release_mem_region(tmdev->res_tsens_mem->start,
 			tmdev->tsens_len);
-	if (tmdev->tsens_critical_wq)
-		destroy_workqueue(tmdev->tsens_critical_wq);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;

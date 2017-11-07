@@ -179,7 +179,7 @@ energy-costs {
 					941 1661
 				>;
 				idle-cost-data = <
-			  		2 2 0 0
+			  		2 2 0
 				>;
 			};
 			CPU_COST_1: core-cost1 {
@@ -211,7 +211,7 @@ energy-costs {
 					1024 1715
 				>;
 				idle-cost-data = <
-				      2 2 0 0
+				      2 2 0
 				>;
 			};
 			CLUSTER_COST_0: cluster-cost0 {
@@ -2998,10 +2998,20 @@ energy-costs {
 
 	qcom,bcl {
 		compatible = "qcom,bcl";
-		/delete-property/ qcom,bcl-enable;
-		qcom,vph-high-threshold-uv = <3200000>;
-		qcom,vph-low-threshold-uv = <3000000>;
-		qcom,soc-low-threshold = <0>;
+		#qcom,bcl-enable;
+		qcom,bcl-framework-interface;
+		qcom,bcl-freq-control-list = <&CPU2 &CPU3>;
+		qcom,bcl-hotplug-list = <&CPU2 &CPU3>;
+		qcom,bcl-soc-hotplug-list = <&CPU2 &CPU3>;
+		qcom,ibat-monitor {
+			qcom,low-threshold-uamp = <3400000>;
+			qcom,high-threshold-uamp = <4200000>;
+			qcom,mitigation-freq-khz = <729600>;
+			qcom,vph-high-threshold-uv = <3200000>;
+			qcom,vph-low-threshold-uv = <3000000>;
+			qcom,soc-low-threshold = <0>;
+			qcom,thermal-handle = <&msm_thermal_freq>;
+		};
 	};
 
 	qcom,memshare {
@@ -3164,10 +3174,6 @@ energy-costs {
 		asoc-codec-names = "msm-stub-codec.1";
 	};
 
- 	mdss_hdmi_tx {
-	status = "disabled";
-	};
- 
 	qcom,msm-adsp-loader {
 		status = "ok";
 		compatible = "qcom,adsp-loader";

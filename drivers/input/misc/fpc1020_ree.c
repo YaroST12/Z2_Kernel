@@ -127,7 +127,7 @@ static ssize_t set_key(struct device* device,
 
 		pr_info("home key pressed = %d\n", (int)home_pressed);
 		fpc1020->report_key = (int)val;
-		queue_work(system_power_efficient_wq, &fpc1020->input_report_work);
+		queue_work(fpc1020->fpc1020_wq, &fpc1020->input_report_work);
 
 		if (!val) {
 			pr_info("calling home key reset");
@@ -384,7 +384,7 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		fpc1020->screen_on = 0;
 		pr_err("ScreenOff\n");
 	}
-	queue_work(system_power_efficient_wq, &fpc1020->pm_work);
+	queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 	return 0;
 }
 

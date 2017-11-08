@@ -227,12 +227,11 @@ static void fpc1020_irq_work(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
-	bool screen_on;
+	bool screen_on = fpc1020->screen_on;
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	
 	smp_mb();
-	screen_on = fpc1020->screen_on;
 	
 	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
@@ -423,7 +422,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_remove_sysfs;
 	}
 	
-	fpc1020->fpc1020_wq = alloc_workqueue("fpc1020_wq", WQ_UNBOUND | WQ_POWER_EFFICIENT, 1);
+	fpc1020->fpc1020_wq = create_workqueue("fpc1020_wq");
 	if (!fpc1020->fpc1020_wq) {
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;

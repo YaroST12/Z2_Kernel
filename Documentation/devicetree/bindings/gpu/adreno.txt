@@ -94,12 +94,9 @@ Optional Properties:
 - qcom,chipid:		   If it exists this property is used to replace
 			   the chip identification read from the GPU hardware.
 			   This is used to override faulty hardware readings.
-<<<<<<< HEAD
 - qcom,strtstp-sleepwake:  Boolean. Enables use of GPU SLUMBER instead of SLEEP for power savings
 - qcom,gx-retention:  	   Boolean. Enables use of GX rail RETENTION voltage
-=======
 - qcom,disable-wake-on-touch:   Boolean. Disables the GPU power up on a touch input event.
->>>>>>> 6d35957... msm: kgsl: Add disable-wake-on-touch devicetree property
 - qcom,disable-busy-time-burst:
 				Boolean. Disables the busy time burst to avoid switching
 				of power level for large frames based on the busy time limit.

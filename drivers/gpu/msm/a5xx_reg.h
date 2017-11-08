@@ -632,6 +632,7 @@
 #define A5XX_VFD_PERFCTR_VFD_SEL_7          0xE57
 
 /* VPC registers */
+#define A5XX_VPC_DBG_ECO_CNTL		    	0xE60
 #define A5XX_VPC_ADDR_MODE_CNTL             0xE61
 #define A5XX_VPC_PERFCTR_VPC_SEL_0          0xE64
 #define A5XX_VPC_PERFCTR_VPC_SEL_1          0xE65

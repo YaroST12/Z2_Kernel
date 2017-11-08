@@ -2019,6 +2019,8 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 		}
 
 	}
+	/* Disable All flat shading optimization */
+	kgsl_regrmw(device, A5XX_VPC_DBG_ECO_CNTL, 0, 0x1 << 10);
 
 	a5xx_preemption_start(adreno_dev);
 	a5xx_protect_init(adreno_dev);

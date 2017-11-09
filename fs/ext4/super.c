@@ -4007,8 +4007,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	}
 
 	sbi->s_gdb_count = db_count;
-	get_random_bytes(&sbi->s_next_generation, sizeof(u32));
-	spin_lock_init(&sbi->s_next_gen_lock);
 
 	init_timer(&sbi->s_err_report);
 	sbi->s_err_report.function = print_daily_error_info;

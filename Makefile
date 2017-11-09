@@ -297,7 +297,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -std=gnu89
 HOSTCXXFLAGS = -O2
 
 ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
@@ -403,8 +403,6 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -std=gnu89
-		   
-KBUILD_CFLAGS	+= -pipe -fno-pic -O2 -mcpu=cortex-a53+crc+crypto -fno-gcse
 		   
 # Kryo doesn't need 835769/843419 erratum fixes.
 # Some toolchains enable those fixes automatically, so opt-out.
@@ -640,16 +638,17 @@ LDFLAGS		+= --strip-debug -O2
 
 # Optimization flags
 KBUILD_CFLAGS	+= -g0 -DNDEBUG \
-		   -fgraphite \
-		   -fgraphite-identity \
-		   -fivopts \
-		   -floop-block \
-		   -floop-interchange \
-		   -floop-strip-mine \
-		   -fomit-frame-pointer \
-		   -ftree-loop-distribution \
-		   -ftree-loop-linear \
-		   -fno-aggressive-loop-optimizations
+		-fgraphite \
+		-fgraphite-identity \
+		-fivopts \
+		-floop-block \
+		-floop-interchange \
+		-floop-strip-mine \
+		-ftree-loop-distribution \
+		-ftree-loop-linear
+
+# F1xy optimizations
+KBUILD_CFLAGS	+= -pipe -fno-pic -O2 -mcpu=cortex-a53+crc+crypto -fno-gcse
 
 # These flags need a special toolchain so split them off
 KBUILD_CFLAGS	+= $(call cc-option,-mlow-precision-recip-sqrt,) \

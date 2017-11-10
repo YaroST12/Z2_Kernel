@@ -394,7 +394,7 @@ static void audit_printk_skb(struct sk_buff *skb)
 
 	if (nlh->nlmsg_type != AUDIT_EOE) {
 		if (printk_ratelimit())
-			pr_notice("type=%d %s\n", nlh->nlmsg_type, data);
+			 pr_debug("type=%d %s\n", nlh->nlmsg_type, data);
 		else
 			audit_log_lost("printk limit exceeded");
 	}
@@ -1166,7 +1166,7 @@ static int __init audit_init(void)
 	if (audit_initialized == AUDIT_DISABLED)
 		return 0;
 
-	pr_info("initializing netlink subsys (%s)\n",
+	 pr_debug("initializing netlink subsys (%s)\n",
 		audit_default ? "enabled" : "disabled");
 	register_pernet_subsys(&audit_net_ops);
 
@@ -1192,7 +1192,7 @@ static int __init audit_enable(char *str)
 	if (!audit_default)
 		audit_initialized = AUDIT_DISABLED;
 
-	pr_info("%s\n", audit_default ?
+	 pr_debug("%s\n", audit_default ?
 		"enabled (after initialization)" : "disabled (until reboot)");
 
 	return 1;
@@ -1205,7 +1205,7 @@ static int __init audit_backlog_limit_set(char *str)
 {
 	u32 audit_backlog_limit_arg;
 
-	pr_info("audit_backlog_limit: ");
+	 pr_debug("audit_backlog_limit: ");
 	if (kstrtouint(str, 0, &audit_backlog_limit_arg)) {
 		pr_cont("using default of %u, unable to parse %s\n",
 			audit_backlog_limit, str);

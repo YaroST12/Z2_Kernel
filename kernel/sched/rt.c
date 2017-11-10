@@ -1527,12 +1527,19 @@ task_may_not_preempt(struct task_struct *task, int cpu)
 static void schedtune_dequeue_rt(struct rq *rq, struct task_struct *p)
 {
 	struct sched_rt_entity *rt_se = &p->rt;
+	unsigned long flags;
 
 	BUG_ON(!raw_spin_is_locked(&rq->lock));
 
 	if (!rt_se->schedtune_enqueued)
 		return;
 
+	if (flags == DEQUEUE_SLEEP) {
+		get_task_struct(p);
+		start_schedtune_timer(rt_se);
+		return;
+	}
+	
 	/*
 	 * Incase of class change cancel any active timers. If an enqueued
 	 * timer was cancelled, put the task ref.

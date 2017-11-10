@@ -1544,7 +1544,7 @@ energy-costs {
 
 		iommus = <&anoc0_smmu>;
 
-		qcom,boot-option = <0x1>;
+		qcom,ep-wakeirq;
 
 		linux,pci-domain = <0>;
 
@@ -1695,7 +1695,7 @@ energy-costs {
 
 		iommus = <&anoc0_smmu>;
 
-		qcom,boot-option = <0x1>;
+		qcom,ep-wakeirq;
 
 		qcom,ep-latency = <10>;
 
@@ -1846,7 +1846,7 @@ energy-costs {
 
 		iommus = <&anoc0_smmu>;
 
-		qcom,boot-option = <0x1>;
+		qcom,ep-wakeirq;
 
 		qcom,ep-latency = <10>;
 		qcom,wr-halt-size = <0xa>;

@@ -645,6 +645,7 @@ KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 		-floop-interchange \
 		-floop-strip-mine \
 		-ftree-loop-distribution \
+		-ftree-loop-distribute-patterns \
 		-ftree-loop-linear
 
 # F1xy optimizations

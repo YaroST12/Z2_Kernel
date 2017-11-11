@@ -228,6 +228,7 @@ static void fpc1020_irq_work(struct work_struct *work)
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
 	bool screen_on = fpc1020->screen_on;
+	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	
@@ -236,7 +237,6 @@ static void fpc1020_irq_work(struct work_struct *work)
 	if (!screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
-		wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 	}

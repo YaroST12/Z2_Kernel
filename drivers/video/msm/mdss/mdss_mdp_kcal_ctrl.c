@@ -312,36 +312,6 @@ static void mdss_mdp_kcal_update_igc(struct kcal_lut_data *lut_data)
 	kfree(payload);
 }
 
-static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
-						const char *buf, size_t count)
-{
-	int kcal_r, kcal_g, kcal_b, r;
-	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
-
-	r = sscanf(buf, "%d %d %d", &kcal_r, &kcal_g, &kcal_b);
-	if ((r != 3) || (kcal_r < 0 || kcal_r > 256) ||
-		(kcal_g < 0 || kcal_g > 256) || (kcal_b < 0 || kcal_b > 256))
-		return -EINVAL;
-
-	lut_data->red = kcal_r;
-	lut_data->green = kcal_g;
-	lut_data->blue = kcal_b;
-
-	mdss_mdp_kcal_update_pcc(lut_data);
-	mdss_mdp_kcal_display_commit();
-
-	return count;
-}
-
-static ssize_t kcal_show(struct device *dev, struct device_attribute *attr,
-								char *buf)
-{
-	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
-
-	return scnprintf(buf, PAGE_SIZE, "%d %d %d\n",
-		lut_data->red, lut_data->green, lut_data->blue);
-}
-
 static ssize_t kcal_enable_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -476,7 +446,6 @@ static ssize_t kcal_cont_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%d\n", lut_data->cont);
 }
 
-static DEVICE_ATTR(kcal, S_IWUSR | S_IRUGO, kcal_show, kcal_store);
 static DEVICE_ATTR(kcal_enable, S_IWUSR | S_IRUGO, kcal_enable_show,
 	kcal_enable_store);
 static DEVICE_ATTR(kcal_invert_obsolete, S_IWUSR | S_IRUGO, kcal_invert_show,
@@ -516,8 +485,7 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 	//mdss_mdp_kcal_update_igc(lut_data);
 	mdss_mdp_kcal_display_commit();
 
-	ret = device_create_file(&pdev->dev, &dev_attr_kcal);
-	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_enable);
+	ret = device_create_file(&pdev->dev, &dev_attr_kcal_enable);
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_invert_obsolete);
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_sat);
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_val);
@@ -532,7 +500,6 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 
 static int kcal_ctrl_remove(struct platform_device *pdev)
 {
-	device_remove_file(&pdev->dev, &dev_attr_kcal);
 	device_remove_file(&pdev->dev, &dev_attr_kcal_enable);
 	device_remove_file(&pdev->dev, &dev_attr_kcal_invert_obsolete);
 	device_remove_file(&pdev->dev, &dev_attr_kcal_sat);

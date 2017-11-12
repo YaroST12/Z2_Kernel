@@ -214,23 +214,16 @@ static void do_input_boost(struct work_struct *work)
 	for_each_possible_cpu(i) {
 		i_sync_info = &per_cpu(sync_info, i);
 
-		// Tegra K1 has no clusters, it's a SMP
-		// to save power there's no point in boosting cpu
-		// if it doesn't have any runnable
-		// thread at this point in time
-		// since inputs are fairly common we might save some
-		// juice in the long run
 		if (cpu_rq(i)->nr_running == 0)
 			continue;
 
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
-	}
-
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 	/* Set dynamic stune boost value */
         if (dynamic_stune_boost > default_topapp_boost)
                 dynamic_boost_write(topapp_css, dynamic_stune_boost);
-#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */		
+	}
 
 	/* Update policies for all online CPUs */
 	update_policy_online();

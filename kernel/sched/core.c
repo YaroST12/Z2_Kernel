@@ -2356,8 +2356,6 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	} else {
 		p->sched_class = &fair_sched_class;
 	}
-	
-	init_entity_runnable_average(&p->se);
 
 	if (p->sched_class->task_fork)
 		p->sched_class->task_fork(p);
@@ -2373,7 +2371,7 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	set_task_cpu(p, cpu);
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 
-#if defined(CONFIG_SCHEDSTATS) || defined(CONFIG_TASK_DELAY_ACCT)
+#ifdef CONFIG_SCHED_INFO
 	if (likely(sched_info_on()))
 		memset(&p->sched_info, 0, sizeof(p->sched_info));
 #endif

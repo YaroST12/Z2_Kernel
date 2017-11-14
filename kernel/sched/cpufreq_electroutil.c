@@ -215,24 +215,15 @@ static unsigned int get_next_freq(struct eugov_policy *eg_policy,
 	switch(policy->cpu){
 	case 0:
 	case 1:
-	case 2:
-	case 3:
 		freq = (freq + (freq >> 2)) * util / max;
 		if(state_suspended &&  silver_max_freq > 0 && silver_max_freq < freq)
 			return silver_max_freq;
 		break;
-	case 4:
-	case 5:
-		freq = (freq + (freq >> 2)) * util / max;
+	case 2:
+	case 3:
+		freq = freq * util / max;
 		if(state_suspended && gold_max_freq > 0 && gold_max_freq < freq)
 			return gold_max_freq;
-		break;
-	case 6:
-	case 7:
-		if(state_suspended)
-			return policy->min;
-		else
-			freq = freq * util / max;
 		break;
 	default:
 		BUG();

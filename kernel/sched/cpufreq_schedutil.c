@@ -204,11 +204,12 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	if (display_on)
 		freq = (freq + (freq >> 2)) * util / max;
 
-	if (!display_on && policy->cpu < 2)
-		freq = freq * util / max;
-	else
-		return policy->min;
-
+	if (!display_on) {
+		if  (policy->cpu < 2)
+			freq = freq * util / max;
+		else
+			return policy->min;
+	}
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
 	sg_policy->cached_raw_freq = freq;

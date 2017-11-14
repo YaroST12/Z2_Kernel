@@ -213,17 +213,15 @@ static unsigned int get_next_freq(struct pwrgov_policy *sg_policy,
 
 	const bool display_on = !state_suspended;
 
-	if(policy->cpu < 2) {
-		if(display_on)
-			freq = (freq + (freq >> 2)) * util / max;
-		else
-			freq = freq * util / max;
-	} else {
-		if(display_on)
-			freq = freq * util / max;
-		else
-			return policy->min;
-	}
+	if (display_on && policy->cpu < 2)
+		freq = (freq + (freq >> 2)) * util / max;
+	else
+		freq = freq * util / max;
+
+	if (!display_on && policy->cpu < 2)
+		freq = freq * util / max;
+	else
+		return policy->min;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

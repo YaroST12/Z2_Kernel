@@ -2356,6 +2356,8 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	} else {
 		p->sched_class = &fair_sched_class;
 	}
+	
+	init_entity_runnable_average(&p->se);
 
 	if (p->sched_class->task_fork)
 		p->sched_class->task_fork(p);
@@ -2371,7 +2373,7 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	set_task_cpu(p, cpu);
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 
-#ifdef CONFIG_SCHED_INFO
+#if defined(CONFIG_SCHEDSTATS) || defined(CONFIG_TASK_DELAY_ACCT)
 	if (likely(sched_info_on()))
 		memset(&p->sched_info, 0, sizeof(p->sched_info));
 #endif
@@ -2522,6 +2524,8 @@ void wake_up_new_task(struct task_struct *p)
 
 	walt_init_new_task_load(p);
 
+	/* Initialize new task's runnable average */
+	init_entity_runnable_average(&p->se);
 #ifdef CONFIG_SMP
 	/*
 	 * Fork balancing, do it here and not earlier because:

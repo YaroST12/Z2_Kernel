@@ -24,7 +24,7 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/platform_device.h>
-#include <linux/wakelock.h>
+#include <linux/pm_wakeup.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/io.h>
 #include <linux/of_gpio.h>
@@ -51,7 +51,7 @@ struct fpc1020_data {
 	/*Input device*/
 	struct input_dev *input_dev;
 	u8  report_key;
-	struct wake_lock wake_lock;
+	struct wakeup_source wake_lock;
 	bool screen_on;
 	bool home_pressed;
 	struct workqueue_struct *fpc1020_wq;
@@ -227,18 +227,17 @@ static void fpc1020_irq_work(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
-	bool screen_on = fpc1020->screen_on;
-	wake_lock_timeout(&fpc1020->wake_lock, msecs_to_jiffies(200));
-
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	
-	smp_mb();
-	
-	if (!screen_on) {
+	switch (fpc1020->screen_on) {
+	case 0:
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
+		__pm_wakeup_event(&fpc1020->wake_lock, msecs_to_jiffies(200));
+		break;
+	default:
+		break;
 	}
 }
 	
@@ -422,7 +421,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_remove_sysfs;
 	}
 	
-	fpc1020->fpc1020_wq = create_workqueue("fpc1020_wq");
+	fpc1020->fpc1020_wq = alloc_workqueue("fpc1020_wq", WQ_HIGHPRI, 0);
 	if (!fpc1020->fpc1020_wq) {
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
@@ -443,7 +442,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 
-	wake_lock_init(&fpc1020->wake_lock, WAKE_LOCK_SUSPEND, "fpc_wakelock");
+	wakeup_source_init(&fpc1020->wake_lock, "fpc_wakelock");
 	
 	retval = fpc1020_initial_irq(fpc1020);
 	if (retval != 0) {

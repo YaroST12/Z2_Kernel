@@ -227,6 +227,7 @@ static void fpc1020_irq_work(struct work_struct *work)
 {
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
+	__pm_wakeup_event(&fpc1020->wake_lock, 5000);
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	switch (fpc1020->screen_on) {
 	case 0:
@@ -234,7 +235,6 @@ static void fpc1020_irq_work(struct work_struct *work)
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
-		__pm_wakeup_event(&fpc1020->wake_lock, msecs_to_jiffies(200));
 		break;
 	default:
 		break;
@@ -244,7 +244,7 @@ static void fpc1020_irq_work(struct work_struct *work)
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
-	
+
 	queue_work(fpc1020->fpc1020_wq, &fpc1020->irq_work);
 	
 	return IRQ_HANDLED;
@@ -361,7 +361,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		set_fingerprintd_nice(-1);
 		pr_err("nice -1\n");
 	}
-	
+	__pm_relax(&fpc1020->wake_lock);
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }

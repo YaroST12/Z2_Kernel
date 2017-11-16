@@ -210,20 +210,21 @@ static unsigned int get_next_freq(struct pwrgov_policy *sg_policy,
 	struct pwrgov_tunables *tunables = sg_policy->tunables;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-
+	bool screen_on = !state_suspended;
+	
 	switch (policy->cpu) {
 	case 0:
 	case 1:
-		if (!state_suspended)
+		if (screen_on)
 			freq = (freq + (freq >> 2)) * util / max;
-		if (state_suspended)
+		if (!screen_on)
 			freq = freq * util / (max * 2);
 		break;
 	case 2:
 	case 3:
-		if (!state_suspended)
+		if (screen_on)
 			freq = freq * util / max;
-		if (state_suspended)
+		if (!screen_on)
 			freq = freq * util / (max * 3);
 		break;
 	default:

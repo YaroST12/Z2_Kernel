@@ -229,6 +229,7 @@ static void fpc1020_irq_work(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), irq_work);
 	__pm_wakeup_event(&fpc1020->wake_lock, 5000);
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	smp_mb();
 	switch (fpc1020->screen_on) {
 	case 0:
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);

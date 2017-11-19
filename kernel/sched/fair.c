@@ -5396,18 +5396,13 @@ normalize_energy(int energy_diff)
 static inline int
 energy_diff(struct energy_env *eenv)
 {
-	int boost;
+	int boost = schedtune_task_boost(eenv->task);
 	int nrg_delta;
 
 	/* Conpute "absolute" energy diff */
 	__energy_diff(eenv);
 
 	/* Return energy diff when boost margin is 0 */
-#ifdef CONFIG_CGROUP_SCHEDTUNE
-	boost = schedtune_task_boost(eenv->task);
-#else
-	boost = get_sysctl_sched_cfs_boost();
-#endif
 	if (boost == 0) {
 		trace_sched_energy_diff(eenv->task,
 				eenv->src_cpu, eenv->dst_cpu, eenv->util_delta,

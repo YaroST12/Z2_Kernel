@@ -230,15 +230,11 @@ static void fpc1020_irq_work(struct work_struct *work)
 	__pm_wakeup_event(&fpc1020->wake_lock, 5000);
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	smp_mb();
-	switch (fpc1020->screen_on) {
-	case 0:
+	if (!fpc1020->screen_on) {
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
-		break;
-	default:
-		break;
 	}
 }
 	
@@ -360,9 +356,9 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	
 	if (!fpc1020->screen_on) {
 		set_fingerprintd_nice(-1);
+		__pm_relax(&fpc1020->wake_lock);
 		pr_err("nice -1\n");
 	}
-	__pm_relax(&fpc1020->wake_lock);
 	sysfs_notify(&fpc1020->dev->kobj, NULL,
 				dev_attr_screen.attr.name);
 }
@@ -435,7 +431,9 @@ static int fpc1020_probe(struct platform_device *pdev)
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
 	fpc1020_hw_reset(fpc1020);
-
+	//Somehow fingerprint initializes disabled
+	reset_home_button();
+	
 	fpc1020->fb_notif.notifier_call = fb_notifier_callback;
 	retval = fb_register_client(&fpc1020->fb_notif);
 	if (retval) {

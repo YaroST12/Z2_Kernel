@@ -649,7 +649,10 @@ KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 		-ftree-loop-linear
 
 # F1xy optimizations
-KBUILD_CFLAGS	+= -pipe -fno-pic -fno-gcse -O2 -mcpu=cortex-a53+crc+crypto
+KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53+crc+crypto \
+		-pipe -fno-pic \
+		-fno-gcse \
+		-fno-signed-zeros
 
 # These flags need a special toolchain so split them off
 KBUILD_CFLAGS	+= $(call cc-option,-mlow-precision-recip-sqrt,) \

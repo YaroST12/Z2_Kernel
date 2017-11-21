@@ -1230,7 +1230,6 @@ struct f2fs_sb_info {
 #ifdef CONFIG_F2FS_FAULT_INJECTION
 	struct f2fs_fault_info fault_info;
 #endif
-	struct list_head list;
 };
 
 #ifdef CONFIG_F2FS_FAULT_INJECTION
@@ -2618,7 +2617,6 @@ void destroy_node_manager_caches(void);
 /*
  * segment.c
  */
-bool need_SSR(struct f2fs_sb_info *sbi);
 void register_inmem_page(struct inode *inode, struct page *page);
 void drop_inmem_pages(struct inode *inode);
 void drop_inmem_page(struct inode *inode, struct page *page);
@@ -2632,7 +2630,7 @@ void invalidate_blocks(struct f2fs_sb_info *sbi, block_t addr);
 bool is_checkpointed_data(struct f2fs_sb_info *sbi, block_t blkaddr);
 void refresh_sit_entry(struct f2fs_sb_info *sbi, block_t old, block_t new);
 void stop_discard_thread(struct f2fs_sb_info *sbi);
-void f2fs_wait_discard_bios(struct f2fs_sb_info *sbi, bool umount);
+void f2fs_wait_discard_bios(struct f2fs_sb_info *sbi);
 void clear_prefree_segments(struct f2fs_sb_info *sbi, struct cp_control *cpc);
 void release_discard_addrs(struct f2fs_sb_info *sbi);
 int npages_for_summary_flush(struct f2fs_sb_info *sbi, bool for_ra);
@@ -2753,11 +2751,6 @@ int f2fs_migrate_page(struct address_space *mapping, struct page *newpage,
  */
 int start_gc_thread(struct f2fs_sb_info *sbi);
 void stop_gc_thread(struct f2fs_sb_info *sbi);
-void start_all_gc_threads(void);
-void stop_all_gc_threads(void);
-void f2fs_sbi_list_add(struct f2fs_sb_info *sbi);
-void f2fs_sbi_list_del(struct f2fs_sb_info *sbi);
-
 block_t start_bidx_of_node(unsigned int node_ofs, struct inode *inode);
 int f2fs_gc(struct f2fs_sb_info *sbi, bool sync, bool background,
 			unsigned int segno);

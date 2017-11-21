@@ -8,8 +8,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#include <linux/wakelock.h>
-
 #define GC_THREAD_MIN_WB_PAGES		1	/*
 						 * a threshold to determine
 						 * whether IO subsystem is idle
@@ -18,7 +16,7 @@
 #define DEF_GC_THREAD_URGENT_SLEEP_TIME	500	/* 500 ms */
 #define DEF_GC_THREAD_MIN_SLEEP_TIME	30000	/* milliseconds */
 #define DEF_GC_THREAD_MAX_SLEEP_TIME	60000
-#define DEF_GC_THREAD_NOGC_SLEEP_TIME	1800000	/* wait 30 min */
+#define DEF_GC_THREAD_NOGC_SLEEP_TIME	300000	/* wait 5 min */
 #define LIMIT_INVALID_BLOCK	40 /* percentage over total user space */
 #define LIMIT_FREE_BLOCK	40 /* percentage over invalid + free space */
 
@@ -28,7 +26,6 @@
 struct f2fs_gc_kthread {
 	struct task_struct *f2fs_gc_task;
 	wait_queue_head_t gc_wait_queue_head;
-	struct wake_lock gc_wakelock;
 
 	/* for gc sleep time */
 	unsigned int urgent_sleep_time;
@@ -72,32 +69,25 @@ static inline block_t limit_free_user_blocks(struct f2fs_sb_info *sbi)
 }
 
 static inline void increase_sleep_time(struct f2fs_gc_kthread *gc_th,
-							unsigned int *wait)
+								long *wait)
 {
-	unsigned int min_time = gc_th->min_sleep_time;
-	unsigned int max_time = gc_th->max_sleep_time;
-
 	if (*wait == gc_th->no_gc_sleep_time)
 		return;
 
-	if ((long long)*wait + (long long)min_time > (long long)max_time)
-		*wait = max_time;
-	else
-		*wait += min_time;
+	*wait += gc_th->min_sleep_time;
+	if (*wait > gc_th->max_sleep_time)
+		*wait = gc_th->max_sleep_time;
 }
 
 static inline void decrease_sleep_time(struct f2fs_gc_kthread *gc_th,
-							unsigned int *wait)
+								long *wait)
 {
-	unsigned int min_time = gc_th->min_sleep_time;
-
 	if (*wait == gc_th->no_gc_sleep_time)
 		*wait = gc_th->max_sleep_time;
 
-	if ((long long)*wait - (long long)min_time < (long long)min_time)
-		*wait = min_time;
-	else
-		*wait -= min_time;
+	*wait -= gc_th->min_sleep_time;
+	if (*wait <= gc_th->min_sleep_time)
+		*wait = gc_th->min_sleep_time;
 }
 
 static inline bool has_enough_invalid_blocks(struct f2fs_sb_info *sbi)

@@ -170,18 +170,7 @@ static ssize_t f2fs_sbi_store(struct f2fs_attr *a,
 				dcc->pend_list_tag[i] &= (~P_ACTIVE);
 		}
 		mutex_unlock(&dcc->cmd_lock);
-
-		*ui = t;
 		return count;
-	}
-	if (!strcmp(a->attr.name, "gc_urgent") && t == 1 && sbi->gc_thread) {
-		struct discard_cmd_control *dcc = SM_I(sbi)->dcc_info;
-
-		sbi->gc_thread->gc_wake = 1;
-		wake_up_interruptible_all(&sbi->gc_thread->gc_wait_queue_head);
-
-		dcc->discard_wake = 1;
-		wake_up_interruptible_all(&dcc->discard_wait_queue);
 	}
 
 	*ui = t;

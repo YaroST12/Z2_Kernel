@@ -17,12 +17,10 @@
 #include <linux/swap.h>
 #include <linux/timer.h>
 #include <linux/freezer.h>
-#include <linux/sched.h>
 
 #include "f2fs.h"
 #include "segment.h"
 #include "node.h"
-#include "gc.h"
 #include "trace.h"
 #include <trace/events/f2fs.h>
 
@@ -167,21 +165,6 @@ pass:
 	return result;
 found:
 	return result - size + __reverse_ffz(tmp);
-}
-
-bool need_SSR(struct f2fs_sb_info *sbi)
-{
-	int node_secs = get_blocktype_secs(sbi, F2FS_DIRTY_NODES);
-	int dent_secs = get_blocktype_secs(sbi, F2FS_DIRTY_DENTS);
-	int imeta_secs = get_blocktype_secs(sbi, F2FS_DIRTY_IMETA);
-
-	if (test_opt(sbi, LFS))
-		return false;
-	if (sbi->gc_thread && sbi->gc_thread->gc_urgent)
-		return true;
-
-	return free_sections(sbi) <= (node_secs + 2 * dent_secs + imeta_secs +
-						2 * reserved_sections(sbi));
 }
 
 void register_inmem_page(struct inode *inode, struct page *page)
@@ -559,10 +542,7 @@ int f2fs_issue_flush(struct f2fs_sb_info *sbi)
 	atomic_inc(&fcc->issing_flush);
 	llist_add(&cmd.llnode, &fcc->issue_list);
 
-	/* update issue_list before we wake up issue_flush thread */
-	smp_mb();
-
-	if (waitqueue_active(&fcc->flush_wait_queue))
+	if (!fcc->dispatch_list)
 		wake_up(&fcc->flush_wait_queue);
 
 	if (fcc->f2fs_issue_flush) {
@@ -1134,9 +1114,6 @@ static int __issue_discard_cmd(struct f2fs_sb_info *sbi, bool issue_cond)
 			if (dcc->pend_list_tag[i] & P_TRIM) {
 				__submit_discard_cmd(sbi, dc);
 				issued++;
-
-				if (fatal_signal_pending(current))
-					break;
 				continue;
 			}
 
@@ -1265,12 +1242,12 @@ void stop_discard_thread(struct f2fs_sb_info *sbi)
 	}
 }
 
-/* This comes from f2fs_put_super and f2fs_trim_fs */
-void f2fs_wait_discard_bios(struct f2fs_sb_info *sbi, bool umount)
+/* This comes from f2fs_put_super */
+void f2fs_wait_discard_bios(struct f2fs_sb_info *sbi)
 {
 	__issue_discard_cmd(sbi, false);
 	__drop_discard_cmd(sbi);
-	__wait_discard_cmd(sbi, !umount);
+	__wait_discard_cmd(sbi, false);
 }
 
 static void mark_discard_range_all(struct f2fs_sb_info *sbi)
@@ -1304,11 +1281,8 @@ static int issue_discard_thread(void *data)
 		if (kthread_should_stop())
 			return 0;
 
-		if (dcc->discard_wake) {
+		if (dcc->discard_wake)
 			dcc->discard_wake = 0;
-			if (sbi->gc_thread && sbi->gc_thread->gc_urgent)
-				mark_discard_range_all(sbi);
-		}
 
 		sb_start_intwrite(sbi->sb);
 
@@ -2303,7 +2277,6 @@ int f2fs_trim_fs(struct f2fs_sb_info *sbi, struct fstrim_range *range)
 	}
 	/* It's time to issue all the filed discards */
 	mark_discard_range_all(sbi);
-	f2fs_wait_discard_bios(sbi, false);
 out:
 	range->len = F2FS_BLK_TO_BYTES(cpc.trimmed);
 	return err;

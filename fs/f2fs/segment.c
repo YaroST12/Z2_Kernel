@@ -240,7 +240,7 @@ retry:
 			err = get_dnode_of_data(&dn, page->index, LOOKUP_NODE);
 			if (err) {
 				if (err == -ENOMEM) {
-					congestion_wait(BLK_RW_ASYNC, HZ/50);
+					congestion_wait(BLK_RW_ASYNC, HZ_f2fs/50);
 					cond_resched();
 					goto retry;
 				}
@@ -286,7 +286,7 @@ next:
 		drop_inmem_pages(inode);
 		iput(inode);
 	}
-	congestion_wait(BLK_RW_ASYNC, HZ/50);
+	congestion_wait(BLK_RW_ASYNC, HZ_f2fs/50);
 	cond_resched();
 	goto next;
 }

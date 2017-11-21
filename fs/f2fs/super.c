@@ -1401,7 +1401,7 @@ repeat:
 		page = read_mapping_page(mapping, blkidx, NULL);
 		if (IS_ERR(page)) {
 			if (PTR_ERR(page) == -ENOMEM) {
-				congestion_wait(BLK_RW_ASYNC, HZ/50);
+				congestion_wait(BLK_RW_ASYNC, HZ_f2fs/50);
 				goto repeat;
 			}
 			return PTR_ERR(page);
@@ -1453,7 +1453,7 @@ retry:
 							&page, NULL);
 		if (unlikely(err)) {
 			if (err == -ENOMEM) {
-				congestion_wait(BLK_RW_ASYNC, HZ/50);
+				congestion_wait(BLK_RW_ASYNC, HZ_f2fs/50);
 				goto retry;
 			}
 			break;

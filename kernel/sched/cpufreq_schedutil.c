@@ -203,8 +203,7 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 
 	if (display_on)
 		freq = (freq + (freq >> 2)) * util / max;
-
-	if (!display_on) {
+	else	{
 		if  (policy->cpu < 2)
 			freq = freq * util / max;
 		else

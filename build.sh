@@ -13,19 +13,16 @@ compile() {
   make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j8
   make O=$objdir -j8
 }
-module(){
-  mkdir modules
-  find . -name '*.ko' -exec cp -av {} modules/ \;
-  ${TOOL_CHAIN_PATH}/${CROSS_COMPILE}strip --strip-unneeded modules/*
-  cp modules/wlan.ko ../../../out/target/product/z2_plus/system/lib/modules/wlan.ko
-  cp modules/wlan.ko ../build/modules/
-  cp arch/arm64/boot/Image.gz-dtb ../build/Image.gz-dtb
+ramdisk() {
+cp ramdisk/init.qcom.power.rc ../build/ramdisk/
+cd ${objdir}
+cp arch/arm64/boot/Image.gz-dtb ../build/Image.gz-dtb
 }
 dtbuild(){
   cd $kernel_dir
   ./tools/dtbToolCM -2 -o $objdir/arch/arm64/boot/dt.img -s 4096 -p $objdir/scripts/dtc/ $objdir/arch/arm64/boot/dts/
 }
 compile 
+ramdisk
 cd ${objdir}
-module
 cd ${kernel_dir}

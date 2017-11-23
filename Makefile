@@ -644,9 +644,11 @@ KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 		-floop-block \
 		-floop-interchange \
 		-floop-strip-mine \
+		-floop-nest-optimize \
 		-ftree-loop-distribution \
 		-ftree-loop-distribute-patterns \
-		-ftree-loop-linear
+		-ftree-loop-linear \
+		-ftree-vectorize
 
 # F1xy optimizations
 KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53+crc+crypto \

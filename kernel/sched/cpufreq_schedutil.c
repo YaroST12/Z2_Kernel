@@ -199,15 +199,15 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	const bool display_on = !state_suspended;
-
-	if (display_on)
+	switch (policy->cpu) {
+	case 0:
+	case 1:
 		freq = (freq + (freq >> 2)) * util / max;
-	else	{
-		if  (policy->cpu < 2)
-			freq = freq * util / max;
-		else
-			return policy->min;
+		break;
+	case 2:
+	case 3:
+		freq = freq * util / max;
+		break;
 	}
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

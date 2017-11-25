@@ -148,11 +148,9 @@ struct msm_vfe_irq_ops {
 		struct msm_isp_timestamp *ts);
 	void (*process_axi_irq)(struct vfe_device *vfe_dev,
 		uint32_t irq_status0, uint32_t irq_status1,
-		uint32_t pingpong_status,
 		struct msm_isp_timestamp *ts);
 	void (*process_stats_irq)(struct vfe_device *vfe_dev,
 		uint32_t irq_status0, uint32_t irq_status1,
-		uint32_t pingpong_status,
 		struct msm_isp_timestamp *ts);
 };
 
@@ -508,7 +506,6 @@ struct msm_vfe_tasklet_queue_cmd {
 	struct list_head list;
 	uint32_t vfeInterruptStatus0;
 	uint32_t vfeInterruptStatus1;
-	uint32_t vfePingPongStatus;
 	struct msm_isp_timestamp ts;
 	uint8_t cmd_used;
 };
@@ -648,11 +645,6 @@ struct msm_vfe_common_subdev {
 	struct msm_vfe_common_dev_data *common_data;
 };
 
-struct isp_proc {
-	uint32_t  kernel_sofid;
-	uint32_t  vfeid;
-};
-
 struct vfe_device {
 	/* Driver private data */
 	struct platform_device *pdev;
@@ -731,8 +723,6 @@ struct vfe_device {
 	/* irq info */
 	uint32_t irq0_mask;
 	uint32_t irq1_mask;
-
-	struct isp_proc *isp_page;
 };
 
 struct vfe_parent_device {

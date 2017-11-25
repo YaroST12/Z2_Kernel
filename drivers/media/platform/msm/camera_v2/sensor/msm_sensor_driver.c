@@ -105,11 +105,7 @@ static int32_t msm_sensor_driver_create_i2c_v4l_subdev
 	s_ctrl->msm_sd.sd.entity.name =	s_ctrl->msm_sd.sd.name;
 	s_ctrl->sensordata->sensor_info->session_id = session_id;
 	s_ctrl->msm_sd.close_seq = MSM_SD_CLOSE_2ND_CATEGORY | 0x3;
-	rc = msm_sd_register(&s_ctrl->msm_sd);
-	if (rc < 0) {
-		pr_err("failed: msm_sd_register rc %d", rc);
-		return rc;
-	}
+	msm_sd_register(&s_ctrl->msm_sd);
 	msm_sensor_v4l2_subdev_fops = v4l2_subdev_fops;
 #ifdef CONFIG_COMPAT
 	msm_sensor_v4l2_subdev_fops.compat_ioctl32 =
@@ -146,11 +142,7 @@ static int32_t msm_sensor_driver_create_v4l_subdev
 	s_ctrl->msm_sd.sd.entity.group_id = MSM_CAMERA_SUBDEV_SENSOR;
 	s_ctrl->msm_sd.sd.entity.name = s_ctrl->msm_sd.sd.name;
 	s_ctrl->msm_sd.close_seq = MSM_SD_CLOSE_2ND_CATEGORY | 0x3;
-	rc = msm_sd_register(&s_ctrl->msm_sd);
-	if (rc < 0) {
-		pr_err("failed: msm_sd_register rc %d", rc);
-		return rc;
-	}
+	msm_sd_register(&s_ctrl->msm_sd);
 	msm_cam_copy_v4l2_subdev_fops(&msm_sensor_v4l2_subdev_fops);
 #ifdef CONFIG_COMPAT
 	msm_sensor_v4l2_subdev_fops.compat_ioctl32 =
@@ -428,11 +420,17 @@ static int32_t msm_sensor_create_pd_settings(void *setting,
 
 #ifdef CONFIG_COMPAT
 	if (is_compat_task()) {
-		rc = msm_sensor_get_pw_settings_compat(
-			pd, pu, size_down);
-		if (rc < 0) {
-			pr_err("failed");
-			return -EFAULT;
+		int i = 0;
+		struct msm_sensor_power_setting32 *power_setting_iter =
+		(struct msm_sensor_power_setting32 *)compat_ptr((
+		(struct msm_camera_sensor_slave_info32 *)setting)->
+		power_setting_array.power_setting);
+
+		for (i = 0; i < size_down; i++) {
+			pd[i].config_val = power_setting_iter[i].config_val;
+			pd[i].delay = power_setting_iter[i].delay;
+			pd[i].seq_type = power_setting_iter[i].seq_type;
+			pd[i].seq_val = power_setting_iter[i].seq_val;
 		}
 	} else
 #endif
@@ -594,7 +592,6 @@ static int32_t msm_sensor_get_power_settings(void *setting,
 		power_info);
 	if (rc < 0) {
 		pr_err("failed");
-		kfree(power_info->power_setting);
 		return -EINVAL;
 	}
 	return rc;
@@ -727,21 +724,6 @@ int32_t msm_sensor_driver_probe(void *setting,
 		}
 	}
 
-	if (strlen(slave_info->sensor_name) >= MAX_SENSOR_NAME ||
-		strlen(slave_info->eeprom_name) >= MAX_SENSOR_NAME ||
-		strlen(slave_info->actuator_name) >= MAX_SENSOR_NAME ||
-		strlen(slave_info->ois_name) >= MAX_SENSOR_NAME) {
-		pr_err("failed: name len greater than 32.\n");
-		pr_err("sensor name len:%zu, eeprom name len: %zu.\n",
-			strlen(slave_info->sensor_name),
-			strlen(slave_info->eeprom_name));
-		pr_err("actuator name len: %zu, ois name len:%zu.\n",
-			strlen(slave_info->actuator_name),
-			strlen(slave_info->ois_name));
-		rc = -EINVAL;
-		goto free_slave_info;
-	}
-
 	/* Print slave info */
 	CDBG("camera id %d Slave addr 0x%X addr_type %d\n",
 		slave_info->camera_id, slave_info->slave_addr,
@@ -816,7 +798,7 @@ int32_t msm_sensor_driver_probe(void *setting,
 
 	camera_info = kzalloc(sizeof(struct msm_camera_slave_info), GFP_KERNEL);
 	if (!camera_info)
-		goto free_power_settings;
+		goto free_slave_info;
 
 	s_ctrl->sensordata->slave_info = camera_info;
 
@@ -915,6 +897,12 @@ CSID_TG:
 	pr_err("%s probe succeeded", slave_info->sensor_name);
 
 	/*
+	  Set probe succeeded flag to 1 so that no other camera shall
+	 * probed on this slot
+	 */
+	s_ctrl->is_probe_succeed = 1;
+
+	/*
 	 * Update the subdevice id of flash-src based on availability in kernel.
 	 */
 	if (strlen(slave_info->flash_name) == 0) {
@@ -966,20 +954,12 @@ CSID_TG:
 
 	msm_sensor_fill_sensor_info(s_ctrl, probed_info, entity_name);
 
-	/*
-	 * Set probe succeeded flag to 1 so that no other camera shall
-	 * probed on this slot
-	 */
-	s_ctrl->is_probe_succeed = 1;
 	return rc;
 
 camera_power_down:
 	s_ctrl->func_tbl->sensor_power_down(s_ctrl);
 free_camera_info:
 	kfree(camera_info);
-free_power_settings:
-	kfree(s_ctrl->sensordata->power_info.power_setting);
-	kfree(s_ctrl->sensordata->power_info.power_down_setting);
 free_slave_info:
 	kfree(slave_info);
 	return rc;

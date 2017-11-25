@@ -69,12 +69,6 @@ int32_t msm_camera_cci_i2c_read_seq(struct msm_camera_i2c_client *client,
 		|| num_byte == 0)
 		return rc;
 
-	if (num_byte > I2C_REG_DATA_MAX) {
-			pr_err("%s: Error num_byte:0x%x exceeds 8K max supported:0x%x\n",
-			__func__, num_byte, I2C_REG_DATA_MAX);
-		return rc;
-	}
-
 	buf = kzalloc(num_byte, GFP_KERNEL);
 	if (!buf) {
 		pr_err("%s:%d no memory\n", __func__, __LINE__);
@@ -282,12 +276,6 @@ int32_t msm_camera_cci_i2c_write_seq_table(
 	client_addr_type = client->addr_type;
 	client->addr_type = write_setting->addr_type;
 
-	if (reg_setting->reg_data_size > I2C_SEQ_REG_DATA_MAX) {
-		pr_err("%s: number of bytes %u exceeding the max supported %d\n",
-		__func__, reg_setting->reg_data_size, I2C_SEQ_REG_DATA_MAX);
-		return rc;
-	}
-
 	for (i = 0; i < write_setting->size; i++) {
 		rc = msm_camera_cci_i2c_write_seq(client, reg_setting->reg_addr,
 			reg_setting->reg_data, reg_setting->reg_data_size);
@@ -399,7 +387,9 @@ int32_t msm_camera_cci_i2c_poll(struct msm_camera_i2c_client *client,
 	enum msm_camera_i2c_data_type data_type, uint32_t delay_ms)
 {
 	int32_t rc = -EFAULT;
+#if 0
 	int32_t i = 0;
+#endif
 	S_I2C_DBG("%s: addr: 0x%x data: 0x%x dt: %d\n",
 		__func__, addr, data, data_type);
 
@@ -408,6 +398,7 @@ int32_t msm_camera_cci_i2c_poll(struct msm_camera_i2c_client *client,
 			__func__, __LINE__, delay_ms, MAX_POLL_DELAY_MS);
 		return -EINVAL;
 	}
+#if 0
 	for (i = 0; i < delay_ms; i++) {
 		rc = msm_camera_cci_i2c_compare(client,
 			addr, data, data_type);
@@ -415,7 +406,19 @@ int32_t msm_camera_cci_i2c_poll(struct msm_camera_i2c_client *client,
 			return rc;
 		usleep_range(1000, 1010);
 	}
+#else
+	do {
+		rc = msm_camera_cci_i2c_compare(client,
+			addr, data, data_type);
+		if (rc == I2C_COMPARE_MATCH || rc < 0)
+			return rc;
 
+		if(delay_ms == 0)
+			break;
+
+		usleep_range(1000, 1010);
+	} while(delay_ms-- > 0);
+#endif
 	/* If rc is 1 then read is successful but poll is failure */
 	if (rc == 1)
 		pr_err("%s:%d poll failed rc=%d(non-fatal)\n",

@@ -2251,10 +2251,12 @@ static int msm_cpp_cfg_frame(struct cpp_device *cpp_dev,
 		return -EINVAL;
 	}
 
-	if (cpp_frame_msg[new_frame->msg_len - 1] !=
-		MSM_CPP_MSG_ID_TRAILER) {
-		pr_err("Invalid frame message\n");
-		return -EINVAL;
+	if (!new_frame->partial_frame_indicator) {
+		if (cpp_frame_msg[new_frame->msg_len - 1] !=
+			MSM_CPP_MSG_ID_TRAILER) {
+			pr_err("Invalid frame message\n");
+			return -EINVAL;
+		}
 	}
 
 	if (stripe_base == UINT_MAX || new_frame->num_strips >

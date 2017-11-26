@@ -4062,6 +4062,7 @@ static int __init kgsl_core_init(void)
 {
 	int result = 0;
 	struct sched_param param = { .sched_priority = 6 };
+	const unsigned long allowed_cpus = 0x3;
 
 	/* alloc major and minor device numbers */
 	result = alloc_chrdev_region(&kgsl_driver.major, 0, KGSL_DEVICE_MAX,
@@ -4130,9 +4131,14 @@ static int __init kgsl_core_init(void)
 
 	init_kthread_worker(&kgsl_driver.worker);
 
-	kgsl_driver.worker_thread = kthread_run(kthread_worker_fn,
+	kgsl_driver.worker_thread = kthread_create(kthread_worker_fn,
 		&kgsl_driver.worker, "kgsl_worker_thread");
 
+	do_set_cpus_allowed(kgsl_driver.worker_thread,
+						to_cpumask(&allowed_cpus));
+	kgsl_driver.worker_thread->flags |= PF_NO_SETAFFINITY;
+	wake_up_process(kgsl_driver.worker_thread);
+	
 	if (IS_ERR(kgsl_driver.worker_thread)) {
 		pr_err("unable to start kgsl thread\n");
 		goto err;

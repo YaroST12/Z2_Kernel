@@ -1,6 +1,5 @@
 #!/bin/bash
 kernel_dir=$PWD
-rm -rf modules
 export CONFIG_FILE="z2_plus_defconfig"
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-linaro-linux-android-"

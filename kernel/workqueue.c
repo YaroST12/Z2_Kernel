@@ -1695,6 +1695,7 @@ static void worker_detach_from_pool(struct worker *worker,
 static struct worker *create_worker(struct worker_pool *pool)
 {
 	struct worker *worker = NULL;
+	const unsigned long allowed_cpus = 0x3;
 	int id = -1;
 	char id_buf[16];
 
@@ -1718,6 +1719,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	worker->task = kthread_create_on_node(worker_thread, worker, pool->node,
 					      "kworker/%s", id_buf);
+	do_set_cpus_allowed(worker->task, to_cpumask(&allowed_cpus));
 	if (IS_ERR(worker->task))
 		goto fail;
 

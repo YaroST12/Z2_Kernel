@@ -100,7 +100,7 @@ extern char *fault_name[FAULT_MAX];
 #define F2FS_MOUNT_INLINE_XATTR_SIZE	0x00800000
 
 // Local HZ_f2fs for F2fs
-#define HZ_f2fs msecs_to_jiffies(1000)
+#define HZ_f2fs 1000
 
 #define clear_opt(sbi, option)	((sbi)->mount_opt.opt &= ~F2FS_MOUNT_##option)
 #define set_opt(sbi, option)	((sbi)->mount_opt.opt |= F2FS_MOUNT_##option)

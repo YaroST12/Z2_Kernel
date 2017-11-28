@@ -36,7 +36,7 @@
 #define INPUT_REBOOST         (1U << 4)
 
 /* The duration in milliseconds for the wake boost */
-#define FB_BOOST_MS (3000)
+#define FB_BOOST_MS (2000)
 
 /*
  * "fb" = "framebuffer". This is the boost that occurs on framebuffer unblank,

@@ -4652,7 +4652,7 @@ retry:
 				    EXT_MAX_BLOCKS - last_block);
 	if (err == -ENOMEM) {
 		cond_resched();
-		congestion_wait(BLK_RW_ASYNC, HZ/50);
+		congestion_wait(BLK_RW_ASYNC, HZ_ext4/50);
 		goto retry;
 	}
 	if (err) {

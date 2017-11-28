@@ -3571,13 +3571,18 @@ static int set_kswapd_cpu_mask(pg_data_t *pgdat)
  */
 int kswapd_run(int nid)
 {
+	const unsigned long allowed_cpus = 0x3;
 	pg_data_t *pgdat = NODE_DATA(nid);
 	int ret = 0;
 
 	if (pgdat->kswapd)
 		return 0;
 
-	pgdat->kswapd = kthread_run(kswapd, pgdat, "kswapd%d", nid);
+	pgdat->kswapd = kthread_create(kswapd, pgdat, "kswapd%d", nid);
+	do_set_cpus_allowed(pgdat->kswapd, to_cpumask(&allowed_cpus));
+	pgdat->kswapd->flags |= PF_NO_SETAFFINITY;
+	wake_up_process(pgdat->kswapd);
+	
 	if (IS_ERR(pgdat->kswapd)) {
 		/* failure at boot is fatal */
 		BUG_ON(system_state == SYSTEM_BOOTING);

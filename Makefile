@@ -638,8 +638,6 @@ LDFLAGS		+= --strip-debug -O2
 
 # Optimization flags
 KBUILD_CFLAGS	+= -g0 -DNDEBUG \
-		-fgraphite \
-		-fgraphite-identity \
 		-fivopts \
 		-floop-block \
 		-floop-interchange \

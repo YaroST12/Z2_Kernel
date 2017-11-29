@@ -20,7 +20,7 @@ on boot
 
     # Enable Adaptive LMK and set other values
 	chmod 666 /sys/module/lowmemorykiller/parameters/minfree
-	write /sys/module/lowmemorykiller/parameters/minfree "15000,22500,32500,55000,70000,95000"
+	write /sys/module/lowmemorykiller/parameters/minfree "15000,22500,35000,55000,80000,110000"
     write /sys/module/lowmemorykiller/parameters/enable_adaptive_lmk 0
     write /sys/module/lowmemorykiller/parameters/vmpressure_file_min 81250
 
@@ -89,15 +89,16 @@ on property:sys.boot_completed=1
 	
     # set default schedTune value for foreground/top-app (only affects EAS)
     write /dev/stune/foreground/schedtune.prefer_idle 1
-    write /dev/stune/foreground/schedtune.boost -25
+    write /dev/stune/foreground/schedtune.boost -15
     write /dev/stune/background/schedtune.prefer_idle 1
     write /dev/stune/background/schedtune.boost -100
     write /dev/stune/top-app/schedtune.prefer_idle 1
-    write /dev/stune/top-app/schedtune.boost -5
+    write /dev/stune/top-app/schedtune.boost -10
     write /dev/stune/schedtune.prefer_idle 1
     write /dev/stune/schedtune.boost 1
 	
 	# Touch-boost
+	write /sys/module/cpu_boost/parameters/dynamic_stune_boost 15
 	write /sys/module/cpu_boost/parameters/input_boost_freq "0:1324800 2:1324800"
 	write /sys/module/cpu_boost/parameters/input_boost_ms 100
 	

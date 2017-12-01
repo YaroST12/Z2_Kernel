@@ -218,12 +218,12 @@ static void do_input_boost(struct work_struct *work)
 			continue;
 
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
+	}
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 	/* Set dynamic stune boost value */
         if (dynamic_stune_boost > default_topapp_boost)
                 dynamic_boost_write(topapp_css, dynamic_stune_boost);
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */		
-	}
 
 	/* Update policies for all online CPUs */
 	update_policy_online();

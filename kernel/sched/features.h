@@ -3,7 +3,7 @@
  * them to run sooner, but does not allow tons of sleepers to
  * rip the spread apart.
  */
-SCHED_FEAT(GENTLE_FAIR_SLEEPERS, true)
+SCHED_FEAT(GENTLE_FAIR_SLEEPERS, false)
 
 /*
  * Place new tasks ahead so that they do not starve already running
@@ -63,7 +63,7 @@ SCHED_FEAT(ATTACH_AGE_LOAD, true)
  * numa_balancing=
  */
 #ifdef CONFIG_NUMA_BALANCING
-SCHED_FEAT(NUMA,	false)
+SCHED_FEAT(NUMA, false)
 
 /*
  * NUMA_FAVOUR_HIGHER will favor moving tasks towards nodes where a

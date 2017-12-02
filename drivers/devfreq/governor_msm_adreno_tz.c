@@ -776,7 +776,7 @@ static struct devfreq_governor msm_adreno_tz = {
 
 static int __init msm_adreno_tz_init(void)
 {
-	workqueue = alloc_workqueue("governor_msm_adreno_tz_wq", WQ_FREEZABLE | WQ_POWER_EFFICIENT, 0);
+	workqueue = alloc_workqueue("governor_msm_adreno_tz_wq", WQ_FREEZABLE | WQ_UNBOUND, 0);
 	if (workqueue == NULL)
 		return -ENOMEM;
 

@@ -649,7 +649,7 @@ KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 		-ftree-vectorize
 
 # F1xy optimizations
-KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a57.cortex-a53 \
+KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53 \
 		-march=armv8-a+crc+crypto \
 		-pipe \
 		-fno-pic \

@@ -141,25 +141,9 @@ static ssize_t set_key(struct device* device,
 
 static DEVICE_ATTR(key, S_IRUSR | S_IWUSR, get_key, set_key);
 
-static ssize_t get_screen_stat(struct device* device, struct device_attribute* attribute, char* buffer)
-{
-	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	return scnprintf(buffer, PAGE_SIZE, "%i\n", fpc1020->screen_on);
-}
-
-static ssize_t set_screen_stat(struct device* device,
-		struct device_attribute* attribute,
-		const char*buffer, size_t count)
-{
-	return 1;
-}
-
-static DEVICE_ATTR(screen, S_IRUSR | S_IWUSR, get_screen_stat, set_screen_stat);
-
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
-	&dev_attr_screen.attr,
 	NULL
 };
 
@@ -365,8 +349,6 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		__pm_relax(&fpc1020->wake_lock);
 		pr_err("nice -1\n");
 	}
-	sysfs_notify(&fpc1020->dev->kobj, NULL,
-				dev_attr_screen.attr.name);
 }
 
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)

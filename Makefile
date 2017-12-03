@@ -654,7 +654,8 @@ KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a57.cortex-a53 \
 		-pipe \
 		-fno-pic \
 		-fno-signed-zeros \
-		-fpredictive-commoning
+		-fpredictive-commoning \
+		-finline-functions
 
 # These flags need a special toolchain so split them off
 KBUILD_CFLAGS	+= $(call cc-option,-mlow-precision-recip-sqrt,) \

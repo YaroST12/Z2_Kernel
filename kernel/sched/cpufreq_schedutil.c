@@ -120,20 +120,26 @@ static bool sugov_up_down_rate_limit(struct sugov_policy *sg_policy, u64 time,
 				     unsigned int next_freq)
 {
 	s64 delta_ns;
+	s64 up_rate_delay_ns;
+	s64 down_rate_delay_ns;
 
+	down_rate_delay_ns = sg_policy->down_rate_delay_ns;
+	up_rate_delay_ns = sg_policy->up_rate_delay_ns;
 	delta_ns = time - sg_policy->last_freq_update_time;
 #ifdef CONFIG_STATE_NOTIFIER
 	if (state_suspended) {
 		if (delta_ns < DEFAULT_RATE_LIMIT_SUSP_NS)
 			return true;
-	} else
+	} else {
 #endif
-
 	if (next_freq > sg_policy->next_freq &&
-	    delta_ns < sg_policy->up_rate_delay_ns)
+	    delta_ns < up_rate_delay_ns)
 			return true;
-
+	else if (next_freq < sg_policy->next_freq &&
+	    delta_ns < down_rate_delay_ns)
+			return true;
 	return false;
+	}
 }
 
 static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,

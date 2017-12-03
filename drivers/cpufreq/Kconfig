@@ -348,6 +348,12 @@ config MSM_TRACK_FREQ_TARGET_INDEX
 	default n
 	depends on CPU_FREQ && ARCH_MSM
 
+config UNDERCLOCK_8996
+	bool "Underclock msm8996"
+	default n
+	help
+	  Enable underclock for msm8996 cpus.
+
 menu "x86 CPU frequency scaling drivers"
 depends on X86
 source "drivers/cpufreq/Kconfig.x86"

@@ -37,6 +37,7 @@
 		qcom,suspend-ulps-enabled;
 		qcom,ulps-enabled;
 		qcom,panel-allow-phy-poweroff;
+		qcom,partial-update-enabled;
 
 		qcom,mdss-dsi-on-command = [
 			15 00 00 00 00 00 02 51 ff

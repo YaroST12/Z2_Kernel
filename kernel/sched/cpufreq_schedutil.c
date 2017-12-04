@@ -18,7 +18,7 @@
 
 #include "sched.h"
 #include "tune.h"
-#ifdef CONFIG_STATE_NOTIFIER
+#if 0
 #include <linux/state_notifier.h>
 #endif
 
@@ -32,7 +32,7 @@ unsigned long boosted_cpu_util(int cpu);
 #define LATENCY_MULTIPLIER			(10000)
 #define SUGOV_KTHREAD_PRIORITY	50
 
-#ifdef CONFIG_STATE_NOTIFIER
+#if 0
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
 #endif
 
@@ -126,7 +126,7 @@ static bool sugov_up_down_rate_limit(struct sugov_policy *sg_policy, u64 time,
 	down_rate_delay_ns = sg_policy->down_rate_delay_ns;
 	up_rate_delay_ns = sg_policy->up_rate_delay_ns;
 	delta_ns = time - sg_policy->last_freq_update_time;
-#ifdef CONFIG_STATE_NOTIFIER
+#if 0
 	if (state_suspended) {
 		if (delta_ns < DEFAULT_RATE_LIMIT_SUSP_NS)
 			return true;
@@ -138,7 +138,9 @@ static bool sugov_up_down_rate_limit(struct sugov_policy *sg_policy, u64 time,
 	else if (next_freq < sg_policy->next_freq &&
 	    delta_ns < down_rate_delay_ns)
 			return true;
+#if 0
 	}
+#endif
 	return false;
 }
 

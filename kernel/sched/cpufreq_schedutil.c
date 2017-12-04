@@ -138,8 +138,8 @@ static bool sugov_up_down_rate_limit(struct sugov_policy *sg_policy, u64 time,
 	else if (next_freq < sg_policy->next_freq &&
 	    delta_ns < down_rate_delay_ns)
 			return true;
-	return false;
 	}
+	return false;
 }
 
 static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,

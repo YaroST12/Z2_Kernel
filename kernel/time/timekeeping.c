@@ -1152,7 +1152,7 @@ void timekeeping_inject_sleeptime(struct timespec *delta)
  * xtime/wall_to_monotonic/jiffies/etc are
  * still managed by arch specific suspend/resume code.
  */
-void timekeeping_resume(void)
+static void timekeeping_resume(void)
 {
 	struct timekeeper *tk = &tk_core.timekeeper;
 	struct clocksource *clock = tk->tkr.clock;
@@ -1233,7 +1233,7 @@ void timekeeping_resume(void)
 	hrtimers_resume();
 }
 
-int timekeeping_suspend(void)
+static int timekeeping_suspend(void)
 {
 	struct timekeeper *tk = &tk_core.timekeeper;
 	unsigned long flags;

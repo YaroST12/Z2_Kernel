@@ -640,13 +640,7 @@ LDFLAGS		+= --strip-debug -O2
 KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 		-fivopts \
 		-floop-block \
-		-floop-interchange \
-		-floop-strip-mine \
-		-floop-nest-optimize \
-		-ftree-loop-distribution \
-		-ftree-loop-distribute-patterns \
-		-ftree-loop-linear \
-		-ftree-vectorize
+		-floop-interchange
 
 # F1xy optimizations
 KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53 \

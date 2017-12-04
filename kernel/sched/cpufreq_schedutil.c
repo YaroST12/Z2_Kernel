@@ -209,6 +209,8 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	case 3:
 		freq = freq * util / max;
 		break;
+	default:
+		BUG();
 	}
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

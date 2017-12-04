@@ -54,7 +54,8 @@ struct fpc1020_data {
 	struct wakeup_source wake_lock;
 	bool screen_on;
 	bool home_pressed;
-	spinlock_t sysfs_lock;
+	bool irq_disabled;
+	spinlock_t irq_lock;
 	struct workqueue_struct *fpc1020_wq;
 	struct work_struct input_report_work;
 	struct work_struct pm_work;
@@ -73,14 +74,25 @@ extern void reset_home_button(void);
 bool reset;
 
 static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
+static void set_fpc_irq(struct fpc1020_data *fpc1020, bool enable);
 	
 static ssize_t irq_get(struct device* device,
 		struct device_attribute* attribute,
 		char* buffer)
 {
-	struct fpc1020_data* fpc1020 = dev_get_drvdata(device);
-	int irq = gpio_get_value(fpc1020->irq_gpio);
-	return scnprintf(buffer, PAGE_SIZE, "%i\n", irq);
+	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
+	bool irq_disabled;
+	int irq;
+	ssize_t count;
+
+	spin_lock(&fpc1020->irq_lock);
+	irq_disabled = fpc1020->irq_disabled;
+	spin_unlock(&fpc1020->irq_lock);
+
+	irq = !irq_disabled && gpio_get_value(fpc1020->irq_gpio);
+	count = scnprintf(buffer, PAGE_SIZE, "%d\n", irq);
+
+	return count;
 }
 
 static ssize_t irq_set(struct device* device,
@@ -213,9 +225,9 @@ static void fpc1020_irq_work(struct work_struct *work)
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
 
-	spin_lock(&fpc1020->sysfs_lock);
+	spin_lock(&fpc1020->irq_lock);
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	spin_unlock(&fpc1020->sysfs_lock);
+	spin_unlock(&fpc1020->irq_lock);
 
 	smp_mb();
 	if (!fpc1020->screen_on) {
@@ -265,7 +277,7 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 	}
 	
 	retval = devm_request_threaded_irq(fpc1020->dev, fpc1020->irq, NULL, fpc1020_irq_handler,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_FORCE_RESUME, 
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT, 
 									   dev_name(fpc1020->dev), fpc1020);
 	if (retval) {
 		pr_err("request irq %i failed.\n", fpc1020->irq);
@@ -325,7 +337,7 @@ static void set_fingerprintd_nice(int nice)
 
 	read_lock(&tasklist_lock);
 	for_each_process(p) {
-		if (!memcmp(p->comm, "fingerprintd", 13)) {
+		if (!memcmp(p->comm, "fingerprintd", sizeof("fingerprintd"))) {
 			set_user_nice(p, nice);
 			break;
 		}
@@ -340,6 +352,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	
 	/* Escalate fingerprintd priority when screen is off */
 	if (fpc1020->screen_on) {
+		set_fpc_irq(fpc1020, true);
 		set_fingerprintd_nice(0);
 		pr_err("nice 0\n");
 	}
@@ -372,6 +385,24 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 	}
 	return 0;
+}
+
+static void set_fpc_irq(struct fpc1020_data *fpc1020, bool enable)
+{
+	bool irq_disabled;
+
+	spin_lock(&fpc1020->irq_lock);
+	irq_disabled = fpc1020->irq_disabled;
+	fpc1020->irq_disabled = !enable;
+	spin_unlock(&fpc1020->irq_lock);
+
+	if (enable == !irq_disabled)
+		return;
+
+	if (enable)
+		enable_irq(fpc1020->irq_gpio);
+	else
+		disable_irq(fpc1020->irq_gpio);
 }
 
 static int fpc1020_probe(struct platform_device *pdev)
@@ -420,7 +451,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	
 	gpio_direction_output(fpc1020->reset_gpio, 1);
-	/*Do HW reset*/
+	//Do HW reset
 	fpc1020_hw_reset(fpc1020);
 	//Somehow fingerprint initializes disabled
 	reset_home_button();
@@ -433,6 +464,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 	}
 
 	wakeup_source_init(&fpc1020->wake_lock, "fpc_wakelock");
+	spin_lock_init(&fpc1020->irq_lock);
 	
 	retval = fpc1020_initial_irq(fpc1020);
 	if (retval != 0) {

@@ -18,7 +18,7 @@
 
 #include "sched.h"
 #include "tune.h"
-#if 0
+#ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
 
@@ -29,10 +29,10 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define LATENCY_MULTIPLIER			(10000)
+#define LATENCY_MULTIPLIER			(1000)
 #define SUGOV_KTHREAD_PRIORITY	50
 
-#if 0
+#ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
 #endif
 
@@ -65,6 +65,7 @@ struct sugov_policy {
 	struct kthread_worker worker;
 	struct task_struct *thread;
 	bool work_in_progress;
+
 	bool need_freq_update;
 };
 
@@ -120,27 +121,23 @@ static bool sugov_up_down_rate_limit(struct sugov_policy *sg_policy, u64 time,
 				     unsigned int next_freq)
 {
 	s64 delta_ns;
-	s64 up_rate_delay_ns;
-	s64 down_rate_delay_ns;
 
-	down_rate_delay_ns = sg_policy->down_rate_delay_ns;
-	up_rate_delay_ns = sg_policy->up_rate_delay_ns;
 	delta_ns = time - sg_policy->last_freq_update_time;
-#if 0
+#ifdef CONFIG_STATE_NOTIFIER
 	if (state_suspended) {
 		if (delta_ns < DEFAULT_RATE_LIMIT_SUSP_NS)
 			return true;
-	} else {
-#endif
-	if (next_freq > sg_policy->next_freq &&
-	    delta_ns < up_rate_delay_ns)
-			return true;
-	else if (next_freq < sg_policy->next_freq &&
-	    delta_ns < down_rate_delay_ns)
-			return true;
-#if 0
 	}
 #endif
+
+	if (next_freq > sg_policy->next_freq &&
+	    delta_ns < sg_policy->up_rate_delay_ns)
+			return true;
+
+	if (next_freq < sg_policy->next_freq &&
+	    delta_ns < sg_policy->down_rate_delay_ns)
+			return true;
+
 	return false;
 }
 
@@ -202,18 +199,9 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	switch (policy->cpu) {
-	case 0:
-	case 1:
-		freq = (freq + (freq >> 2)) * util / max;
-		break;
-	case 2:
-	case 3:
-		freq = freq * util / max;
-		break;
-	default:
-		BUG();
-	}
+
+	freq = (freq + (freq >> 2)) * util / max;
+
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
 	sg_policy->cached_raw_freq = freq;

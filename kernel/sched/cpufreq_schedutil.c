@@ -29,8 +29,8 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define LATENCY_MULTIPLIER			(10000)
-#define SUGOV_KTHREAD_PRIORITY	15
+#define LATENCY_MULTIPLIER			(1000)
+#define SUGOV_KTHREAD_PRIORITY	50
 
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
@@ -199,13 +199,8 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	int __read_mostly pwr_running = (cpu_rq(0)->nr_running + cpu_rq(1)->nr_running);
-	int __read_mostly prf_running = (cpu_rq(2)->nr_running + cpu_rq(3)->nr_running);
 
-	if (pwr_running || prf_running < 2)
-		freq = (freq + (freq >> 2)) * util / max;
-	else
-		freq = freq * util / max;
+	freq = (freq + (freq >> 2)) * util / max;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

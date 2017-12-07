@@ -202,6 +202,7 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	int i = policy->cpu;
 	int pwr_running = (cpu_rq(0)->nr_running + cpu_rq(1)->nr_running);
 	int prf_running = (cpu_rq(2)->nr_running + cpu_rq(3)->nr_running);
+	int total_running = prf_running + pwr_running;
 
 	switch (i) {
 		case 0:
@@ -213,7 +214,9 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 			break;
 		case 2:
 		case 3:
-			if (prf_running > 0)
+			if (total_running >= 4)
+				freq = freq * util / max;
+			else if (prf_running > 0)
 				freq = (freq + (freq >> 2)) * util / max;
 			else
 				freq = (policy->min + (freq >> 2)) * util / max;

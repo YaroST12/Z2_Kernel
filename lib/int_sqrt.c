@@ -7,12 +7,13 @@
 
 #include <linux/kernel.h>
 #include <linux/export.h>
+#include <linux/bitops.h>
 
 /**
- * int_sqrt - rough approximation to sqrt
+ * int_sqrt - computes the integer square root
  * @x: integer of which to calculate the sqrt
  *
- * A very rough approximation to the sqrt() function.
+ * Computes: floor(sqrt(x))
  */
 inline unsigned long int_sqrt(unsigned long x)
 {
@@ -23,7 +24,7 @@ inline unsigned long int_sqrt(unsigned long x)
 	if (x <= 1)
 		return x;
 
-	place = 1UL << (BITS_PER_LONG - 2);
+	place = 1UL << (__fls(x) & ~1UL);
 
 	do{
 		place >>= 2;

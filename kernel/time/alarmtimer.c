@@ -27,7 +27,7 @@
 #include <linux/freezer.h>
 
 #ifdef CONFIG_MSM_PM
-#include "lpm-levels.h"
+#include "../drivers/cpuidle/lpm-levels.h"
 #endif
 #include <linux/workqueue.h>
 

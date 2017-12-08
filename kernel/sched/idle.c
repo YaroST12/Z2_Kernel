@@ -217,6 +217,7 @@ use_default:
 static void cpu_idle_loop(void)
 {
 	while (1) {
+	int cpu = smp_processor_id();
 		/*
 		 * If the arch has a polling bit, we maintain an invariant:
 		 *
@@ -234,7 +235,7 @@ static void cpu_idle_loop(void)
 			check_pgt_cache();
 			rmb();
 
-			if (cpu_is_offline(smp_processor_id()))
+			if (cpu_is_offline(cpu))
 				arch_cpu_idle_dead();
 
 			local_irq_disable();

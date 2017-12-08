@@ -752,7 +752,7 @@ int get_nohz_timer_target(int pinned)
 	int i;
 	struct sched_domain *sd;
 
-	if (!idle_cpu(cpu) && is_housekeeping_cpu(cpu))
+	if (pinned || !get_sysctl_timer_migration() || !idle_cpu(cpu))
 		return cpu;
 
 	rcu_read_lock();
@@ -898,6 +898,15 @@ void sched_avg_update(struct rq *rq)
  * @wakeup_latency = latency to wakeup from cstate
  *
  */
+void
+sched_set_cpu_cstate(int cpu, int cstate, int wakeup_energy, int wakeup_latency)
+{
+	struct rq *rq = cpu_rq(cpu);
+
+	rq->cstate = cstate; /* C1, C2 etc */
+	rq->wakeup_energy = wakeup_energy;
+	rq->wakeup_latency = wakeup_latency;
+}
 #endif /* CONFIG_SMP */
 
 #if defined(CONFIG_RT_GROUP_SCHED) || (defined(CONFIG_FAIR_GROUP_SCHED) && \

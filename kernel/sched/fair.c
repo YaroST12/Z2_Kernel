@@ -5142,6 +5142,44 @@ long group_norm_util(struct energy_env *eenv, int cpu_idx)
 	return min_t(unsigned long, util_sum, SCHED_CAPACITY_SCALE);
 }
 
+#ifdef CONFIG_SCHED_TUNE
+static inline unsigned long boosted_task_util(struct task_struct *task);
+
+static inline int
+find_min_capacity(struct energy_env *eenv, int cpu_idx)
+{
+	const struct sched_group_energy const *sge = eenv->sg->sge;
+	unsigned long min_capacity, cur_capacity;
+	int min_cap_idx, cap_idx;
+	unsigned long min_util;
+
+	/* Non boosted tasks do not affect the minimum capacity */
+	if (!schedtune_task_boost(eenv->p))
+		return eenv->cpu[cpu_idx].cap_idx;
+
+	/* Find minimum capacity to satify the task boost value */
+	min_util = boosted_task_util(eenv->p);
+	for (min_cap_idx = 0; min_cap_idx < (sge->nr_cap_states-1); min_cap_idx++) {
+		if (sge->cap_states[min_cap_idx].cap >= min_util)
+			break;
+	}
+	min_capacity = sge->cap_states[min_cap_idx].cap;
+
+	/* The current capacity is the one computed by the caller */
+	cur_capacity = sge->cap_states[eenv->cpu[cpu_idx].cap_idx].cap;
+
+	/*
+	 * Compute the minumum CPU capacity required to support task boosting
+	 * within this SG.
+	 */
+	cap_idx = max(eenv->cpu[cpu_idx].cap_idx, min_cap_idx);
+
+	return cap_idx;
+}
+#else
+#define find_min_capacity(eenv, cpu_idx) eenv->cpu[cpu_idx].cap_idx
+#endif /* CONFIG_SCHED_TUNE */
+
 static int find_new_capacity(struct energy_env *eenv, int cpu_idx)
 {
 	const struct sched_group_energy *sge = eenv->sg->sge;
@@ -5160,6 +5198,9 @@ static int find_new_capacity(struct energy_env *eenv, int cpu_idx)
 			break;
 		}
 	}
+
+	/* Update SG's capacity based on boost value of the current task */
+	eenv->cpu[cpu_idx].cap_idx = find_min_capacity(eenv, cpu_idx);
 
 	return eenv->cpu[cpu_idx].cap_idx;
 }

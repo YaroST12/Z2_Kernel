@@ -216,10 +216,10 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 		case 3:
 			if (total_running >= 4)
 				freq = freq * util / max;
-			else if (prf_running > 0)
+			else if (prf_running / 2 >= 1 / 2)
 				freq = (freq + (freq >> 2)) * util / max;
 			else
-				freq = (policy->min + (freq >> 2)) * util / max;
+				freq = policy->min * util / max;
 			break;
 		default:
 			BUG();

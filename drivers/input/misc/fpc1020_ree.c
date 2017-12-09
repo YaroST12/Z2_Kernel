@@ -352,15 +352,15 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	
 	/* Escalate fingerprintd priority when screen is off */
 	if (fpc1020->screen_on) {
-		set_fpc_irq(fpc1020, true);
+		__pm_relax(&fpc1020->wakeup);
+		disable_irq_wake(fpc1020->irq);
 		set_fingerprintd_nice(0);
-		pr_err("nice 0\n");
 	}
 	
 	if (!fpc1020->screen_on) {
-		set_fingerprintd_nice(-1);
 		__pm_relax(&fpc1020->wakeup);
-		pr_err("nice -1\n");
+		enable_irq_wake(fpc1020->irq);
+		set_fingerprintd_nice(-1);
 	}
 }
 
@@ -462,7 +462,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Unable to register fb_notifier : %d\n", retval);
 		goto error_destroy_workqueue;
 	}
-
+	set_fpc_irq(fpc1020, true);
 	wakeup_source_init(&fpc1020->wakeup, "fpc_wakeup");
 	spin_lock_init(&fpc1020->irq_lock);
 	
@@ -471,9 +471,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("IRQ initialized failure\n");
 		goto error_unregister_client;
 	}
-
-	//Enable wake IRQ
-	enable_irq_wake(fpc1020->irq);
 
 	return 0;
 

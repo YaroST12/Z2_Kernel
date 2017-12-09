@@ -51,7 +51,7 @@ struct fpc1020_data {
 	/*Input device*/
 	struct input_dev *input_dev;
 	u8  report_key;
-	struct wakeup_source wake_lock;
+	struct wakeup_source wakeup;
 	bool screen_on;
 	bool home_pressed;
 	bool irq_disabled;
@@ -231,7 +231,7 @@ static void fpc1020_irq_work(struct work_struct *work)
 
 	smp_mb();
 	if (!fpc1020->screen_on) {
-		__pm_wakeup_event(&fpc1020->wake_lock, 5000);
+		__pm_wakeup_event(&fpc1020->wakeup, 5000);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
 		msleep(1);
@@ -359,7 +359,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	
 	if (!fpc1020->screen_on) {
 		set_fingerprintd_nice(-1);
-		__pm_relax(&fpc1020->wake_lock);
+		__pm_relax(&fpc1020->wakeup);
 		pr_err("nice -1\n");
 	}
 }
@@ -440,7 +440,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_remove_sysfs;
 	}
 	
-	fpc1020->fpc1020_wq = alloc_workqueue("fpc1020_wq", WQ_UNBOUND, 0);
+	fpc1020->fpc1020_wq = alloc_workqueue("fpc1020_wq", WQ_HIGHPRI, 0);
 	if (!fpc1020->fpc1020_wq) {
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
@@ -463,7 +463,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 
-	wakeup_source_init(&fpc1020->wake_lock, "fpc_wakelock");
+	wakeup_source_init(&fpc1020->wakeup, "fpc_wakeup");
 	spin_lock_init(&fpc1020->irq_lock);
 	
 	retval = fpc1020_initial_irq(fpc1020);

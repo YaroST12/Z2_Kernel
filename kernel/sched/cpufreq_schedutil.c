@@ -207,10 +207,7 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	switch (i) {
 		case 0:
 		case 1:
-			if (pwr_running >= 2)
-				freq = (freq + (freq >> 2)) * util / max;
-			else
-				freq = freq * util / max;
+			freq = (freq + (freq >> 2)) * util / max;
 			break;
 		case 2:
 		case 3:

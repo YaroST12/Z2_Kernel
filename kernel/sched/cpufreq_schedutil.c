@@ -29,8 +29,8 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define LATENCY_MULTIPLIER			(1000)
-#define SUGOV_KTHREAD_PRIORITY	50
+#define LATENCY_MULTIPLIER			(10000)
+#define SUGOV_KTHREAD_PRIORITY	15
 
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))

@@ -52,7 +52,7 @@ struct fpc1020_data {
 	struct input_dev *input_dev;
 	u8  report_key;
 	struct wakeup_source wakeup;
-	bool screen_on;
+	bool __read_mostly screen_on;
 	bool home_pressed;
 	bool irq_disabled;
 	spinlock_t irq_lock;
@@ -225,11 +225,8 @@ static void fpc1020_irq_work(struct work_struct *work)
 	struct fpc1020_data *fpc1020 =
 		container_of(work, typeof(*fpc1020), irq_work);
 
-	spin_lock(&fpc1020->irq_lock);
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-	spin_unlock(&fpc1020->irq_lock);
 
-	smp_mb();
 	if (!fpc1020->screen_on) {
 		__pm_wakeup_event(&fpc1020->wakeup, 5000);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);

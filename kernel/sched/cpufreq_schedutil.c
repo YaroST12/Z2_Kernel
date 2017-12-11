@@ -199,28 +199,13 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	int i = policy->cpu;
-	int pwr_running = (cpu_rq(0)->nr_running + cpu_rq(1)->nr_running);
-	int prf_running = (cpu_rq(2)->nr_running + cpu_rq(3)->nr_running);
-	int total_running = prf_running + pwr_running;
+	int __read_mostly pwr_running = (cpu_rq(0)->nr_running + cpu_rq(1)->nr_running);
+	int __read_mostly prf_running = (cpu_rq(2)->nr_running + cpu_rq(3)->nr_running);
 
-	switch (i) {
-		case 0:
-		case 1:
-			freq = (freq + (freq >> 2)) * util / max;
-			break;
-		case 2:
-		case 3:
-			if (total_running >= 4)
-				freq = freq * util / max;
-			else if (prf_running / 2 >= 1 / 2)
-				freq = (freq + (freq >> 2)) * util / max;
-			else
-				freq = policy->min * util / max;
-			break;
-		default:
-			BUG();
-	}
+	if (pwr_running || prf_running < 2)
+		freq = (freq + (freq >> 2)) * util / max;
+	else
+		freq = freq * util / max;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

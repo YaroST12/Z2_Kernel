@@ -29,8 +29,8 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define LATENCY_MULTIPLIER			(1000)
-#define SUGOV_KTHREAD_PRIORITY	50
+#define LATENCY_MULTIPLIER			(10000)
+#define SUGOV_KTHREAD_PRIORITY	15
 
 #ifdef CONFIG_STATE_NOTIFIER
 #define DEFAULT_RATE_LIMIT_SUSP_NS ((s64)(80000 * NSEC_PER_USEC))
@@ -57,6 +57,7 @@ struct sugov_policy {
 	s64 down_rate_delay_ns;
 	unsigned int next_freq;
 	unsigned int cached_raw_freq;
+	unsigned int nr_threshold;
 
 	/* The next fields are only needed if fast switch cannot be used. */
 	struct irq_work irq_work;
@@ -199,8 +200,15 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-
-	freq = (freq + (freq >> 2)) * util / max;
+	unsigned int __read_mostly threshold = sg_policy->nr_threshold;
+	/*
+	* We will have schedutil threads running on CPUs 0 and 2.
+	* So we will count running tasks on CPUs 0+(0+1) and 2+(2+1).
+	*/
+	if ((cpu_rq(policy->cpu)->nr_running + cpu_rq(policy->cpu + 1)->nr_running) < threshold)
+		freq = (freq + (freq >> 2)) * util / max;
+	else
+		freq = freq * util / max;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
@@ -652,6 +660,10 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 		pr_warn("%s: failed to set SCHED_FIFO\n", __func__);
 		return ret;
 	}
+	if (policy->cpu == 0)
+		sg_policy->nr_threshold = 3;
+	else
+		sg_policy->nr_threshold = 2;
 
 	sg_policy->thread = thread;
 	kthread_bind_mask(thread, policy->related_cpus);
@@ -741,7 +753,7 @@ initialize:
 		tunables->up_rate_limit_us *= lat;
 		tunables->down_rate_limit_us *= lat;
 	}
-	tunables->eval_busy_for_freq = true;
+	tunables->eval_busy_for_freq = false;
 	
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:

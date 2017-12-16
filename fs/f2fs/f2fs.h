@@ -99,7 +99,7 @@ extern char *fault_name[FAULT_MAX];
 #define F2FS_MOUNT_QUOTA		0x00400000
 #define F2FS_MOUNT_INLINE_XATTR_SIZE	0x00800000
 
-// Local HZ_f2fs for F2fs
+// Local HZ for F2fs
 #define HZ_f2fs msecs_to_jiffies(1000)
 
 #define clear_opt(sbi, option)	((sbi)->mount_opt.opt &= ~F2FS_MOUNT_##option)
@@ -1333,7 +1333,7 @@ static inline void f2fs_update_time(struct f2fs_sb_info *sbi, int type)
 
 static inline bool f2fs_time_over(struct f2fs_sb_info *sbi, int type)
 {
-	unsigned long interval = sbi->interval_time[type] * HZ_f2fs;
+	unsigned long interval = sbi->interval_time[type] * HZ;
 
 	return time_after(jiffies, sbi->last_time[type] + interval);
 }

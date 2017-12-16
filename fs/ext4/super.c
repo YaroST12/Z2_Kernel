@@ -323,7 +323,7 @@ static void __save_error_info(struct super_block *sb, const char *func,
 	 * started already
 	 */
 	if (!es->s_error_count)
-		mod_timer(&EXT4_SB(sb)->s_err_report, jiffies + 24*60*60*HZ_ext4);
+		mod_timer(&EXT4_SB(sb)->s_err_report, jiffies + 24*60*60*HZ);
 	le32_add_cpu(&es->s_error_count, 1);
 }
 
@@ -1529,7 +1529,7 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 	} else if (token == Opt_commit) {
 		if (arg == 0)
 			arg = JBD2_DEFAULT_MAX_COMMIT_AGE;
-		sbi->s_commit_interval = HZ_ext4 * arg;
+		sbi->s_commit_interval = HZ * arg;
 	} else if (token == Opt_max_batch_time) {
 		sbi->s_max_batch_time = arg;
 	} else if (token == Opt_min_batch_time) {
@@ -1832,8 +1832,8 @@ static int _ext4_show_options(struct seq_file *seq, struct super_block *sb,
 		SEQ_OPTS_PUTS("errors=continue");
 	if (test_opt(sb, ERRORS_PANIC) && def_errors != EXT4_ERRORS_PANIC)
 		SEQ_OPTS_PUTS("errors=panic");
-	if (nodefs || sbi->s_commit_interval != JBD2_DEFAULT_MAX_COMMIT_AGE*HZ_ext4)
-		SEQ_OPTS_PRINT("commit=%lu", sbi->s_commit_interval / HZ_ext4);
+	if (nodefs || sbi->s_commit_interval != JBD2_DEFAULT_MAX_COMMIT_AGE*HZ)
+		SEQ_OPTS_PRINT("commit=%lu", sbi->s_commit_interval / HZ);
 	if (nodefs || sbi->s_min_batch_time != EXT4_DEF_MIN_BATCH_TIME)
 		SEQ_OPTS_PRINT("min_batch_time=%u", sbi->s_min_batch_time);
 	if (nodefs || sbi->s_max_batch_time != EXT4_DEF_MAX_BATCH_TIME)
@@ -2920,7 +2920,7 @@ static void print_daily_error_info(unsigned long arg)
 			       le64_to_cpu(es->s_last_error_block));
 		printk("\n");
 	}
-	mod_timer(&sbi->s_err_report, jiffies + 24*60*60*HZ_ext4);  /* Once a day */
+	mod_timer(&sbi->s_err_report, jiffies + 24*60*60*HZ);  /* Once a day */
 }
 
 /* Find next suitable group and run ext4_init_inode_table */
@@ -3180,7 +3180,7 @@ static struct ext4_li_request *ext4_li_request_new(struct super_block *sb,
 	 * better.
 	 */
 	elr->lr_next_sched = jiffies + (prandom_u32() %
-				(EXT4_DEF_LI_MAX_START_DELAY * HZ_ext4));
+				(EXT4_DEF_LI_MAX_START_DELAY * HZ));
 	return elr;
 }
 
@@ -3620,7 +3620,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 
 	sbi->s_resuid = make_kuid(&init_user_ns, le16_to_cpu(es->s_def_resuid));
 	sbi->s_resgid = make_kgid(&init_user_ns, le16_to_cpu(es->s_def_resgid));
-	sbi->s_commit_interval = JBD2_DEFAULT_MAX_COMMIT_AGE * HZ_ext4;
+	sbi->s_commit_interval = JBD2_DEFAULT_MAX_COMMIT_AGE * HZ;
 	sbi->s_min_batch_time = EXT4_DEF_MIN_BATCH_TIME;
 	sbi->s_max_batch_time = EXT4_DEF_MAX_BATCH_TIME;
 
@@ -4313,12 +4313,12 @@ no_journal:
 		 *sbi->s_es->s_mount_opts ? "; " : "", orig_data);
 
 	if (es->s_error_count)
-		mod_timer(&sbi->s_err_report, jiffies + 300*HZ_ext4); /* 5 minutes */
+		mod_timer(&sbi->s_err_report, jiffies + 300*HZ); /* 5 minutes */
 
 	/* Enable message ratelimiting. Default is 10 messages per 5 secs. */
-	ratelimit_state_init(&sbi->s_err_ratelimit_state, 5 * HZ_ext4, 10);
-	ratelimit_state_init(&sbi->s_warning_ratelimit_state, 5 * HZ_ext4, 10);
-	ratelimit_state_init(&sbi->s_msg_ratelimit_state, 5 * HZ_ext4, 10);
+	ratelimit_state_init(&sbi->s_err_ratelimit_state, 5 * HZ, 10);
+	ratelimit_state_init(&sbi->s_warning_ratelimit_state, 5 * HZ, 10);
+	ratelimit_state_init(&sbi->s_msg_ratelimit_state, 5 * HZ, 10);
 
 	kfree(orig_data);
 	return 0;

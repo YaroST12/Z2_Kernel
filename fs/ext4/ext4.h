@@ -36,7 +36,6 @@
 #include <linux/compat.h>
 #endif
 
-#define HZ_ext4 1000
 /*
  * The fourth extended filesystem constants/structures
  */

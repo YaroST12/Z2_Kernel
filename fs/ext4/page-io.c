@@ -499,7 +499,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 			if (ret == -ENOMEM && wbc->sync_mode == WB_SYNC_ALL) {
 				if (io->io_bio) {
 					ext4_io_submit(io);
-					congestion_wait(BLK_RW_ASYNC, HZ_ext4/50);
+					congestion_wait(BLK_RW_ASYNC, HZ/50);
 				}
 				gfp_flags |= __GFP_NOFAIL;
 				goto retry_encrypt;

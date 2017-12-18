@@ -19,6 +19,7 @@
 #include <linux/input.h>
 #include <linux/slab.h>
 
+#include "../../kernel/sched/sched.h"
 #define CPU_MASK(cpu) (1U << (cpu))
 
 /*
@@ -37,6 +38,11 @@
 
 /* The duration in milliseconds for the wake boost */
 #define FB_BOOST_MS (2000)
+
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+static int dynamic_stune_boost = 30;
+module_param(dynamic_stune_boost, uint, 0644);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 /*
  * "fb" = "framebuffer". This is the boost that occurs on framebuffer unblank,
@@ -110,6 +116,12 @@ static void ib_boost_main(struct work_struct *work)
 	/* Always boost CPU0 */
 	ib->cpus_to_boost = CPU_MASK(0);
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	/* Set dynamic stune boost value */
+        if (dynamic_stune_boost > default_topapp_boost)
+                dynamic_boost_write(topapp_css, dynamic_stune_boost);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
+
 	/* Copy the user-set boost duration since it will be altered below */
 	ib->adj_duration_ms = ib->duration_ms;
 
@@ -170,6 +182,11 @@ static void ib_unboost_main(struct work_struct *work)
 	struct ib_config *ib = &b->ib;
 	struct ib_pcpu *pcpu = container_of(work, typeof(*pcpu),
 						unboost_work.work);
+
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	/* Reset dynamic stune boost value to the default value */
+        dynamic_boost_write(topapp_css, default_topapp_boost);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 	/* Unboost a single CPU */
 	ib->cpus_to_boost &= ~CPU_MASK(pcpu->cpu);

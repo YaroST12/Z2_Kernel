@@ -72,7 +72,7 @@
 		 * Timeout to enter deeper power saving state
 		 * from NAP.
 		 */
-		qcom,deep-nap-timeout = <20>; //msecs
+		qcom,deep-nap-timeout = <100>; //msecs
 		qcom,strtstp-sleepwake;
 
 		qcom,highest-bank-bit = <15>;

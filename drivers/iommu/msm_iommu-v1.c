@@ -375,7 +375,7 @@ static void __sync_tlb(struct msm_iommu_drvdata *iommu_drvdata, int ctx,
 	res = readl_relaxed_poll_timeout_atomic(
 			CTX_REG(CB_TLBSTATUS, base, ctx),
 			val, (val & CB_TLBSTATUS_SACTIVE) == 0,
-			1, 500000);
+			0, 500000);
 	if (res)
 		check_tlb_sync_state(iommu_drvdata, ctx, priv);
 }

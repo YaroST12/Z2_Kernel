@@ -661,7 +661,7 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 		return ret;
 	}
 	if (policy->cpu == 0)
-		sg_policy->nr_threshold = 3;
+		sg_policy->nr_threshold = 4;
 	else
 		sg_policy->nr_threshold = 2;
 

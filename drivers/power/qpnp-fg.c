@@ -2973,7 +2973,7 @@ wait:
 #ifdef CONFIG_PRODUCT_Z2_PLUS
 #define TEMP_FLOAT_LOW_THRESHOLD		80
 #define TEMP_FLOAT_HIGH_THRESHOLD		100
-#define UPDATE_JEITA_DELAY_MS			500
+#define UPDATE_JEITA_DELAY_MS			200
 			if (temp > TEMP_FLOAT_HIGH_THRESHOLD) {
 				if (settings[FG_MEM_SOFT_COLD + 0].value != 170) {
 					settings[FG_MEM_SOFT_COLD + 0].value = 170;
@@ -6638,6 +6638,7 @@ static int fg_batt_profile_init(struct fg_chip *chip)
 {
 	int rc = 0, ret;
 	int len;
+	int threshold_mah_max, threshold_mah_min;
 	struct device_node *node = chip->spmi->dev.of_node;
 	struct device_node *batt_node, *profile_node;
 	const char *data, *batt_type_str;
@@ -6648,6 +6649,10 @@ wait:
 	fg_stay_awake(&chip->profile_wakeup_source);
 	ret = wait_for_completion_interruptible_timeout(&chip->batt_id_avail,
 			msecs_to_jiffies(PROFILE_LOAD_TIMEOUT_MS));
+#ifdef 	CONFIG_PRODUCT_Z2_PLUS
+		threshold_mah_max = 3800000;
+		threshold_mah_min = 3200000;
+#endif
 	/* If we were interrupted wait again one more time. */
 	if (ret == -ERESTARTSYS && !tried_again) {
 		tried_again = true;
@@ -6807,8 +6812,9 @@ wait:
 	if (reg & PROFILE_INTEGRITY_BIT) {
 		fg_cap_learning_load_data(chip);
 #ifdef CONFIG_PRODUCT_Z2_PLUS
-		if (chip->learning_data.learned_cc_uah < 3300000) {
-			pr_debug("Battery profile same, but learned capaicty is below 3300000, clearing data and reset FG\n");
+		if ((chip->learning_data.learned_cc_uah < threshold_mah_min) ||
+			(chip->learning_data.learned_cc_uah > threshold_mah_max)) {
+			pr_info("Battery total capability not normal range, clearing data and reset FG\n");
 			clear_cycle_counter(chip);
 			chip->learning_data.learned_cc_uah = 0;
 		} else if (vbat_in_range && !fg_is_batt_empty(chip) && profiles_same) {

@@ -124,10 +124,10 @@ maple_expired_request(struct maple_data *mdata, int sync, int data_dir)
 static struct request *
 maple_choose_expired_request(struct maple_data *mdata)
 {
-	struct request *rq_sync_read = maple_expired_request(mdata, SYNC, READ);
-	struct request *rq_sync_write = maple_expired_request(mdata, SYNC, WRITE);
 	struct request *rq_async_read = maple_expired_request(mdata, ASYNC, READ);
 	struct request *rq_async_write = maple_expired_request(mdata, ASYNC, WRITE);
+	struct request *rq_sync_read = maple_expired_request(mdata, SYNC, READ);
+	struct request *rq_sync_write = maple_expired_request(mdata, SYNC, WRITE);
 
 	/* Reset (non-expired-)batch-counter */
 	mdata->batched = 0;
@@ -135,18 +135,19 @@ maple_choose_expired_request(struct maple_data *mdata)
 	/*
 	 * Check expired requests.
 	 */
-	if (rq_sync_read)
+
+	if (rq_async_read)
+		return rq_async_read;
+	else if (rq_sync_read)
 		return rq_sync_read;
+	else if (rq_async_write)
+		return rq_async_write;
 	else if (rq_sync_write)
 		return rq_sync_write;
-	else if (rq_async_read)
-		return rq_async_read;
 	else if (rq_async_read && rq_sync_read) {
 		if (time_after(rq_sync_read->fifo_time, rq_async_read->fifo_time))
 			return rq_async_read;
 	}
-	else if (rq_async_write)
-		return rq_async_write;
 	else if (rq_async_write && rq_sync_write) {
 		if (time_after(rq_sync_write->fifo_time, rq_async_write->fifo_time))
 			return rq_async_write;

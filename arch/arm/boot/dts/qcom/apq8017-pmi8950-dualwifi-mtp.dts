@@ -1,0 +1,126 @@
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+
+#include "apq8017.dtsi"
+#include "msm8917-pmi8950-cdp.dtsi"
+#include "apq8017-rome.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. APQ8017-PMI8950 MTP with Dual Wifi";
+	compatible = "qcom,apq8017-mtp", "qcom,apq8017", "qcom,mtp";
+	qcom,board-id= <8 1>;
+	qcom,pmic-id = <0x10019 0x010011 0x0 0x0>;
+};
+
+&tlmm {
+	sdc2_wlan_gpio {
+		sdc2_wlan_gpio_active: sdc2_wlan_gpio_active {
+			config {
+				pins = "gpio99";
+				output-high;
+				drive-strength = <8>;
+				bias-pull-up;
+			};
+		};
+		sdc2_wlan_gpio_sleep: sdc2_wlan_gpio_sleep {
+			config {
+				pins = "gpio99";
+				output-low;
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+	};
+
+};
+
+&sdhc_2 {
+	/* device core power supply */
+	/delete-property/vdd-supply;
+	/delete-property/qcom,vdd-voltage-level;
+	/delete-property/qcom,vdd-current-level;
+
+	/* device communication power supply */
+	vdd-io-supply = <&pm8917_l5>;
+	qcom,vdd-io-always-on;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-current-level = <200 325000>;
+
+	qcom,core_3_0v_support;
+	qcom,nonremovable;
+
+	pinctrl-names = "active", "sleep";
+	pinctrl-0 = <&sdc2_clk_on &sdc2_cmd_on &sdc2_data_on
+			&sdc2_wlan_gpio_active>;
+	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off
+			&sdc2_wlan_gpio_sleep>;
+
+	#address-cells = <0>;
+	interrupt-parent = <&sdhc_2>;
+	interrupts = <0 1 2>;
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0xffffffff>;
+	interrupt-map = <0 &intc 0 125 0
+		1 &intc 0 221 0
+		2 &tlmm 124 0x4>;
+	interrupt-names = "hc_irq", "pwr_irq", "sdiowakeup_irq";
+
+	/delete-property/cd-gpios;
+	/delete-property/qcom,devfreq,freq-table;
+
+	status = "ok";
+
+};
+
+&mdss_fb0 {
+	/delete-node/ qcom,cont-splash-memory;
+};
+
+/delete-node/ &cont_splash_mem;
+
+&soc {
+	gpio_keys {
+		/delete-node/ home;
+	};
+
+	slim@c140000 {
+		status = "disabled";
+	};
+	sound {
+		status = "disabled";
+	};
+	venus-ddr-gov {
+		status = "disabled";
+	};
+	qcom,venus@1de0000 {
+		status = "disabled";
+	};
+	i2c_2: i2c@78b6000 {
+		status = "disabled";
+	};
+};
+
+&spmi_bus{
+	qcom,pmi8950@3{
+		qcom,leds@d300 {
+			status = "disabled";
+		};
+	};
+};
+
+&usb_otg {
+	vbus_otg-supply = <0>;
+	qcom,vbus-low-as-hostmode;
+};

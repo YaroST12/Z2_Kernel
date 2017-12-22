@@ -46,6 +46,8 @@ struct maple_data {
 	int fifo_batch;
 	int writes_starved;
 	int sleep_latency_multiple;
+	int sync;
+	int data_dir;
 };
 
 static inline struct maple_data *
@@ -100,6 +102,8 @@ maple_expired_request(struct maple_data *mdata, int sync, int data_dir)
 {
 	struct list_head *list = &mdata->fifo_list[sync][data_dir];
 	struct request *rq;
+	sync = mdata->sync;
+	data_dir = mdata->data_dir;
 
 	if (list_empty(list))
 		return NULL;
@@ -117,11 +121,6 @@ maple_expired_request(struct maple_data *mdata, int sync, int data_dir)
 static struct request *
 maple_choose_expired_request(struct maple_data *mdata)
 {
-	struct request *rq_sync_read = maple_expired_request(mdata, SYNC, READ);
-	struct request *rq_sync_write = maple_expired_request(mdata, SYNC, WRITE);
-	struct request *rq_async_read = maple_expired_request(mdata, ASYNC, READ);
-	struct request *rq_async_write = maple_expired_request(mdata, ASYNC, WRITE);
-
 	/* Reset (non-expired-)batch-counter */
 	mdata->batched = 0;
 
@@ -131,23 +130,17 @@ maple_choose_expired_request(struct maple_data *mdata)
 	 * Read requests have priority over write.
 	 */
 
-	if (rq_async_read && rq_sync_read) {
-		if (time_after(rq_sync_read->fifo_time, rq_async_read->fifo_time))
-			return rq_async_read;
+	if (likely(mdata->sync == ASYNC)) {
+		if (mdata->data_dir == READ)
+			return maple_expired_request(mdata, ASYNC, READ);
+		else
+			return maple_expired_request(mdata, ASYNC, WRITE);
+	} else {
+		if (mdata->data_dir == READ)
+			return maple_expired_request(mdata, SYNC, READ);
+		else
+			return maple_expired_request(mdata, SYNC, WRITE);
 	}
-	else if (rq_async_read)
-		return rq_async_read;
-	else if (rq_sync_read)
-		return rq_sync_read;
-
-	if (rq_async_write && rq_sync_write) {
-		if (time_after(rq_sync_write->fifo_time, rq_async_write->fifo_time))
-			return rq_async_write;
-	}
-	else if (rq_async_write)
-		return rq_async_write;
-	else if (rq_sync_write)
-		return rq_sync_write;
 
 	return NULL;
 }
@@ -160,7 +153,6 @@ maple_choose_request(struct maple_data *mdata, int data_dir)
 
 	/* Increase (non-expired-)batch-counter */
 	mdata->batched++;
-
 
 	/*
 	 * Retrieve request from available fifo list.

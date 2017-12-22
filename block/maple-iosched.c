@@ -169,12 +169,12 @@ maple_choose_request(struct maple_data *mdata, int data_dir)
 	 */
 	if (!list_empty(&async[data_dir]))
 		return rq_entry_fifo(async[data_dir].next);
-	if (!list_empty(&sync[data_dir]))
+	else if (!list_empty(&sync[data_dir]))
 		return rq_entry_fifo(sync[data_dir].next);
 
 	if (!list_empty(&async[!data_dir]))
 		return rq_entry_fifo(async[!data_dir].next);
-	if (!list_empty(&sync[!data_dir]))
+	else if (!list_empty(&sync[!data_dir]))
 		return rq_entry_fifo(sync[!data_dir].next);
 
 	return NULL;

@@ -24,11 +24,11 @@
 enum { ASYNC, SYNC };
 
 /* Tunables */
-static const int sync_read_expire = 350;	/* max time before a read sync is submitted. */
-static const int sync_write_expire = 550;	/* max time before a write sync is submitted. */
-static const int async_read_expire = 250;	/* ditto for read async, these limits are SOFT! */
-static const int async_write_expire = 450;	/* ditto for write async, these limits are SOFT! */
-static const int fifo_batch = 8;		/* # of sequential requests treated as one by the above parameters. */
+static const int sync_read_expire = HZ / 3;	/* max time before a read sync is submitted. */
+static const int sync_write_expire = 2 * HZ;	/* max time before a write sync is submitted. */
+static const int async_read_expire = HZ / 6;	/* ditto for read async, these limits are SOFT! */
+static const int async_write_expire = 4 * HZ;	/* ditto for write async, these limits are SOFT! */
+static const int fifo_batch = 4;		/* # of sequential requests treated as one by the above parameters. */
 static const int writes_starved = 4;		/* max times reads can starve a write */
 static const int sleep_latency_multiple = 10;	/* multple for expire time when device is asleep */
 

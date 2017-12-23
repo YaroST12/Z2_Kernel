@@ -129,15 +129,14 @@ maple_choose_expired_request(struct maple_data *mdata)
 	 * Asynchronous requests have priority over synchronous.
 	 * Read requests have priority over write.
 	 */
-
-	if (likely(mdata->sync == ASYNC)) {
-		if (mdata->data_dir == READ)
+	if (mdata->data_dir == READ) {
+		if (mdata->sync == ASYNC)
 			return maple_expired_request(mdata, ASYNC, READ);
 		else
-			return maple_expired_request(mdata, ASYNC, WRITE);
-	} else {
-		if (mdata->data_dir == READ)
 			return maple_expired_request(mdata, SYNC, READ);
+	} else {
+		if (mdata->sync == ASYNC)
+			return maple_expired_request(mdata, ASYNC, WRITE);
 		else
 			return maple_expired_request(mdata, SYNC, WRITE);
 	}

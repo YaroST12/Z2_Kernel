@@ -662,13 +662,6 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 		pr_warn("%s: failed to set SCHED_FIFO\n", __func__);
 		return ret;
 	}
-	if (policy->cpu == 0) {
-		sg_policy->FREQ_SHIFT = 2;
-		sg_policy->nr_threshold = 4;
-	} else {
-		sg_policy->FREQ_SHIFT = 4;
-		sg_policy->nr_threshold = 2;
-	}
 
 	sg_policy->thread = thread;
 	kthread_bind_mask(thread, policy->related_cpus);
@@ -811,6 +804,14 @@ static int sugov_init(struct cpufreq_policy *policy)
 	
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
+
+	if (policy->cpu == 0) {
+		sg_policy->FREQ_SHIFT = 2;
+		sg_policy->nr_threshold = 4;
+	} else {
+		sg_policy->FREQ_SHIFT = 4;
+		sg_policy->nr_threshold = 2;
+	}
 
 	ret = kobject_init_and_add(&tunables->attr_set.kobj, &sugov_tunables_ktype,
 				   get_governor_parent_kobj(policy), "%s",

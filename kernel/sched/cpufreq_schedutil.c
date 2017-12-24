@@ -58,7 +58,7 @@ struct sugov_policy {
 	unsigned int next_freq;
 	unsigned int cached_raw_freq;
 	unsigned int nr_threshold;
-	unsigned int freq_bump;
+	unsigned int FREQ_SHIFT;
 
 	/* The next fields are only needed if fast switch cannot be used. */
 	struct irq_work irq_work;
@@ -202,13 +202,13 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
 	unsigned int __read_mostly threshold = sg_policy->nr_threshold;
-	unsigned int __read_mostly freq_bump = sg_policy->freq_bump;
+	unsigned int __read_mostly FREQ_SHIFT = sg_policy->FREQ_SHIFT;
 	/*
 	* We will have schedutil threads running on CPUs 0 and 2.
 	* So we will count running tasks on CPUs 0+(0+1) and 2+(2+1).
 	*/
 	if ((cpu_rq(policy->cpu)->nr_running + cpu_rq(policy->cpu + 1)->nr_running) < threshold)
-		freq = (freq + (freq >> freq_bump)) * util / max;
+		freq = (freq + (freq >> FREQ_SHIFT)) * util / max;
 	else
 		freq = freq * util / max;
 
@@ -663,10 +663,10 @@ static int sugov_kthread_create(struct sugov_policy *sg_policy)
 		return ret;
 	}
 	if (policy->cpu == 0) {
-		sg_policy->freq_bump = 2;
+		sg_policy->FREQ_SHIFT = 2;
 		sg_policy->nr_threshold = 4;
 	} else {
-		sg_policy->freq_bump = 4;
+		sg_policy->FREQ_SHIFT = 4;
 		sg_policy->nr_threshold = 2;
 	}
 

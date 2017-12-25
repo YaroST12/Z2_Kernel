@@ -58,7 +58,7 @@ static DEFINE_SPINLOCK(suspend_lock);
 
 #define TAG "msm_adreno_tz: "
 
-#if 1
+#if 0
 static unsigned int adrenoboost = 2;
 #endif
 
@@ -92,7 +92,7 @@ u64 suspend_time_ms(void)
 	return time_diff;
 }
 
-#if 1
+#if 0
 static ssize_t adrenoboost_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -163,7 +163,7 @@ static ssize_t suspend_time_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%llu\n", time_diff);
 }
 
-#if 1
+#if 0
 static DEVICE_ATTR(adrenoboost, 0644,
 		adrenoboost_show, adrenoboost_save);
 #endif
@@ -177,7 +177,7 @@ static DEVICE_ATTR(suspend_time, 0444,
 static const struct device_attribute *adreno_tz_attr_list[] = {
 		&dev_attr_gpu_load,
 		&dev_attr_suspend_time,
-#if 1
+#if 0
 		&dev_attr_adrenoboost,
 #endif
 		NULL
@@ -380,7 +380,7 @@ extern int adreno_idler(struct devfreq_dev_status stats, struct devfreq *devfreq
 		 unsigned long *freq);
 #endif
 
-#if 1
+#if 0
 
 // mapping gpu level calculated linear conservation half curve values into a
 // bell curve of conservation  (lower is higher freq level)
@@ -410,7 +410,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	int val, level = 0;
 	unsigned int scm_data[4];
 	int context_count = 0;
-#if 1
+#if 0
 	int last_level = priv->bin.last_level;
 //	int max_state_val = devfreq->profile->max_state - 1;
 #endif
@@ -437,7 +437,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 #endif
 
 	priv->bin.total_time += stats.total_time;
-#if 1
+#if 0
 	// scale busy time up based on adrenoboost parameter, only if MIN_BUSY exceeded...
 //	if ((unsigned int)(priv->bin.busy_time + stats.busy_time) >= MIN_BUSY && adrenoboost) {
 	if (adrenoboost) {
@@ -495,7 +495,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 		__secure_tz_update_entry3(scm_data, sizeof(scm_data),
 					&val, sizeof(val), priv);
 	}
-#if 1
+#if 0
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 #endif
@@ -504,7 +504,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * If the decision is to move to a different level, make sure the GPU
 	 * frequency changes.
 	 */
-#if 1
+#if 0
 	if (!adrenoboost && val) {
 		level += val;
 		level = max(level, 0);
@@ -627,7 +627,7 @@ static int tz_start(struct devfreq *devfreq)
 	for (i = 0; adreno_tz_attr_list[i] != NULL; i++)
 		device_create_file(&devfreq->dev, adreno_tz_attr_list[i]);
 
-#if 1
+#if 0
 	priv->bin.last_level = devfreq->profile->max_state - 1;
 #endif
 

@@ -807,9 +807,9 @@ static int sugov_init(struct cpufreq_policy *policy)
 
 	if (policy->cpu == 0) {
 		sg_policy->FREQ_SHIFT = 2;
-		sg_policy->nr_threshold = 4;
+		sg_policy->nr_threshold = 3;
 	} else {
-		sg_policy->FREQ_SHIFT = 4;
+		sg_policy->FREQ_SHIFT = 3;
 		sg_policy->nr_threshold = 2;
 	}
 

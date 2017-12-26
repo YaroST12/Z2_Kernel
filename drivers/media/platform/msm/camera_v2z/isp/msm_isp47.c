@@ -1618,6 +1618,10 @@ static void msm_vfe47_cfg_axi_ub_equal_default(
 			total_image_size += axi_data->wm_image_size[i];
 		}
 	}
+	if (!total_image_size) {
+		pr_err("%s: Error total_image_size is 0\n", __func__);
+		return;
+	}
 	if (vfe_dev->pdev->id == ISP_VFE0) {
 		prop_size = MSM_ISP47_TOTAL_IMAGE_UB_VFE0 -
 		axi_data->hw_info->min_wm_ub * num_used_wms;
@@ -1628,18 +1632,18 @@ static void msm_vfe47_cfg_axi_ub_equal_default(
 		pr_err("%s: incorrect VFE device\n", __func__);
 	}
 	for (i = 0; i < axi_data->hw_info->num_wm; i++) {
-		if (axi_data->free_wm[i]) {
-			delta = (uint64_t)axi_data->wm_image_size[i] *
-					(uint64_t)prop_size;
-			do_div(delta, total_image_size);
-			wm_ub_size = axi_data->hw_info->min_wm_ub +
-					(uint32_t)delta;
-			msm_camera_io_w(ub_offset << 16 | (wm_ub_size - 1),
+		if (!axi_data->free_wm[i]) {
+						msm_camera_io_w(0,
 				vfe_dev->vfe_base + VFE47_WM_BASE(i) + 0x18);
-			ub_offset += wm_ub_size;
-		} else
-			msm_camera_io_w(0,
-				vfe_dev->vfe_base + VFE47_WM_BASE(i) + 0x18);
+		}
+		delta = (uint64_t)axi_data->wm_image_size[i] *
+				(uint64_t)prop_size;
+		do_div(delta, total_image_size);
+		wm_ub_size = axi_data->hw_info->min_wm_ub +
+				(uint32_t)delta;
+		msm_camera_io_w(ub_offset << 16 | (wm_ub_size - 1),
+			vfe_dev->vfe_base + VFE47_WM_BASE(i) + 0x18);
+		ub_offset += wm_ub_size;
 	}
 }
 

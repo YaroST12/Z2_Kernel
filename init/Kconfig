@@ -954,6 +954,20 @@ config NUMA_BALANCING
 
 	  This system will be inactive on UMA systems.
 
+config HUAWEI_BOOST_KILL
+	bool "Boost kill"
+	default n
+	help
+	  if set, the process to be killed will be move to fast cpu and its nice
+	  value will also set to -20.
+
+config HUAWEI_BOOST_SIGKILL_FREE
+	bool "Boost memory release for sigkilled procs"
+	default n
+	help
+	  if set, the process to be killed will release its memory before all
+	  threads are dead.
+
 menuconfig CGROUPS
 	boolean "Control Group support"
 	select KERNFS

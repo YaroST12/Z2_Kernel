@@ -35,6 +35,10 @@ enum { sysctl_hung_task_timeout_secs = 0 };
 
 extern int sysctl_max_map_count;
 
+#ifdef CONFIG_HUAWEI_BOOST_KILL
+extern unsigned int sysctl_boost_killing;
+#endif
+
 extern unsigned int sysctl_sched_latency;
 extern unsigned int sysctl_sched_min_granularity;
 extern unsigned int sysctl_sched_wakeup_granularity;

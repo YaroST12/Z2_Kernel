@@ -643,7 +643,7 @@ KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 		-floop-interchange
 
 # F1xy optimizations
-KBUILD_CFLAGS	+= -O2 -march=armv8-a+crc+crypto \
+KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53+crc+crypto \
 		-pipe \
 		-fno-pic \
 		-fno-signed-zeros \

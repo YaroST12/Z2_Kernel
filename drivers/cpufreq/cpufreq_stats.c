@@ -607,20 +607,17 @@ static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 	struct cpufreq_frequency_table *table, *pos;
 	unsigned int cpu_num, cpu = policy->cpu;
 
-	if (val == CPUFREQ_UPDATE_POLICY_CPU) {
-		cpufreq_stats_update_policy_cpu(policy);
-		return 0;
-	} else if (val == CPUFREQ_REMOVE_POLICY) {
-		__cpufreq_stats_free_table(policy);
-		return 0;
-	}
-
 	table = cpufreq_frequency_get_table(cpu);
 	if (!table)
 		return 0;
 
 	cpufreq_for_each_valid_entry(pos, table)
 		count++;
+
+	if (val == CPUFREQ_UPDATE_POLICY_CPU) {
+		cpufreq_stats_update_policy_cpu(policy);
+		return 0;
+	}
 
 	if (!per_cpu(all_cpufreq_stats, cpu))
 		cpufreq_allstats_create(cpu, table, count);

@@ -632,42 +632,42 @@ EXPORT_SYMBOL(jiffies_to_timeval);
  */
 clock_t jiffies_to_clock_t(unsigned long x)
 {
-#if (TICK_NSEC % (NSEC_PER_SEC / USER_HZ)) == 0
-# if HZ < USER_HZ
-	return x * (USER_HZ / HZ);
+#if (TICK_NSEC % (NSEC_PER_SEC / 100)) == 0
+# if HZ < 100
+	return x * (100 / HZ);
 # else
-	return x / (HZ / USER_HZ);
+	return x / (HZ / 100);
 # endif
 #else
-	return div_u64((u64)x * TICK_NSEC, NSEC_PER_SEC / USER_HZ);
+	return div_u64((u64)x * TICK_NSEC, NSEC_PER_SEC / 100);
 #endif
 }
 EXPORT_SYMBOL(jiffies_to_clock_t);
 
 unsigned long clock_t_to_jiffies(unsigned long x)
 {
-#if (HZ % USER_HZ)==0
-	if (x >= ~0UL / (HZ / USER_HZ))
+#if (HZ % 100)==0
+	if (x >= ~0UL / (HZ / 100))
 		return ~0UL;
-	return x * (HZ / USER_HZ);
+	return x * (HZ / 100);
 #else
 	/* Don't worry about loss of precision here .. */
-	if (x >= ~0UL / HZ * USER_HZ)
+	if (x >= ~0UL / HZ * 100)
 		return ~0UL;
 
 	/* .. but do try to contain it here */
-	return div_u64((u64)x * HZ, USER_HZ);
+	return div_u64((u64)x * HZ, 100);
 #endif
 }
 EXPORT_SYMBOL(clock_t_to_jiffies);
 
 u64 jiffies_64_to_clock_t(u64 x)
 {
-#if (TICK_NSEC % (NSEC_PER_SEC / USER_HZ)) == 0
-# if HZ < USER_HZ
-	x = div_u64(x * USER_HZ, HZ);
-# elif HZ > USER_HZ
-	x = div_u64(x, HZ / USER_HZ);
+#if (TICK_NSEC % (NSEC_PER_SEC / 100)) == 0
+# if HZ < 100
+	x = div_u64(x * 100, HZ);
+# elif HZ > 100
+	x = div_u64(x, HZ / 100);
 # else
 	/* Nothing to do */
 # endif
@@ -677,7 +677,7 @@ u64 jiffies_64_to_clock_t(u64 x)
 	 * but even this doesn't overflow in hundreds of years
 	 * in 64 bits, so..
 	 */
-	x = div_u64(x * TICK_NSEC, (NSEC_PER_SEC / USER_HZ));
+	x = div_u64(x * TICK_NSEC, (NSEC_PER_SEC / 100));
 #endif
 	return x;
 }
@@ -685,17 +685,17 @@ EXPORT_SYMBOL(jiffies_64_to_clock_t);
 
 u64 nsec_to_clock_t(u64 x)
 {
-#if (NSEC_PER_SEC % USER_HZ) == 0
-	return div_u64(x, NSEC_PER_SEC / USER_HZ);
-#elif (USER_HZ % 512) == 0
-	return div_u64(x * USER_HZ / 512, NSEC_PER_SEC / 512);
+#if (NSEC_PER_SEC % 100) == 0
+	return div_u64(x, NSEC_PER_SEC / 100);
+#elif (100 % 512) == 0
+	return div_u64(x * 100 / 512, NSEC_PER_SEC / 512);
 #else
 	/*
-         * max relative error 5.7e-8 (1.8s per year) for USER_HZ <= 1024,
+         * max relative error 5.7e-8 (1.8s per year) for 100 <= 1024,
          * overflow after 64.99 years.
          * exact for HZ=60, 72, 90, 120, 144, 180, 300, 600, 900, ...
          */
-	return div_u64(x * 9, (9ull * NSEC_PER_SEC + (USER_HZ / 2)) / USER_HZ);
+	return div_u64(x * 9, (9ull * NSEC_PER_SEC + (100 / 2)) / 100);
 #endif
 }
 

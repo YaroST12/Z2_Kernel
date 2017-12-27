@@ -3796,7 +3796,3 @@ void ptlock_free(struct page *page)
 	kmem_cache_free(page_ptl_cachep, page->ptl);
 }
 #endif
-
-#ifdef CONFIG_HUAWEI_BOOST_SIGKILL_FREE
-#include "boost_sigkill_free.c"
-#endif

@@ -45,17 +45,6 @@
 #include <asm/cacheflush.h>
 #include "audit.h"	/* audit_signal_info() */
 
-#ifdef CONFIG_HUAWEI_KSTATE
-#include <linux/hw_kcollect.h>
-#endif
-
-#ifdef CONFIG_HUAWEI_BOOST_KILL
-/* Add apportunity to config enable/disable boost
- * killing action
- */
-unsigned int sysctl_boost_killing;
-#endif
-
 /*
  * SLAB caches for signal bits.
  */
@@ -997,12 +986,6 @@ static void complete_signal(int sig, struct task_struct *p, int group)
 			signal->group_stop_count = 0;
 			t = p;
 			do {
-#ifdef CONFIG_HUAWEI_BOOST_KILL
-				if (sysctl_boost_killing) {
-					if (can_nice(t, -20))
-						set_user_nice(t, -20);
-				}
-#endif
 				task_clear_jobctl_pending(t, JOBCTL_PENDING_MASK);
 				sigaddset(&t->pending.signal, SIGKILL);
 				signal_wake_up(t, 1);

@@ -1,4 +1,4 @@
-ccflags-y := -Os
+ccflags-y := -Os -fno-loop-block -fno-loop-interchange -fno-predictive-commoning
 ccflags-y += -Idrivers/media/platform/msm/camera_v2z
 ccflags-y += -Idrivers/media/platform/msm/camera_v2z/sensor/io
 ccflags-y += -Idrivers/media/platform/msm/camera_v2z/common/

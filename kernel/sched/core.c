@@ -1301,22 +1301,9 @@ static int migration_cpu_stop(void *data)
 	return 0;
 }
 
-static const struct cpumask *adjust_cpumask(const struct task_struct *p,
-	const struct cpumask *old_mask)
-{
-	static const unsigned long allowed_cpus = 0x3;
-
-	if (!(p->flags & PF_KTHREAD) || p->kthread_per_cpu)
-		return old_mask;
-
-	/* Force as many kthreads as possible to run on the little cluster */
-	return to_cpumask(&allowed_cpus);
-}
-
 void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 {
 	lockdep_assert_held(&p->pi_lock);
-	new_mask = adjust_cpumask(p, new_mask);
 
 	if (p->sched_class->set_cpus_allowed)
 		p->sched_class->set_cpus_allowed(p, new_mask);
@@ -1342,7 +1329,6 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	unsigned int dest_cpu;
 	int ret = 0;
 
-	new_mask = adjust_cpumask(p, new_mask);
 	rq = task_rq_lock(p, &flags);
 
 	/*
@@ -5153,6 +5139,7 @@ void init_idle(struct task_struct *idle, int cpu)
 }
 
 #ifdef CONFIG_SMP
+
 #ifdef CONFIG_NUMA_BALANCING
 /* Migrate current task p to target_cpu */
 int migrate_task_to(struct task_struct *p, int target_cpu)

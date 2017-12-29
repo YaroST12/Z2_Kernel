@@ -182,7 +182,7 @@ energy-costs {
 					812 1040
 				>;
 				idle-cost-data = <
-					10 10 0 0
+					2 2 2 0
 				>;
 			};
 			CPU_COST_1: core-cost1 {
@@ -214,7 +214,7 @@ energy-costs {
 					1024 1715
 				>;
 				idle-cost-data = <
-					10 10 0 0
+					2 2 2 0
 				>;
 			};
 			CLUSTER_COST_0: cluster-cost0 {
@@ -239,7 +239,7 @@ energy-costs {
 					812 62
 				>;
 				idle-cost-data = <
-					31 31 31 0
+					0 0 0 0
 				>;
 			};
 			CLUSTER_COST_1: cluster-cost1 {
@@ -271,7 +271,7 @@ energy-costs {
 					1024 96
 				>;
 				idle-cost-data = <
-					31 31 31 0
+					0 0 0 0
 				>;
 			};
 		};

@@ -9512,7 +9512,7 @@ static inline bool nohz_kick_needed(struct rq *rq)
 	if (unlikely(rq->idle_balance))
 		return false;
 
-       /*
+	/*
 	* We may be recently in ticked or tickless idle mode. At the first
 	* busy tick after returning from idle, we will update the busy stats.
 	*/
@@ -9529,8 +9529,9 @@ static inline bool nohz_kick_needed(struct rq *rq)
 	if (time_before(now, nohz.next_balance))
 		return false;
 
-	if (energy_aware())
-		return rq->nr_running >= 2 && cpu_overutilized(cpu);
+	if (rq->nr_running >= 2 &&
+	    (!energy_aware() || cpu_overutilized(cpu)))
+		return true;
 
 	/* Do idle load balance if there have misfit task */
 	if (energy_aware())

@@ -6188,20 +6188,6 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 				continue;
 
 			/*
-			 * Enforce energy_diff
-			 *
-			 * For non latency sensitive tasks, skip the task's
-			 * previous CPU.
-			 *
-			 * The goal here is to try hard to find another
-			 * possible candidate and use energy_diff to find out
-			 * if it's more energy efficient to move the task
-			 * there.
-			 */
-			if (i == prev_cpu)
-				continue;
-
-			/*
 			 * Case B) Non latency sensitive tasks on IDLE CPUs.
 			 *
 			 * Find an optimal backup IDLE CPU for non latency

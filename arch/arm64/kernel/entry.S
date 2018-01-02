@@ -193,6 +193,15 @@ alternative_endif
 
 	uaccess_ttbr0_enable x0
 
+	.if	\el == 0
+	/*
+	 * Enable errata workarounds only if returning to user. The only
+	 * workaround currently required for TTBR0_EL1 changes are for the
+	 * Cavium erratum 27456 (broadcast TLBI instructions may cause I-cache
+	 * corruption).
+	 */
+	bl	post_ttbr_update_workaround
+	.endif
 1:
 	.if	\el != 0
 	and	x22, x22, #~PSR_PAN_BIT		// ARMv8.0 CPUs do not understand this bit

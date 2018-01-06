@@ -2224,6 +2224,9 @@ static int i2c_msm_pm_clk_enable(struct i2c_msm_ctrl *ctrl)
 	return ret;
 }
 
+static void i2c_msm_pm_pinctrl_state(struct i2c_msm_ctrl *ctrl,
+				bool runtime_active);
+
 static int i2c_msm_pm_xfer_start(struct i2c_msm_ctrl *ctrl)
 {
 	int ret;

@@ -646,7 +646,8 @@ KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53+crc+crypto \
 		-pipe \
 		-fno-pic \
-		-fno-signed-zeros
+		-fno-signed-zeros \
+		-fpredictive-commoning
 
 # These flags need a special toolchain so split them off
 KBUILD_CFLAGS	+= $(call cc-option,-mlow-precision-recip-sqrt,) \

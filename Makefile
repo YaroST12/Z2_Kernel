@@ -297,8 +297,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -std=gnu89
-HOSTCXXFLAGS = -O3
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -std=gnu89
+HOSTCXXFLAGS = -O2
 
 ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
 HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter \
@@ -634,15 +634,20 @@ KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 ###########################
 
 # Strip linker
-LDFLAGS		+= --strip-debug -O3
+LDFLAGS		+= --strip-debug -O2
+
+# Optimization flags
+KBUILD_CFLAGS	+= -g0 -DNDEBUG \
+		-fivopts \
+		-floop-block \
+		-floop-interchange
 
 # F1xy optimizations
-KBUILD_CFLAGS	+= -O3 -mcpu=cortex-a53+crc+crypto \
-		-g0 -DNDEBUG \
+KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53+crc+crypto \
 		-pipe \
 		-fno-pic \
 		-fno-signed-zeros \
-		-fno-inline-functions
+		-fpredictive-commoning
 
 # These flags need a special toolchain so split them off
 KBUILD_CFLAGS	+= $(call cc-option,-mlow-precision-recip-sqrt,) \

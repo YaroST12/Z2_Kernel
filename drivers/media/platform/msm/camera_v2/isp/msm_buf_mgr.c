@@ -473,8 +473,7 @@ static int msm_isp_buf_unprepare(struct msm_isp_buf_mgr *buf_mgr,
 
 
 static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
-	uint32_t bufq_handle, uint32_t buf_index,
-	struct msm_isp_buffer **buf_info)
+	uint32_t bufq_handle, struct msm_isp_buffer **buf_info)
 {
 	int rc = -1;
 	unsigned long flags;
@@ -524,12 +523,8 @@ static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
 		}
 		break;
 	case MSM_ISP_BUFFER_SRC_HAL:
-		if (MSM_ISP_INVALID_BUF_INDEX == buf_index)
-			vb2_buf = buf_mgr->vb2_ops->get_buf(
-				bufq->session_id, bufq->stream_id);
-		else
-			vb2_buf = buf_mgr->vb2_ops->get_buf_by_idx(
-				bufq->session_id, bufq->stream_id,  buf_index);
+		vb2_buf = buf_mgr->vb2_ops->get_buf(
+			bufq->session_id, bufq->stream_id);
 		if (vb2_buf) {
 			if (vb2_buf->v4l2_buf.index < bufq->num_bufs) {
 				*buf_info = &bufq->bufs[vb2_buf
@@ -695,10 +690,7 @@ static int msm_isp_update_put_buf_cnt_unsafe(
 			bufq->stream_id, buf_info->state);
 			return -EFAULT;
 		}
-		if (buf_info->pingpong_bit != pingpong_bit) {
-			pr_err("%s: Pingpong bit mismatch\n", __func__);
-			return -EFAULT;
-		}
+		BUG_ON(buf_info->pingpong_bit != pingpong_bit);
 	}
 
 	if (bufq->buf_type != ISP_SHARE_BUF ||

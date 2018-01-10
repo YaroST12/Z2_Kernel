@@ -1689,13 +1689,13 @@ static int msm_venc_queue_setup(struct vb2_queue *q,
 		if (ctrl) {
 			extradata = v4l2_ctrl_g_ctrl(ctrl);
 			switch (extradata) {
-			case V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP:
-			case V4L2_MPEG_VIDC_EXTRADATA_DIGITAL_ZOOM:
-			case V4L2_MPEG_VIDC_EXTRADATA_ASPECT_RATIO:
-			case V4L2_MPEG_VIDC_EXTRADATA_YUV_STATS:
-			case V4L2_MPEG_VIDC_EXTRADATA_ROI_QP:
-			case V4L2_MPEG_VIDC_EXTRADATA_PQ_INFO:
-				*num_planes = *num_planes + 1;
+				case V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP:
+				case V4L2_MPEG_VIDC_EXTRADATA_DIGITAL_ZOOM:
+				case V4L2_MPEG_VIDC_EXTRADATA_ASPECT_RATIO:
+				case V4L2_MPEG_VIDC_EXTRADATA_YUV_STATS:
+				case V4L2_MPEG_VIDC_EXTRADATA_ROI_QP:
+				case V4L2_MPEG_VIDC_EXTRADATA_PQ_INFO:
+					*num_planes = *num_planes + 1;
 				break;
 			default:
 				break;

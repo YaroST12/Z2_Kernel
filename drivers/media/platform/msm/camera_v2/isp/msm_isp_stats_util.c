@@ -68,8 +68,7 @@ static int msm_isp_stats_cfg_ping_pong_address(struct vfe_device *vfe_dev,
 	pingpong_bit = (~(pingpong_status >> stats_pingpong_offset) & 0x1);
 
 	rc = vfe_dev->buf_mgr->ops->get_buf(vfe_dev->buf_mgr,
-			vfe_dev->pdev->id, bufq_handle,
-			MSM_ISP_INVALID_BUF_INDEX, &buf);
+			vfe_dev->pdev->id, bufq_handle, &buf);
 	if (rc == -EFAULT) {
 		msm_isp_halt_send_error(vfe_dev, ISP_EVENT_BUF_FATAL_ERROR);
 		return rc;
@@ -203,7 +202,7 @@ static int32_t msm_isp_stats_buf_divert(struct vfe_device *vfe_dev,
 	if (rc < 0) {
 		if (rc == -EFAULT)
 			msm_isp_halt_send_error(vfe_dev,
-					ISP_EVENT_PING_PONG_MISMATCH);
+					ISP_EVENT_BUF_FATAL_ERROR);
 		pr_err("stats_buf_divert: update put buf cnt fail\n");
 		return rc;
 	}
@@ -442,6 +441,10 @@ int msm_isp_request_stats_stream(struct vfe_device *vfe_dev, void *arg)
 		stream_info->framedrop_pattern = 0x1;
 	stream_info->framedrop_period = framedrop_period - 1;
 
+	if (!stream_info->composite_flag)
+		vfe_dev->hw_info->vfe_ops.stats_ops.
+			cfg_wm_irq_mask(vfe_dev, stream_info);
+
 	if (stream_info->init_stats_frame_drop == 0)
 		vfe_dev->hw_info->vfe_ops.stats_ops.cfg_wm_reg(vfe_dev,
 			stream_info);
@@ -478,6 +481,10 @@ int msm_isp_release_stats_stream(struct vfe_device *vfe_dev, void *arg)
 			stream_release_cmd->stream_handle;
 		rc = msm_isp_cfg_stats_stream(vfe_dev, &stream_cfg_cmd);
 	}
+
+	if (!stream_info->composite_flag)
+		vfe_dev->hw_info->vfe_ops.stats_ops.
+			clear_wm_irq_mask(vfe_dev, stream_info);
 
 	vfe_dev->hw_info->vfe_ops.stats_ops.clear_wm_reg(vfe_dev, stream_info);
 	memset(stream_info, 0, sizeof(struct msm_vfe_stats_stream));
@@ -714,9 +721,6 @@ static int msm_isp_start_stats_stream(struct vfe_device *vfe_dev,
 			pr_err("%s: No buffer for stream%d\n", __func__, idx);
 			return rc;
 		}
-		if (!stream_info->composite_flag)
-			vfe_dev->hw_info->vfe_ops.stats_ops.
-				cfg_wm_irq_mask(vfe_dev, stream_info);
 
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].active)
 			stream_info->state = STATS_START_PENDING;
@@ -789,10 +793,6 @@ static int msm_isp_stop_stats_stream(struct vfe_device *vfe_dev,
 				num_stats_comp_mask);
 			return -EINVAL;
 		}
-
-		if (!stream_info->composite_flag)
-			vfe_dev->hw_info->vfe_ops.stats_ops.
-				clear_wm_irq_mask(vfe_dev, stream_info);
 
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].active)
 			stream_info->state = STATS_STOP_PENDING;
@@ -893,23 +893,20 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 
 	/*validate request*/
 	for (i = 0; i < update_cmd->num_streams; i++) {
-		update_info = (struct msm_vfe_axi_stream_cfg_update_info *)
-				&update_cmd->update_info[i];
+		update_info = &update_cmd->update_info[i];
 		/*check array reference bounds*/
 		if (STATS_IDX(update_info->stream_handle)
 			>= vfe_dev->hw_info->stats_hw_info->num_stats_type) {
 			pr_err("%s: stats idx %d out of bound!", __func__,
-			STATS_IDX(update_info->stream_handle));
+				STATS_IDX(update_info->stream_handle));
 			return -EINVAL;
 		}
 	}
 
 	for (i = 0; i < update_cmd->num_streams; i++) {
-		update_info = (struct msm_vfe_axi_stream_cfg_update_info *)
-				&update_cmd->update_info[i];
+		update_info = &update_cmd->update_info[i];
 		stream_info = &stats_data->stream_info[
-			STATS_IDX(
-			update_info->stream_handle)];
+				STATS_IDX(update_info->stream_handle)];
 		if (stream_info->stream_handle !=
 			update_info->stream_handle) {
 			pr_err("%s: stats stream handle %x %x mismatch!\n",
@@ -923,8 +920,7 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 			uint32_t framedrop_period =
 				msm_isp_get_framedrop_period(
 				   update_info->skip_pattern);
-			if (update_info->skip_pattern ==
-				SKIP_ALL)
+			if (update_info->skip_pattern == SKIP_ALL)
 				stream_info->framedrop_pattern = 0x0;
 			else
 				stream_info->framedrop_pattern = 0x1;
@@ -935,8 +931,7 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 			break;
 		}
 		case UPDATE_STREAM_SW_FRAME_DROP: {
-			sw_skip_info =
-			&update_info->sw_skip_info;
+			sw_skip_info = &update_info->sw_skip_info;
 			if (!stream_info->sw_skip.stream_src_mask)
 				stream_info->sw_skip = *sw_skip_info;
 

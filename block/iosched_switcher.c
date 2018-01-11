@@ -50,6 +50,7 @@ static void change_elevator(struct req_queue_data *r, bool use_noop)
 	if (use_noop) {
 		strcpy(r->prev_e, q->elevator->type->elevator_name);
 		elevator_change(q, NOOP_IOSCHED);
+		pr_info("Noop I/O sched enabled\n");
 	} else {
 		elevator_change(q, r->prev_e);
 	}

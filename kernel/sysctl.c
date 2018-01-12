@@ -1193,6 +1193,7 @@ static struct ctl_table kern_table[] = {
 		.extra1		= &mmap_rnd_bits_min,
 		.extra2		= &mmap_rnd_bits_max,
 	},
+#endif
 #if defined(CONFIG_TREE_RCU) || defined(CONFIG_PREEMPT_RCU)
 	{
 		.procname	= "panic_on_rcu_stall",

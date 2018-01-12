@@ -1426,20 +1426,6 @@ cpu_has_rt_task(int cpu)
 #ifdef CONFIG_SMP
 static int find_lowest_rq(struct task_struct *task);
 
-static bool is_top_app_cpu(int cpu)
-{
-	bool boosted = (schedtune_cpu_boost(cpu) > 0);
-
-	return boosted;
-}
-
-static bool is_top_app(struct task_struct *cur)
-{
-	bool boosted = (schedtune_task_boost(cur) > 0);
-
-	return boosted;
-}
-
 /*
  * Return whether the task on the given cpu is currently non-preemptible
  * while handling a potentially long softint, or if the task is likely
@@ -1454,17 +1440,6 @@ task_may_not_preempt(struct task_struct *task, int cpu)
 	__u32 softirqs = per_cpu(active_softirqs, cpu) |
 			 __IRQ_STAT(cpu, __softirq_pending);
 	struct task_struct *cpu_ksoftirqd = per_cpu(ksoftirqd, cpu);
-	int task_pc = 0;
-
-	if (task) {
-		if (is_top_app(task))
-			return true;
-		task_pc = task_preempt_count(task);
-	}
-
-	if (is_top_app_cpu(cpu))
-		return true;
-
 	return ((softirqs & LONG_SOFTIRQ_MASK) &&
 		(task == cpu_ksoftirqd || is_idle_task(task) ||
 		 (task_thread_info(task)->preempt_count

@@ -931,6 +931,12 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 	 * ASID for TLB invalidation. Here, mb() is required because
 	 * both these registers are separated by more than 1KB. */
 	mb();
+	/* If requested, disable stall on this context bank */
+	if (priv->attributes & (1 << DOMAIN_ATTR_CB_STALL_DISABLE)) {
+		SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
+		SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
+	}
+
 	SET_TLBIASID(iommu_drvdata->cb_base, ctx_drvdata->num,
 					ctx_drvdata->asid);
 	__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
@@ -1841,6 +1847,10 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 		 * we don't need to do anything here.
 		 */
 		break;
+	case DOMAIN_ATTR_CB_STALL_DISABLE:
+		if (*((int *)data))
+			priv->attributes |= 1 << DOMAIN_ATTR_CB_STALL_DISABLE;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1892,6 +1902,10 @@ static int msm_iommu_domain_get_attr(struct iommu_domain *domain,
 	case DOMAIN_ATTR_DYNAMIC:
 		*((int *)data) = !!(priv->attributes
 					& (1 << DOMAIN_ATTR_DYNAMIC));
+		break;
+	case DOMAIN_ATTR_CB_STALL_DISABLE:
+		*((int *)data) = !!(priv->attributes
+			& (1 << DOMAIN_ATTR_CB_STALL_DISABLE));
 		break;
 	default:
 		return -EINVAL;

@@ -562,7 +562,6 @@ static int eeprom_init_config(struct msm_eeprom_ctrl_t *e_ctrl,
 	rc = eeprom_parse_memory_map(e_ctrl, memory_map_arr);
 	if (rc < 0) {
 		pr_err("%s::%d memory map parse failed\n", __func__, __LINE__);
-		goto free_mem;
 	}
 
 	rc = msm_camera_power_down(power_info, e_ctrl->eeprom_device_type,
@@ -570,7 +569,6 @@ static int eeprom_init_config(struct msm_eeprom_ctrl_t *e_ctrl,
 	if (rc < 0) {
 		pr_err("%s:%d Power down failed rc %d\n",
 			__func__, __LINE__, rc);
-		goto free_mem;
 	}
 
 free_mem:
@@ -871,6 +869,11 @@ static int msm_eeprom_i2c_remove(struct i2c_client *client)
 	e_ctrl = (struct msm_eeprom_ctrl_t *)v4l2_get_subdevdata(sd);
 	if (!e_ctrl) {
 		pr_err("%s: eeprom device is NULL\n", __func__);
+		return 0;
+	}
+
+	if (!e_ctrl->eboard_info) {
+		pr_err("%s: eboard_info is NULL\n", __func__);
 		return 0;
 	}
 
@@ -1249,6 +1252,11 @@ static int msm_eeprom_spi_remove(struct spi_device *sdev)
 		return 0;
 	}
 
+	if (!e_ctrl->eboard_info) {
+		pr_err("%s: eboard_info is NULL\n", __func__);
+		return 0;
+	}
+
 	kfree(e_ctrl->i2c_client.spi_client);
 	kfree(e_ctrl->cal_data.mapdata);
 	kfree(e_ctrl->cal_data.map);
@@ -1381,6 +1389,16 @@ static int eeprom_init_config32(struct msm_eeprom_ctrl_t *e_ctrl,
 
 	power_info = &(e_ctrl->eboard_info->power_info);
 
+	if ((power_setting_array32->size > MAX_POWER_CONFIG) ||
+		(power_setting_array32->size_down > MAX_POWER_CONFIG) ||
+		(!power_setting_array32->size) ||
+		(!power_setting_array32->size_down)) {
+		pr_err("%s:%d invalid power setting size=%d size_down=%d\n",
+			__func__, __LINE__, power_setting_array32->size,
+			power_setting_array32->size_down);
+		rc = -EINVAL;
+		goto free_mem;
+	}
 	msm_eeprom_copy_power_settings_compat(
 		power_setting_array,
 		power_setting_array32);
@@ -1394,20 +1412,6 @@ static int eeprom_init_config32(struct msm_eeprom_ctrl_t *e_ctrl,
 		power_setting_array->size;
 	power_info->power_down_setting_size =
 		power_setting_array->size_down;
-
-	if ((power_info->power_setting_size >
-		MAX_POWER_CONFIG) ||
-		(power_info->power_down_setting_size >
-		MAX_POWER_CONFIG) ||
-		(!power_info->power_down_setting_size) ||
-		(!power_info->power_setting_size)) {
-		rc = -EINVAL;
-		pr_err("%s:%d Invalid power setting size :%d, %d\n",
-			__func__, __LINE__,
-			power_info->power_setting_size,
-			power_info->power_down_setting_size);
-		goto free_mem;
-	}
 
 	if (e_ctrl->i2c_client.cci_client) {
 		e_ctrl->i2c_client.cci_client->i2c_freq_mode =
@@ -1753,6 +1757,11 @@ static int msm_eeprom_platform_remove(struct platform_device *pdev)
 	e_ctrl = (struct msm_eeprom_ctrl_t *)v4l2_get_subdevdata(sd);
 	if (!e_ctrl) {
 		pr_err("%s: eeprom device is NULL\n", __func__);
+		return 0;
+	}
+
+	if (!e_ctrl->eboard_info) {
+		pr_err("%s: eboard_info is NULL\n", __func__);
 		return 0;
 	}
 

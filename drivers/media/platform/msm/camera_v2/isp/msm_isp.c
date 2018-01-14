@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,6 +29,7 @@
 #include "msm_isp_axi_util.h"
 #include "msm_isp_stats_util.h"
 #include "msm_sd.h"
+#include "msm_isp48.h"
 #include "msm_isp47.h"
 #include "msm_isp46.h"
 #include "msm_isp44.h"
@@ -282,18 +283,18 @@ static int msm_isp_enable_debugfs(struct vfe_device *vfe_dev,
 
 	snprintf(dirname, sizeof(dirname), "msm_isp%d", vfe_dev->pdev->id);
 	debugfs_base = debugfs_create_dir(dirname, NULL);
-	if (!debugfs_base)
+	if (IS_ERR_OR_NULL(debugfs_base))
 		return -ENOMEM;
-	if (!debugfs_create_file("stats", S_IRUGO | S_IWUSR, debugfs_base,
-		vfe_dev, &vfe_debugfs_error))
-		return -ENOMEM;
-
-	if (!debugfs_create_file("bw_req_history", S_IRUGO | S_IWUSR,
-		debugfs_base, isp_req_hist, &bw_history_ops))
+	if (IS_ERR_OR_NULL(debugfs_create_file("stats", S_IRUGO | S_IWUSR, debugfs_base,
+		vfe_dev, &vfe_debugfs_error)))
 		return -ENOMEM;
 
-	if (!debugfs_create_file("ub_info", S_IRUGO | S_IWUSR,
-		debugfs_base, vfe_dev, &ub_info_ops))
+	if (IS_ERR_OR_NULL(debugfs_create_file("bw_req_history", S_IRUGO | S_IWUSR,
+		debugfs_base, isp_req_hist, &bw_history_ops)))
+		return -ENOMEM;
+
+	if (IS_ERR_OR_NULL(debugfs_create_file("ub_info", S_IRUGO | S_IWUSR,
+		debugfs_base, vfe_dev, &ub_info_ops)))
 		return -ENOMEM;
 
 	return 0;
@@ -329,6 +330,17 @@ void msm_isp_update_req_history(uint32_t client, uint64_t ab,
 			 % MAX_DEPTH_BW_REQ_HISTORY;
 	spin_unlock(&req_history_lock);
 }
+
+void msm_isp_update_last_overflow_ab_ib(struct vfe_device *vfe_dev)
+{
+	spin_lock(&req_history_lock);
+	vfe_dev->msm_isp_last_overflow_ab =
+	msm_isp_bw_request_history[msm_isp_bw_request_history_idx].total_ab;
+	vfe_dev->msm_isp_last_overflow_ib =
+	msm_isp_bw_request_history[msm_isp_bw_request_history_idx].total_ib;
+	spin_unlock(&req_history_lock);
+}
+
 
 #ifdef CONFIG_COMPAT
 static long msm_isp_dqevent(struct file *file, struct v4l2_fh *vfh, void *arg)
@@ -530,6 +542,7 @@ static int vfe_probe(struct platform_device *pdev)
 
 	memset(&vfe_common_data, 0, sizeof(vfe_common_data));
 	spin_lock_init(&vfe_common_data.common_dev_data_lock);
+	spin_lock_init(&vfe_common_data.common_dev_axi_lock);
 
 	of_property_read_u32(pdev->dev.of_node, "num_child", &num_hw_sd);
 
@@ -612,8 +625,7 @@ int vfe_hw_probe(struct platform_device *pdev)
 
 	vfe_dev->pdev = pdev;
 
-
-	rc = vfe_dev->hw_info->vfe_ops.core_ops.get_platform_data(vfe_dev);
+	rc = vfe_dev->hw_info->vfe_ops.platform_ops.get_platform_data(vfe_dev);
 	if (rc < 0) {
 		pr_err("%s: failed to get platform resources\n", __func__);
 		rc = -ENOMEM;

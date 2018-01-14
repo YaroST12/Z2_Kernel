@@ -112,15 +112,12 @@ struct msm_session {
 	struct mutex close_lock;
 };
 
-<<<<<<< HEAD
-=======
 static inline bool msm_is_daemon_present(void)
 {
 	return is_daemon_status;
 }
 
 void msm_pm_qos_update_request(int val);
->>>>>>> 30c760f... msm:camera: Enable/Disable camera daemon
 int msm_post_event(struct v4l2_event *event, int timeout);
 int  msm_create_session(unsigned int session, struct video_device *vdev);
 int msm_destroy_session(unsigned int session_id);

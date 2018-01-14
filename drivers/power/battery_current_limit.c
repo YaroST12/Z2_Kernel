@@ -183,6 +183,7 @@ struct bcl_context {
 	struct bcl_threshold vbat_high_thresh;
 	struct bcl_threshold vbat_low_thresh;
 	uint32_t bcl_p_freq_max;
+	struct workqueue_struct *bcl_hotplug_wq;
 	struct device_clnt_data *hotplug_handle;
 	struct device_clnt_data *cpufreq_handle[NR_CPUS];
 };
@@ -309,7 +310,7 @@ static void power_supply_callback(struct power_supply *psy)
 			? "trigger SoC mitigation"
 			: "clear SoC mitigation");
 		if (bcl_hotplug_enabled)
-			queue_work(system_power_efficient_wq, &bcl_hotplug_work);
+			queue_work(gbcl->bcl_hotplug_wq, &bcl_hotplug_work);
 		update_cpu_freq();
 	}
 }
@@ -430,7 +431,7 @@ static void bcl_ibat_notify(enum bcl_threshold_state thresh_type)
 {
 	bcl_ibat_state = thresh_type;
 	if (bcl_hotplug_enabled)
-		queue_work(system_power_efficient_wq, &bcl_hotplug_work);
+		queue_work(gbcl->bcl_hotplug_wq, &bcl_hotplug_work);
 	update_cpu_freq();
 }
 
@@ -438,7 +439,7 @@ static void bcl_vph_notify(enum bcl_threshold_state thresh_type)
 {
 	bcl_vph_state = thresh_type;
 	if (bcl_hotplug_enabled)
-		queue_work(system_power_efficient_wq, &bcl_hotplug_work);
+		queue_work(gbcl->bcl_hotplug_wq, &bcl_hotplug_work);
 	update_cpu_freq();
 }
 
@@ -1728,6 +1729,11 @@ static int bcl_probe(struct platform_device *pdev)
 	bcl_psy.set_property     = bcl_battery_set_property;
 	bcl_psy.num_properties = 0;
 	bcl_psy.external_power_changed = power_supply_callback;
+	bcl->bcl_hotplug_wq = alloc_workqueue("bcl_hotplug_wq",  WQ_HIGHPRI, 0);
+	if (!bcl->bcl_hotplug_wq) {
+		pr_err("Workqueue alloc failed\n");
+		return -ENOMEM;
+	}
 
 	/* Initialize mitigation KTM interface */
 	if (num_possible_cpus() > 1) {
@@ -1774,6 +1780,8 @@ static int bcl_remove(struct platform_device *pdev)
 			gbcl->cpufreq_handle[cpu]);
 	}
 	remove_bcl_sysfs(gbcl);
+	if (gbcl->bcl_hotplug_wq)
+		destroy_workqueue(gbcl->bcl_hotplug_wq);
 	platform_set_drvdata(pdev, NULL);
 	return 0;
 }

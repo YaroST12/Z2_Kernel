@@ -635,7 +635,7 @@ int32_t msm_fd_hw_set_dt_parms_by_name(struct msm_fd_device *fd,
 	pr_debug("%s:%d E\n", __func__, __LINE__);
 
 	if (!of_get_property(of_node, dt_prop_name, &dt_count)) {
-		pr_debug("%s: Error property does not exist\n", __func__);
+		pr_err("%s: Error property does not exist\n", __func__);
 		return -ENOENT;
 	}
 	if (dt_count % (sizeof(int32_t) * MSM_FD_REG_LAST_IDX)) {
@@ -965,7 +965,7 @@ void msm_fd_hw_put(struct msm_fd_device *fd)
  */
 static int msm_fd_hw_attach_iommu(struct msm_fd_device *fd)
 {
-	int ret = -EINVAL;
+	int ret;
 
 	mutex_lock(&fd->lock);
 

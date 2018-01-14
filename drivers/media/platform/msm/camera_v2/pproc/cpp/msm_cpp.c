@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -44,7 +44,7 @@
 
 #define ENABLE_CPP_LOW		0
 
-#define CPP_CMD_TIMEOUT_MS	120
+#define CPP_CMD_TIMEOUT_MS	300
 #define MSM_CPP_INVALID_OFFSET	0x00000000
 #define MSM_CPP_NOMINAL_CLOCK	266670000
 #define MSM_CPP_TURBO_CLOCK	320000000
@@ -1515,17 +1515,6 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 		goto end;
 	}
 
-	for (i = 0; i < queue_len; i++) {
-		processed_frame[i] = cpp_timer.data.processed_frame[i];
-		if (!processed_frame[i]) {
-			pr_warn("process frame null , queue len %d", queue_len);
-			msm_cpp_flush_queue_and_release_buffer(cpp_dev,
-				queue_len);
-			msm_cpp_set_micro_irq_mask(cpp_dev, 1, 0x8);
-			goto end;
-		}
-	}
-
 	atomic_set(&cpp_timer.used, 1);
 	pr_warn("Starting timer to fire in %d ms. (jiffies=%lu)\n",
 		CPP_CMD_TIMEOUT_MS, jiffies);
@@ -1533,6 +1522,9 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 		jiffies + msecs_to_jiffies(CPP_CMD_TIMEOUT_MS));
 
 	msm_cpp_set_micro_irq_mask(cpp_dev, 1, 0x8);
+
+	for (i = 0; i < MAX_CPP_PROCESSING_FRAME; i++)
+		processed_frame[i] = cpp_timer.data.processed_frame[i];
 
 	for (i = 0; i < queue_len; i++) {
 		pr_warn("Rescheduling for identity=0x%x, frame_id=%03d\n",
@@ -1852,8 +1844,6 @@ static int msm_cpp_check_buf_type(struct msm_buf_mngr_info *buff_mgr_info,
 			/* More or equal bufs as Input buffer */
 			num_output_bufs = new_frame->batch_info.batch_size;
 		}
-		if (num_output_bufs > MSM_OUTPUT_BUF_CNT)
-			return 0;
 		for (i = 0; i < num_output_bufs; i++) {
 			new_frame->output_buffer_info[i].index =
 				buff_mgr_info->user_buf.buf_idx[i];
@@ -2261,21 +2251,19 @@ static int msm_cpp_cfg_frame(struct cpp_device *cpp_dev,
 		return -EINVAL;
 	}
 
-	if (!new_frame->partial_frame_indicator) {
-		if (cpp_frame_msg[new_frame->msg_len - 1] !=
-			MSM_CPP_MSG_ID_TRAILER) {
-			pr_err("Invalid frame message\n");
-			return -EINVAL;
-		}
+	if (cpp_frame_msg[new_frame->msg_len - 1] !=
+		MSM_CPP_MSG_ID_TRAILER) {
+		pr_err("Invalid frame message\n");
+		return -EINVAL;
+	}
 
-		if ((stripe_base + new_frame->num_strips * stripe_size + 1) !=
-			new_frame->msg_len) {
-			pr_err("Invalid frame message,len=%d,expected=%d\n",
-				new_frame->msg_len,
-				(stripe_base +
-				new_frame->num_strips * stripe_size + 1));
-			return -EINVAL;
-		}
+	if ((stripe_base + new_frame->num_strips * stripe_size + 1) !=
+		new_frame->msg_len) {
+		pr_err("Invalid frame message,len=%d,expected=%d\n",
+			new_frame->msg_len,
+			(stripe_base +
+			new_frame->num_strips * stripe_size + 1));
+		return -EINVAL;
 	}
 
 	if (cpp_dev->iommu_state != CPP_IOMMU_STATE_ATTACHED) {
@@ -2896,7 +2884,8 @@ STREAM_BUFF_END:
 		uint32_t identity;
 		struct msm_cpp_buff_queue_info_t *buff_queue_info;
 		CPP_DBG("VIDIOC_MSM_CPP_DEQUEUE_STREAM_BUFF_INFO\n");
-		if (ioctl_ptr->len != sizeof(uint32_t)) {
+		if ((ioctl_ptr->len == 0) ||
+		    (ioctl_ptr->len > sizeof(uint32_t))) {
 			mutex_unlock(&cpp_dev->mutex);
 			return -EINVAL;
 		}
@@ -3467,7 +3456,6 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 	struct msm_cpp_frame_info32_t k32_frame_info;
 	struct msm_cpp_frame_info_t k64_frame_info;
 	uint32_t identity_k = 0;
-	bool is_copytouser_req = true;
 	void __user *up = (void __user *)arg;
 
 	if (sd == NULL) {
@@ -3601,8 +3589,9 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 				break;
 			}
 		}
-		if (copy_to_user((void __user *)kp_ioctl.ioctl_ptr,
-			&inst_info, sizeof(struct msm_cpp_frame_info32_t))) {
+		if (copy_to_user(
+				(void __user *)kp_ioctl.ioctl_ptr, &inst_info,
+				sizeof(struct msm_cpp_frame_info32_t))) {
 			mutex_unlock(&cpp_dev->mutex);
 			return -EFAULT;
 		}
@@ -3638,7 +3627,6 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 				  sizeof(struct msm_cpp_stream_buff_info_t);
 			}
 		}
-		is_copytouser_req = false;
 		if (cmd == VIDIOC_MSM_CPP_ENQUEUE_STREAM_BUFF_INFO32)
 			cmd = VIDIOC_MSM_CPP_ENQUEUE_STREAM_BUFF_INFO;
 		else if (cmd == VIDIOC_MSM_CPP_DELETE_STREAM_BUFF32)
@@ -3653,7 +3641,6 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		get_user(identity_k, identity_u);
 		kp_ioctl.ioctl_ptr = (void *)&identity_k;
 		kp_ioctl.len = sizeof(uint32_t);
-		is_copytouser_req = false;
 		cmd = VIDIOC_MSM_CPP_DEQUEUE_STREAM_BUFF_INFO;
 		break;
 	}
@@ -3712,7 +3699,6 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 					sizeof(struct msm_cpp_clock_settings_t);
 			}
 		}
-		is_copytouser_req = false;
 		cmd = VIDIOC_MSM_CPP_SET_CLOCK;
 		break;
 	}
@@ -3745,7 +3731,6 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 
 		kp_ioctl.ioctl_ptr = (void *)&k_queue_buf;
 		kp_ioctl.len = sizeof(struct msm_pproc_queue_buf_info);
-		is_copytouser_req = false;
 		cmd = VIDIOC_MSM_CPP_QUEUE_BUF;
 		break;
 	}
@@ -3770,8 +3755,6 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		k64_frame_info.frame_id = k32_frame_info.frame_id;
 
 		kp_ioctl.ioctl_ptr = (void *)&k64_frame_info;
-
-		is_copytouser_req = false;
 		cmd = VIDIOC_MSM_CPP_POP_STREAM_BUFFER;
 		break;
 	}
@@ -3825,16 +3808,13 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		break;
 	}
 
-	if (is_copytouser_req) {
-		up32_ioctl.id = kp_ioctl.id;
-		up32_ioctl.len = kp_ioctl.len;
-		up32_ioctl.trans_code = kp_ioctl.trans_code;
-		up32_ioctl.ioctl_ptr = ptr_to_compat(kp_ioctl.ioctl_ptr);
+	up32_ioctl.id = kp_ioctl.id;
+	up32_ioctl.len = kp_ioctl.len;
+	up32_ioctl.trans_code = kp_ioctl.trans_code;
+	up32_ioctl.ioctl_ptr = ptr_to_compat(kp_ioctl.ioctl_ptr);
 
-		if (copy_to_user((void __user *)up, &up32_ioctl,
-			sizeof(up32_ioctl)))
-			return -EFAULT;
-	}
+	if (copy_to_user((void __user *)up, &up32_ioctl, sizeof(up32_ioctl)))
+		return -EFAULT;
 
 	return rc;
 }

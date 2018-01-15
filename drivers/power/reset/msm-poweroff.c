@@ -291,8 +291,12 @@ static void msm_restart_prepare(const char *cmd)
 				strcmp(cmd, "userrequested")));
 	}
 
-	/* To preserve console-ramoops */
-	need_warm_reset = true;
+	if (cmd != NULL) {
+		if ((!strncmp(cmd, "bootloader", 10)) ||
+				(!strncmp(cmd, "recovery", 8)) ||
+					(in_panic))
+			need_warm_reset = true;
+	}
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
 	if (need_warm_reset) {
@@ -346,6 +350,8 @@ static void msm_restart_prepare(const char *cmd)
 			set_dload_mode(1);
 			in_panic = 1;
 		} else {
+			pr_notice("%s : cmd is %s, set to reboot mode\n", __func__, cmd);
+			qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
 			__raw_writel(0x77665501, restart_reason);
 		}
 	}

@@ -332,18 +332,11 @@ enum msm_vfe_axi_stream_cmd {
 	STOP_IMMEDIATELY,
 };
 
-enum msm_vfe_hw_state {
-	HW_STATE_NONE,
-	HW_STATE_SLEEP,
-	HW_STATE_AWAKE,
-};
-
 struct msm_vfe_axi_stream_cfg_cmd {
 	uint8_t num_streams;
 	uint32_t stream_handle[VFE_AXI_SRC_MAX];
 	enum msm_vfe_axi_stream_cmd cmd;
 	uint8_t sync_frame_id_src;
-	enum msm_vfe_hw_state hw_state;
 };
 
 enum msm_vfe_axi_stream_update_type {
@@ -1003,5 +996,13 @@ enum msm_isp_ioctl_cmd_code {
 		struct msm_vfe_axi_stream_cfg_cmd)
 
 #define VIDIOC_MSM_ISP_AHB_CLK_CFG \
-	_IOWR('V', MSM_ISP_AHB_CLK_CFG, struct msm_isp_ahb_clk_cfg)
+	_IOWR('V', BASE_VIDIOC_PRIVATE+25, struct msm_isp_ahb_clk_cfg)
+
+#define VIDIOC_MSM_ISP_FETCH_ENG_MULTI_PASS_START \
+	_IOWR('V', MSM_ISP_FETCH_ENG_MULTI_PASS_START, \
+		struct msm_vfe_fetch_eng_multi_pass_start)
+
+#define VIDIOC_MSM_ISP_MAP_BUF_START_MULTI_PASS_FE \
+	_IOWR('V', MSM_ISP_MAP_BUF_START_MULTI_PASS_FE, \
+		struct msm_vfe_fetch_eng_multi_pass_start)
 #endif /* __MSMB_ISP__ */

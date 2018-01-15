@@ -20,6 +20,8 @@
 #include "msm_isp_stats_util.h"
 #include "msm_camera_io_util.h"
 #include "cam_smmu_api.h"
+#define CREATE_TRACE_POINTS
+#include "trace/events/msm_cam.h"
 
 #define MAX_ISP_V4l2_EVENTS 100
 #define MAX_ISP_REG_LIST 100
@@ -374,13 +376,9 @@ static int msm_isp_start_fetch_engine_multi_pass(struct vfe_device *vfe_dev,
 		fe_cfg->frame_id;
 
 	if (fe_cfg->offline_pass == OFFLINE_SECOND_PASS) {
-		for (i = 0; i < VFE_AXI_SRC_MAX; i++) {
-			stream_info = &vfe_dev->axi_data.stream_info[i];
-			if (stream_info->stream_id == fe_cfg->output_stream_id)
-				break;
-		}
-
-		if (i == VFE_AXI_SRC_MAX) {
+		stream_info = &vfe_dev->axi_data.stream_info[
+			HANDLE_TO_IDX(fe_cfg->output_stream_id)];
+		if (!stream_info) {
 			pr_err("%s: Couldn't find streamid 0x%X\n", __func__,
 				fe_cfg->output_stream_id);
 			return -EINVAL;
@@ -444,9 +442,7 @@ static int msm_isp_cfg_pix(struct vfe_device *vfe_dev,
 	}
 
 	pix_cfg = &input_cfg->d.pix_cfg;
-	if ((pix_cfg->hvx_cmd > HVX_DISABLE) &&
-		(pix_cfg->hvx_cmd <= HVX_ROUND_TRIP))
-		vfe_dev->hvx_cmd = pix_cfg->hvx_cmd;
+	vfe_dev->hvx_cmd = pix_cfg->hvx_cmd;
 	vfe_dev->is_split = input_cfg->d.pix_cfg.is_split;
 
 	vfe_dev->axi_data.src_info[VFE_PIX_0].pixel_clock =
@@ -1828,6 +1824,8 @@ void msm_isp_process_overflow_irq(
 
 		ISP_DBG("%s: VFE%d Bus overflow detected: start recovery!\n",
 			__func__, vfe_dev->pdev->id);
+
+		trace_msm_cam_isp_overflow(vfe_dev, *irq_status0, *irq_status1);
 
 		/* maks off irq for current vfe */
 		atomic_cmpxchg(&vfe_dev->error_info.overflow_state,

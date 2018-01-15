@@ -47,7 +47,7 @@
 
 #define ISPIF_TIMEOUT_SLEEP_US                1000
 #define ISPIF_TIMEOUT_ALL_US               1000000
-#define ISPIF_SOF_DEBUG_COUNT                    5
+#define ISPIF_SOF_DEBUG_COUNT                    0
 
 #undef CDBG
 #ifdef CONFIG_MSMB_CAMERA_DEBUG
@@ -1670,7 +1670,7 @@ static long msm_ispif_subdev_fops_ioctl(struct file *file, unsigned int cmd,
 static int ispif_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct ispif_device *ispif = v4l2_get_subdevdata(sd);
-	int rc;
+	int rc = 0;
 
 	mutex_lock(&ispif->mutex);
 	if (0 == ispif->open_cnt) {

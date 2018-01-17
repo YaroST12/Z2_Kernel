@@ -81,9 +81,6 @@
 extern struct panel_effect_data lcd_data;
 struct msm_fb_data_type *mfd_priv;
 
-#define MDSS_BRIGHT_TO_BL_DIM(out, v) do {\
-			out = ((v) * (v) * 255  / 4095 + (v) * (255 - (v)) / 32);\
-			} while (0)
 bool backlight_dimmer = false;
 module_param(backlight_dimmer, bool, 0755);
 

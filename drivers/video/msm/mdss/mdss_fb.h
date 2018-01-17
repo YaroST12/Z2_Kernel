@@ -242,6 +242,9 @@ struct msm_mdp_interface {
 				do_div(out, 2 * max_bright);\
 				} while (0)
 
+#define MDSS_BRIGHT_TO_BL_DIM(out, v) do {\
+				out = ((v) * (v) * 255  / 4095 + (v) * (255 - (v)) / 32);\
+				} while (0)
 struct mdss_fb_file_info {
 	struct file *file;
 	struct list_head list;

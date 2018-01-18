@@ -266,6 +266,7 @@ int alloc_rt_sched_group(struct task_group *tg, struct task_group *parent)
 #ifdef CONFIG_SMP
 
 static void pull_rt_task(struct rq *);
+static DEFINE_PER_CPU(struct callback_head, rt_pull_head);
 
 static inline void queue_pull_task(struct rq *rq)
 {

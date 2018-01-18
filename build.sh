@@ -10,15 +10,15 @@ export TOOL_CHAIN_PATH="${HOME}/build/z2/aarch64-linaro-7.x/bin"
 export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
 export PATH=$PATH:${TOOL_CHAIN_PATH}
 export objdir="${kernel_dir}/../out"
+export builddir="${kernel_dir}/build"
 cd $kernel_dir
 compile() {
 	make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE} $CONFIG_FILE -j8
 	make O=$objdir -j8
 }
 ramdisk() {
-	cp ramdisk/init.qcom.power.rc ../build/ramdisk/
 	cd ${objdir}
-	cp arch/arm64/boot/Image.gz-dtb ../build/Image.gz-dtb
+	cp arch/arm64/boot/Image.gz-dtb $builddir/Image.gz-dtb
 }
 dtbuild(){
 	cd $kernel_dir

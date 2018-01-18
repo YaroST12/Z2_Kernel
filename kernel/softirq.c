@@ -253,8 +253,7 @@ asmlinkage __visible void __do_softirq(void)
 	 * delay handling the long-running softirq handlers by leaving
 	 * them for the ksoftirqd thread.
 	 */
-	if (current != __this_cpu_read(ksoftirqd) &&
-	    cpu_has_rt_task(smp_processor_id()))
+	if (current != __this_cpu_read(ksoftirqd))
 		pending_mask = LONG_SOFTIRQ_MASK;
 	else
 		pending_mask = 0;

@@ -8,7 +8,6 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/irq_work.h>
-#include <linux/hrtimer.h>
 
 #include "walt.h"
 #include "tune.h"
@@ -69,10 +68,6 @@ static void start_rt_bandwidth(struct rt_bandwidth *rt_b)
 	raw_spin_unlock(&rt_b->rt_runtime_lock);
 }
 
-#ifdef CONFIG_SMP
-static void push_irq_work_func(struct irq_work *work);
-#endif
-
 void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq)
 {
 	struct rt_prio_array *array;
@@ -92,14 +87,7 @@ void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq)
 	rt_rq->rt_nr_migratory = 0;
 	rt_rq->overloaded = 0;
 	plist_head_init(&rt_rq->pushable_tasks);
-
-#ifdef HAVE_RT_PUSH_IPI
-	rt_rq->push_flags = 0;
-	rt_rq->push_cpu = nr_cpu_ids;
-	raw_spin_lock_init(&rt_rq->push_lock);
-	init_irq_work(&rt_rq->push_work, push_irq_work_func);
 #endif
-#endif /* CONFIG_SMP */
 	/* We start is dequeued state, because no RT tasks are queued */
 	rt_rq->rt_queued = 0;
 
@@ -265,14 +253,7 @@ int alloc_rt_sched_group(struct task_group *tg, struct task_group *parent)
 
 #ifdef CONFIG_SMP
 
-static void pull_rt_task(struct rq *);
-static DEFINE_PER_CPU(struct callback_head, rt_pull_head);
-
-static inline void queue_pull_task(struct rq *rq)
-{
-	queue_balance_callback(rq, &per_cpu(rt_pull_head, rq->cpu),
-		pull_rt_task);
-}
+static int pull_rt_task(struct rq *this_rq);
 
 static inline bool need_pull_rt_task(struct rq *rq, struct task_struct *prev)
 {
@@ -1010,6 +991,9 @@ static void update_curr_rt(struct rq *rq)
 	if (unlikely((s64)delta_exec <= 0))
 		return;
 
+	/* Kick cpufreq (see the comment in kernel/sched/sched.h). */
+	cpufreq_update_this_cpu(rq, SCHED_CPUFREQ_RT);
+
 	schedstat_set(curr->se.statistics.exec_max,
 		      max(curr->se.statistics.exec_max, delta_exec));
 
@@ -1345,25 +1329,6 @@ static void dequeue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flags)
 }
 
 /*
- * Keep track of whether each cpu has an RT task that will
- * soon schedule on that core. The problem this is intended
- * to address is that we want to avoid entering a non-preemptible
- * softirq handler if we are about to schedule a real-time
- * task on that core. Ideally, we could just check whether
- * the RT runqueue on that core had a runnable task, but the
- * window between choosing to schedule a real-time task
- * on a core and actually enqueueing it on that run-queue
- * is large enough to lose races at an unacceptably high rate.
- *
- * This variable attempts to reduce that window by indicating
- * when we have decided to schedule an RT task on a core
- * but not yet enqueued it.
- * This variable is a heuristic only: it is not guaranteed
- * to be correct and may be updated without synchronization.
- */
-DEFINE_PER_CPU(bool, incoming_rt_task);
-
-/*
  * Adding/removing a task to/from a priority array:
  */
 static void
@@ -1379,8 +1344,6 @@ enqueue_task_rt(struct rq *rq, struct task_struct *p, int flags)
 
 	if (!task_current(rq, p) && p->nr_cpus_allowed > 1)
 		enqueue_pushable_task(rq, p);
-
-	*per_cpu_ptr(&incoming_rt_task, cpu_of(rq)) = false;
 
 	schedtune_enqueue_task(p, cpu_of(rq));
 }
@@ -1431,27 +1394,14 @@ static void yield_task_rt(struct rq *rq)
 	requeue_task_rt(rq, rq->curr, 0);
 }
 
-/*
- * Return whether the given cpu has (or will shortly have) an RT task
- * ready to run. NB: This is a heuristic and is subject to races.
- */
-bool
-cpu_has_rt_task(int cpu)
-{
-	struct rq *rq = cpu_rq(cpu);
-	return rq->rt.rt_nr_running > 0 || per_cpu(incoming_rt_task, cpu);
-}
-
 #ifdef CONFIG_SMP
 static int find_lowest_rq(struct task_struct *task);
 
 /*
  * Return whether the task on the given cpu is currently non-preemptible
  * while handling a potentially long softint, or if the task is likely
- * to block preemptions soon because (a) it is a ksoftirq thread that is
- * handling slow softints, (b) it is idle and therefore likely to start
- * processing the irq's immediately, (c) the cpu is currently handling
- * hard irq's and will soon move on to the softirq handler.
+ * to block preemptions soon because it is a ksoftirq thread that is
+ * handling slow softints.
  */
 bool
 task_may_not_preempt(struct task_struct *task, int cpu)
@@ -1460,19 +1410,20 @@ task_may_not_preempt(struct task_struct *task, int cpu)
 			 __IRQ_STAT(cpu, __softirq_pending);
 	struct task_struct *cpu_ksoftirqd = per_cpu(ksoftirqd, cpu);
 	return ((softirqs & LONG_SOFTIRQ_MASK) &&
-		(task == cpu_ksoftirqd || is_idle_task(task) ||
-		 (task_thread_info(task)->preempt_count
-		     & (HARDIRQ_MASK | SOFTIRQ_MASK))));
+		(task == cpu_ksoftirqd ||
+		 task_thread_info(task)->preempt_count & SOFTIRQ_MASK));
 }
 
 static int
-select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags)
+select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
+		  int sibling_count_hint)
 {
-	struct task_struct *curr, *tgt_task;
+	struct task_struct *curr;
 	struct rq *rq;
 	bool may_not_preempt;
-	int target;
-	int sync = flags & WF_SYNC;
+
+	if (p->nr_cpus_allowed == 1)
+		goto out;
 
 	/* For anything but wake ups, just return the task_cpu */
 	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
@@ -1483,28 +1434,50 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags)
 	rcu_read_lock();
 	curr = READ_ONCE(rq->curr); /* unlocked access */
 
+	/*
+	 * If the current task on @p's runqueue is a softirq task,
+	 * it may run without preemption for a time that is
+	 * ill-suited for a waiting RT task. Therefore, try to
+	 * wake this RT task on another runqueue.
+	 *
+	 * Also, if the current task on @p's runqueue is an RT task, then
+	 * try to see if we can wake this RT task up on another
+	 * runqueue. Otherwise simply start this RT task
+	 * on its current runqueue.
+	 *
+	 * We want to avoid overloading runqueues. If the woken
+	 * task is a higher priority, then it will stay on this CPU
+	 * and the lower prio task should be moved to another CPU.
+	 * Even though this will probably make the lower prio task
+	 * lose its cache, we do not want to bounce a higher task
+	 * around just because it gave up its CPU, perhaps for a
+	 * lock?
+	 *
+	 * For equal prio tasks, we just let the scheduler sort it out.
+	 *
+	 * Otherwise, just let it ride on the affined RQ and the
+	 * post-schedule router will push the preempted task away
+	 *
+	 * This test is optimistic, if we get it wrong the load-balancer
+	 * will have to sort it out.
+	 */
 	may_not_preempt = task_may_not_preempt(curr, cpu);
-	target = find_lowest_rq(p);
+	if (curr && (may_not_preempt ||
+		     (unlikely(rt_task(curr)) &&
+		      (curr->nr_cpus_allowed < 2 ||
+		       curr->prio <= p->prio)))) {
+		int target = find_lowest_rq(p);
 
-	/*
-	 * Check once for losing a race with the other core's irq handler.
-	 * This does not happen frequently, but it can avoid delaying
-	 * the execution of the RT task in those cases.
-	 */
-	if (target != -1) {
-		tgt_task = READ_ONCE(cpu_rq(target)->curr);
-		if (task_may_not_preempt(tgt_task, target))
-			target = find_lowest_rq(p);
+		/*
+		 * Possible race. Don't bother moving it if the
+		 * destination CPU is not running a lower priority task.
+		 */
+                if (target != -1 &&
+                    p->prio < cpu_rq(target)->rt.highest_prio.curr)
+			cpu = target;
 	}
-	/*
-	 * Possible race. Don't bother moving it if the
-	 * destination CPU is not running a lower priority task.
-	 */
-	if (target != -1 &&
-	    (may_not_preempt || p->prio < cpu_rq(target)->rt.highest_prio.curr))
-		cpu = target;
-	*per_cpu_ptr(&incoming_rt_task, cpu) = true;
 	rcu_read_unlock();
+
 out:
 	return cpu;
 }
@@ -1529,6 +1502,7 @@ static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
 	requeue_task_rt(rq, p, 1);
 	resched_curr(rq);
 }
+
 #endif /* CONFIG_SMP */
 
 /*
@@ -1928,192 +1902,20 @@ static void push_rt_tasks(struct rq *rq)
 		;
 }
 
-#ifdef HAVE_RT_PUSH_IPI
-/*
- * The search for the next cpu always starts at rq->cpu and ends
- * when we reach rq->cpu again. It will never return rq->cpu.
- * This returns the next cpu to check, or nr_cpu_ids if the loop
- * is complete.
- *
- * rq->rt.push_cpu holds the last cpu returned by this function,
- * or if this is the first instance, it must hold rq->cpu.
- */
-static int rto_next_cpu(struct rq *rq)
+static int pull_rt_task(struct rq *this_rq)
 {
-	int prev_cpu = rq->rt.push_cpu;
-	int cpu;
-
-	cpu = cpumask_next(prev_cpu, rq->rd->rto_mask);
-
-	/*
-	 * If the previous cpu is less than the rq's CPU, then it already
-	 * passed the end of the mask, and has started from the beginning.
-	 * We end if the next CPU is greater or equal to rq's CPU.
-	 */
-	if (prev_cpu < rq->cpu) {
-		if (cpu >= rq->cpu)
-			return nr_cpu_ids;
-
-	} else if (cpu >= nr_cpu_ids) {
-		/*
-		 * We passed the end of the mask, start at the beginning.
-		 * If the result is greater or equal to the rq's CPU, then
-		 * the loop is finished.
-		 */
-		cpu = cpumask_first(rq->rd->rto_mask);
-		if (cpu >= rq->cpu)
-			return nr_cpu_ids;
-	}
-	rq->rt.push_cpu = cpu;
-
-	/* Return cpu to let the caller know if the loop is finished or not */
-	return cpu;
-}
-
-static int find_next_push_cpu(struct rq *rq)
-{
-	struct rq *next_rq;
-	int cpu;
-
-	while (1) {
-		cpu = rto_next_cpu(rq);
-		if (cpu >= nr_cpu_ids)
-			break;
-		next_rq = cpu_rq(cpu);
-
-		/* Make sure the next rq can push to this rq */
-		if (next_rq->rt.highest_prio.next < rq->rt.highest_prio.curr)
-			break;
-	}
-
-	return cpu;
-}
-
-#define RT_PUSH_IPI_EXECUTING		1
-#define RT_PUSH_IPI_RESTART		2
-
-static void tell_cpu_to_push(struct rq *rq)
-{
-	int cpu;
-
-	if (rq->rt.push_flags & RT_PUSH_IPI_EXECUTING) {
-		raw_spin_lock(&rq->rt.push_lock);
-		/* Make sure it's still executing */
-		if (rq->rt.push_flags & RT_PUSH_IPI_EXECUTING) {
-			/*
-			 * Tell the IPI to restart the loop as things have
-			 * changed since it started.
-			 */
-			rq->rt.push_flags |= RT_PUSH_IPI_RESTART;
-			raw_spin_unlock(&rq->rt.push_lock);
-			return;
-		}
-		raw_spin_unlock(&rq->rt.push_lock);
-	}
-
-	/* When here, there's no IPI going around */
-
-	rq->rt.push_cpu = rq->cpu;
-	cpu = find_next_push_cpu(rq);
-	if (cpu >= nr_cpu_ids)
-		return;
-
-	rq->rt.push_flags = RT_PUSH_IPI_EXECUTING;
-
-	irq_work_queue_on(&rq->rt.push_work, cpu);
-}
-
-/* Called from hardirq context */
-static void try_to_push_tasks(void *arg)
-{
-	struct rt_rq *rt_rq = arg;
-	struct rq *rq, *src_rq;
-	int this_cpu;
-	int cpu;
-
-	this_cpu = rt_rq->push_cpu;
-
-	/* Paranoid check */
-	BUG_ON(this_cpu != smp_processor_id());
-
-	rq = cpu_rq(this_cpu);
-	src_rq = rq_of_rt_rq(rt_rq);
-
-again:
-	if (has_pushable_tasks(rq)) {
-		raw_spin_lock(&rq->lock);
-		push_rt_task(rq);
-		raw_spin_unlock(&rq->lock);
-	}
-
-	/* Pass the IPI to the next rt overloaded queue */
-	raw_spin_lock(&rt_rq->push_lock);
-	/*
-	 * If the source queue changed since the IPI went out,
-	 * we need to restart the search from that CPU again.
-	 */
-	if (rt_rq->push_flags & RT_PUSH_IPI_RESTART) {
-		rt_rq->push_flags &= ~RT_PUSH_IPI_RESTART;
-		rt_rq->push_cpu = src_rq->cpu;
-	}
-
-	cpu = find_next_push_cpu(src_rq);
-
-	if (cpu >= nr_cpu_ids)
-		rt_rq->push_flags &= ~RT_PUSH_IPI_EXECUTING;
-	raw_spin_unlock(&rt_rq->push_lock);
-
-	if (cpu >= nr_cpu_ids)
-		return;
-
-	/*
-	 * It is possible that a restart caused this CPU to be
-	 * chosen again. Don't bother with an IPI, just see if we
-	 * have more to push.
-	 */
-	if (unlikely(cpu == rq->cpu))
-		goto again;
-
-	/* Try the next RT overloaded CPU */
-	irq_work_queue_on(&rt_rq->push_work, cpu);
-}
-
-static void push_irq_work_func(struct irq_work *work)
-{
-	struct rt_rq *rt_rq = container_of(work, struct rt_rq, push_work);
-
-	try_to_push_tasks(rt_rq);
-}
-#endif /* HAVE_RT_PUSH_IPI */
-
-static void pull_rt_task(struct rq *this_rq)
-{
-	int this_cpu = this_rq->cpu, cpu;
-	bool resched = false;
+	int this_cpu = this_rq->cpu, ret = 0, cpu;
 	struct task_struct *p;
 	struct rq *src_rq;
-	int rt_overload_count = rt_overloaded(this_rq);
 
-	if (likely(!rt_overload_count))
-		return;
+	if (likely(!rt_overloaded(this_rq)))
+		return 0;
 
 	/*
 	 * Match the barrier from rt_set_overloaded; this guarantees that if we
 	 * see overloaded we must also see the rto_mask bit.
 	 */
 	smp_rmb();
-
-	/* If we are the only overloaded CPU do nothing */
-	if (rt_overload_count == 1 &&
-	    cpumask_test_cpu(this_rq->cpu, this_rq->rd->rto_mask))
-		return;
-
-#ifdef HAVE_RT_PUSH_IPI
-	if (sched_feat(RT_PUSH_IPI)) {
-		tell_cpu_to_push(this_rq);
-		return;
-	}
-#endif
 
 	for_each_cpu(cpu, this_rq->rd->rto_mask) {
 		if (this_cpu == cpu)
@@ -2164,7 +1966,7 @@ static void pull_rt_task(struct rq *this_rq)
 			if (p->prio < src_rq->curr->prio)
 				goto skip;
 
-			resched = true;
+			ret = 1;
 
 			deactivate_task(src_rq, p, 0);
 			p->on_rq = TASK_ON_RQ_MIGRATING;
@@ -2181,8 +1983,8 @@ static void pull_rt_task(struct rq *this_rq)
 skip:
 		double_unlock_balance(this_rq, src_rq);
 	}
-	if (resched)
-		resched_curr(this_rq);
+
+	return ret;
 }
 
 static void post_schedule_rt(struct rq *rq)
@@ -2283,7 +2085,8 @@ static void switched_from_rt(struct rq *rq, struct task_struct *p)
 	if (!task_on_rq_queued(p) || rq->rt.rt_nr_running)
 		return;
 
-	queue_pull_task(rq);
+	if (pull_rt_task(rq))
+		resched_curr(rq);
 }
 
 void __init init_sched_rt_class(void)
@@ -2342,7 +2145,7 @@ prio_changed_rt(struct rq *rq, struct task_struct *p, int oldprio)
 		 * may need to pull tasks to this runqueue.
 		 */
 		if (oldprio < p->prio)
-			queue_pull_task(rq);
+			pull_rt_task(rq);
 		/*
 		 * If there's a higher priority task waiting to run
 		 * then reschedule. Note, the above pull_rt_task

@@ -15,7 +15,7 @@ config IOSCHED_NOOP
 config IOSCHED_TEST
 	tristate "Test I/O scheduler"
 	depends on DEBUG_FS
-	default m
+	default n
 	---help---
 	  The test I/O scheduler is a duplicate of the noop scheduler with
 	  addition of test utlity.
@@ -25,7 +25,7 @@ config IOSCHED_TEST
 
 config IOSCHED_DEADLINE
 	tristate "Deadline I/O scheduler"
-	default y
+	default n
 	---help---
 	  The deadline I/O scheduler is simple and compact. It will provide
 	  CSCAN service with FIFO expiration of requests, switching to
@@ -56,7 +56,7 @@ config CFQ_GROUP_IOSCHED
 
 config IOSCHED_FIOPS
 	tristate "IOPS based I/O scheduler"
-	default y
+	default n
 	---help---
 	  This is an IOPS based I/O scheduler. It will try to distribute
           IOPS equally among all processes in the system. It's mainly for
@@ -85,7 +85,7 @@ config CGROUP_BFQIO
 
 config IOSCHED_TRIPNDROID
 	tristate "Tripndroid"
-	default y
+	default n
 	---help---
 	  The Trip N Droid scheduler
 
@@ -102,7 +102,7 @@ config IOSCHED_SWITCHER
 
 config IOSCHED_ZEN
 	tristate "Zen I/O scheduler"
-	default y
+	default n
 	---help---
 	  FCFS, dispatches are back-inserted, deadlines ensure fairness.
 	  Should work best with devices where there is no travel delay.
@@ -156,7 +156,7 @@ config DEFAULT_IOSCHED
 	default "bfq" if DEFAULT_BFQ
 	default "noop" if DEFAULT_NOOP
 	default "tripndroid" if DEFAULT_TRIPNDROID
-        default "zen" if DEFAULT_ZEN
+	default "zen" if DEFAULT_ZEN
 
 endmenu
 

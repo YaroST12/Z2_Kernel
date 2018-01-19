@@ -16,7 +16,11 @@ typedef void (elevator_merge_req_fn) (struct request_queue *, struct request *, 
 
 typedef void (elevator_merged_fn) (struct request_queue *, struct request *, int);
 
-typedef int (elevator_allow_merge_fn) (struct request_queue *, struct request *, struct bio *);
+typedef int (elevator_allow_bio_merge_fn) (struct request_queue *,
+					   struct request *, struct bio *);
+
+typedef int (elevator_allow_rq_merge_fn) (struct request_queue *,
+					  struct request *, struct request *);
 
 typedef void (elevator_bio_merged_fn) (struct request_queue *,
 						struct request *, struct bio *);
@@ -39,13 +43,15 @@ typedef void (elevator_deactivate_req_fn) (struct request_queue *, struct reques
 typedef int (elevator_init_fn) (struct request_queue *,
 				struct elevator_type *e);
 typedef void (elevator_exit_fn) (struct elevator_queue *);
+typedef void (elevator_registered_fn) (struct request_queue *);
 
 struct elevator_ops
 {
 	elevator_merge_fn *elevator_merge_fn;
 	elevator_merged_fn *elevator_merged_fn;
 	elevator_merge_req_fn *elevator_merge_req_fn;
-	elevator_allow_merge_fn *elevator_allow_merge_fn;
+	elevator_allow_bio_merge_fn *elevator_allow_bio_merge_fn;
+	elevator_allow_rq_merge_fn *elevator_allow_rq_merge_fn;
 	elevator_bio_merged_fn *elevator_bio_merged_fn;
 
 	elevator_dispatch_fn *elevator_dispatch_fn;
@@ -68,6 +74,7 @@ struct elevator_ops
 
 	elevator_init_fn *elevator_init_fn;
 	elevator_exit_fn *elevator_exit_fn;
+	elevator_registered_fn *elevator_registered_fn;
 };
 
 #define ELV_NAME_MAX	(16)
@@ -155,7 +162,7 @@ extern ssize_t elv_iosched_store(struct request_queue *, const char *, size_t);
 extern int elevator_init(struct request_queue *, char *);
 extern void elevator_exit(struct elevator_queue *);
 extern int elevator_change(struct request_queue *, const char *);
-extern bool elv_rq_merge_ok(struct request *, struct bio *);
+extern bool elv_bio_merge_ok(struct request *, struct bio *);
 extern struct elevator_queue *elevator_alloc(struct request_queue *,
 					struct elevator_type *);
 

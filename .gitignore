@@ -100,3 +100,4 @@ all.config
 
 # stuff
 /build
+/out

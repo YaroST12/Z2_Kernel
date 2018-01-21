@@ -174,6 +174,20 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 	}
 }
 
+static int count_threads(struct cpufreq_policy *policy)
+{
+	int cluster_running;
+#if CONFIG_NR_CPUS == 4
+	cluster_running = (cpu_rq(policy->cpu)->nr_running +
+				cpu_rq(policy->cpu + 1)->nr_running);
+#else
+	cluster_running = (cpu_rq(policy->cpu)->nr_running +
+			cpu_rq(policy->cpu + 1)->nr_running +
+			cpu_rq(policy->cpu + 2)->nr_running +
+			cpu_rq(policy->cpu + 3)->nr_running);
+#endif
+	return cluster_running;
+}
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.
  * @sg_policy: schedutil policy object to compute the new frequency for.
@@ -202,17 +216,15 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	unsigned int __read_mostly threshold = sg_policy->nr_threshold;
-	unsigned int __read_mostly FREQ_SHIFT = sg_policy->FREQ_SHIFT;
-	/*
-	* We will have schedutil threads running on CPUs 0 and 2.
-	* So we will count running tasks on CPUs 0+(0+1) and 2+(2+1).
-	*/
-	if ((cpu_rq(policy->cpu)->nr_running + cpu_rq(policy->cpu + 1)->nr_running) < threshold)
+	int __read_mostly threshold = sg_policy->nr_threshold;
+	int __read_mostly FREQ_SHIFT = sg_policy->FREQ_SHIFT;
+	int __read_mostly threads = count_threads(policy);
+
+	if (threads < threshold)
 		freq = (freq + (freq >> FREQ_SHIFT)) * util / max;
 	else
 		freq = freq * util / max;
-
+	pr_info_ratelimited("CORE:%i, THREADS:%i", policy->cpu, count_threads(policy));
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
 	sg_policy->cached_raw_freq = freq;

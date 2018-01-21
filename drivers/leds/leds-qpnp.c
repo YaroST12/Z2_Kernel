@@ -1794,8 +1794,6 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 		if (!rc)
 			led->rgb_cfg->pwm_cfg->pwm_enabled = 1;
 	} else {
-		//led->rgb_cfg->pwm_cfg->mode =
-		//	led->rgb_cfg->pwm_cfg->default_mode;
 		pwm_disable(led->rgb_cfg->pwm_cfg->pwm_dev);
 		led->rgb_cfg->pwm_cfg->pwm_enabled = 0;
 		rc = qpnp_led_masked_write(led,
@@ -1808,7 +1806,6 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 		}
 	}
 
-	//led->rgb_cfg->pwm_cfg->blinking = false;
 	qpnp_dump_regs(led, rgb_pwm_debug_regs, ARRAY_SIZE(rgb_pwm_debug_regs));
 
 	return 0;
@@ -3819,46 +3816,6 @@ static ssize_t led_blink_show(struct device *dev,
 		container_of(led_cdev, struct qpnp_led_data,cdev);
 	return sprintf(buf, "%d\n", led_dat->led_blink);
 }
-
-#if 0
-static void show_param(struct pwm_config_data *pwm_cfg)
-{
-	int i;
-	printk("\t pwm_period_us=%d\n",pwm_cfg->pwm_period_us);
-	printk("\t mode=%d\n",pwm_cfg->mode);
-	printk("\t default_mode=%d\n",pwm_cfg->default_mode);
-	printk("\t pwm_enabled=%d\n",pwm_cfg->pwm_enabled);
-	printk("\t use_blink=%d\n",pwm_cfg->use_blink);
-	printk("\t blinking=%d\n",pwm_cfg->blinking);
-	printk("\t lut_params.start_idx=%d\n",pwm_cfg->lut_params.start_idx);
-	printk("\t lut_params.idx_len=%d\n",pwm_cfg->lut_params.idx_len);
-	printk("\t lut_params.lut_pause_hi=%d\n",pwm_cfg->lut_params.lut_pause_hi);
-	printk("\t lut_params.lut_pause_lo=%d\n",pwm_cfg->lut_params.lut_pause_lo);
-	printk("\t lut_params.ramp_step_ms=%d\n",pwm_cfg->lut_params.ramp_step_ms);
-	printk("\t lut_params.flags=%d\n",pwm_cfg->lut_params.flags);
-
-	printk("\t lut_params1.start_idx=%d\n",pwm_cfg->lut_params1.start_idx);
-	printk("\t lut_params1.idx_len=%d\n",pwm_cfg->lut_params1.idx_len);
-	printk("\t lut_params1.lut_pause_hi=%d\n",pwm_cfg->lut_params1.lut_pause_hi);
-	printk("\t lut_params1.lut_pause_lo=%d\n",pwm_cfg->lut_params1.lut_pause_lo);
-	printk("\t lut_params1.ramp_step_ms=%d\n",pwm_cfg->lut_params1.ramp_step_ms);
-	printk("\t lut_params1.flags=%d\n",pwm_cfg->lut_params1.flags);
-
-	printk("\t duty_cycles->num_duty_pcts=%d\n",pwm_cfg->duty_cycles->num_duty_pcts);
-	printk("\t duty_cycles->duty_pcts=");
-	for(i=0;i<pwm_cfg->duty_cycles->num_duty_pcts;i++)
-		printk(" %02x",pwm_cfg->duty_cycles->duty_pcts[i]);
-	printk("\n\t duty_cycles->duty_ms=%d\n",pwm_cfg->duty_cycles->duty_ms);
-	printk("\t duty_cycles->start_idx=%d\n",pwm_cfg->duty_cycles->start_idx);
-
-	printk("\t duty_cycles1->num_duty_pcts=%d\n",pwm_cfg->duty_cycles1->num_duty_pcts);
-	printk("\t duty_cycles1->duty_pcts=");
-	for(i=0;i<pwm_cfg->duty_cycles1->num_duty_pcts;i++)
-		printk(" %02x",pwm_cfg->duty_cycles1->duty_pcts[i]);
-	printk("\n\t duty_cycles1->duty_ms=%d\n",pwm_cfg->duty_cycles1->duty_ms);
-	printk("\t duty_cycles1->start_idx=%d\n",pwm_cfg->duty_cycles1->start_idx);
-}
-#endif
 
 static ssize_t led_blink_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)

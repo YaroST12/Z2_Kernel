@@ -21,7 +21,7 @@
 #include <linux/irq.h>
 #include <linux/workqueue.h>
 #include "gt9xx.h"
-
+#define KEY_FINGERPRINT 0x2ee
 #if GTP_ICS_SLOT_REPORT
     #include <linux/input/mt.h>
 #endif
@@ -664,8 +664,12 @@ static void goodix_ts_work_func(struct work_struct *work)
             else if (0xCC == doze_buf[2])
             {
                 GTP_INFO("Double click to light up the screen!");
-                doze_status = DOZE_WAKEUP;
+                doze_status = DOZE_WAKEUP; 
+                input_report_key(ts->input_dev, KEY_FINGERPRINT, 1);
+                input_sync(ts->input_dev);
                 input_report_key(ts->input_dev, KEY_GESTURE_DT, 1);
+                input_sync(ts->input_dev);
+                input_report_key(ts->input_dev, KEY_FINGERPRINT, 0);
                 input_sync(ts->input_dev);
                 input_report_key(ts->input_dev, KEY_GESTURE_DT, 0);
                 input_sync(ts->input_dev);
@@ -1881,6 +1885,7 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 
 #if GTP_GESTURE_WAKEUP
     input_set_capability(ts->input_dev, EV_KEY, KEY_GESTURE_DT);
+    input_set_capability(ts->input_dev, EV_KEY, KEY_FINGERPRINT);
 #endif 
 
 #if GTP_CHANGE_X2Y

@@ -25,7 +25,11 @@
 #include <linux/workqueue.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 #include <linux/string.h>
+#else
+#include <linux/delay.h>
+#endif
 
 #define WLED_MOD_EN_REG(base, n)	(base + 0x60 + n*0x10)
 #define WLED_IDAC_DLY_REG(base, n)	(WLED_MOD_EN_REG(base, n) + 0x01)
@@ -182,8 +186,12 @@
 #define RGB_LED_ENABLE_MASK		0xE0
 #define RGB_LED_SRC_MASK		0x03
 #define QPNP_LED_PWM_FLAGS	(PM_PWM_LUT_LOOP | PM_PWM_LUT_RAMP_UP)
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 #define QPNP_LUT_RAMP_STEP_DEFAULT      150
 #define QPNP_LUT_RAMP_STEP_DEFAULT1     150
+#else
+#define QPNP_LUT_RAMP_STEP_DEFAULT	255
+#endif
 #define	PWM_LUT_MAX_SIZE		63
 #define	PWM_GPLED_LUT_MAX_SIZE		31
 #define RGB_LED_DISABLE			0x00
@@ -356,11 +364,15 @@ static u8 gpio_debug_regs[] = {
  */
 struct pwm_config_data {
 	struct lut_params	lut_params;
-        struct lut_params       lut_params1;
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
+	struct lut_params       lut_params1;
+#endif
 	struct pwm_device	*pwm_dev;
 	u32			pwm_period_us;
 	struct pwm_duty_cycles	*duty_cycles;
-        struct pwm_duty_cycles  *duty_cycles1;
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
+	struct pwm_duty_cycles  *duty_cycles1;
+#endif
 	int	*old_duty_pcts;
 	u8	mode;
 	u8	default_mode;
@@ -557,8 +569,10 @@ struct qpnp_led_data {
 	bool			default_on;
 	bool                    in_order_command_processing;
 	int			turn_off_delay_ms;
-        int led_blink;
-        int led_breath;
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
+	int led_blink;
+	int led_breath;
+#endif
 };
 
 static DEFINE_MUTEX(flash_lock);
@@ -1764,17 +1778,19 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 			}
 		}
 
-                if (led->rgb_cfg->pwm_cfg->mode == LPG_MODE) {
-                        rc = pwm_lut_config(led->rgb_cfg->pwm_cfg->pwm_dev,
-                                PM_PWM_PERIOD_MIN, /* ignored by hardware */
-                                led->rgb_cfg->pwm_cfg->duty_cycles->duty_pcts,
-                                led->rgb_cfg->pwm_cfg->lut_params);
-                        if (rc < 0) {
-                                dev_err(&led->spmi_dev->dev, "Failed to " \
-                                        "configure pwm LUT\n");
-                                return rc;
-                        }
-                }
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
+		if (led->rgb_cfg->pwm_cfg->mode == LPG_MODE) {
+				rc = pwm_lut_config(led->rgb_cfg->pwm_cfg->pwm_dev,
+						PM_PWM_PERIOD_MIN, /* ignored by hardware */
+						led->rgb_cfg->pwm_cfg->duty_cycles->duty_pcts,
+						led->rgb_cfg->pwm_cfg->lut_params);
+				if (rc < 0) {
+						dev_err(&led->spmi_dev->dev, "Failed to " \
+								"configure pwm LUT\n");
+						return rc;
+				}
+		}
+#endif
 
 		rc = qpnp_led_masked_write(led,
 			RGB_LED_EN_CTL(led->base),
@@ -1794,6 +1810,10 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 		if (!rc)
 			led->rgb_cfg->pwm_cfg->pwm_enabled = 1;
 	} else {
+#ifndef CONFIG_MACH_ZUK_Z2_PLUS
+		led->rgb_cfg->pwm_cfg->mode =
+			led->rgb_cfg->pwm_cfg->default_mode;
+#endif
 		pwm_disable(led->rgb_cfg->pwm_cfg->pwm_dev);
 		led->rgb_cfg->pwm_cfg->pwm_enabled = 0;
 		rc = qpnp_led_masked_write(led,
@@ -1805,7 +1825,9 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 			return rc;
 		}
 	}
-
+#ifndef CONFIG_MACH_ZUK_Z2_PLUS
+	led->rgb_cfg->pwm_cfg->blinking = false;
+#endif
 	qpnp_dump_regs(led, rgb_pwm_debug_regs, ARRAY_SIZE(rgb_pwm_debug_regs));
 
 	return 0;
@@ -2158,7 +2180,10 @@ static int qpnp_pwm_init(struct pwm_config_data *pwm_cfg,
 					struct spmi_device *spmi_dev,
 					const char *name)
 {
-	int rc, start_idx, idx_len, lut_max_size;
+	int rc;
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
+	int start_idx, idx_len, lut_max_size;
+#endif
 
 	if (pwm_cfg->pwm_dev) {
 		if (pwm_cfg->mode == LPG_MODE) {
@@ -2967,6 +2992,7 @@ static int qpnp_rgb_init(struct qpnp_led_data *led)
 		return rc;
 	}
 
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 	start_idx = led->rgb_cfg->pwm_cfg->duty_cycles->start_idx;
 	idx_len = led->rgb_cfg->pwm_cfg->duty_cycles->num_duty_pcts;
 
@@ -2980,6 +3006,7 @@ static int qpnp_rgb_init(struct qpnp_led_data *led)
 				"Exceed LUT limit\n");
 		return -EINVAL;
 	}
+#endif
 
 	/* Initialize led for use in auto trickle charging mode */
 	rc = qpnp_led_masked_write(led, RGB_LED_ATC_CTL(led->base),
@@ -3439,7 +3466,9 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 	u32 val;
 	u8 *temp_cfg;
 	const char *led_label;
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 	u32 is_rgb=0;
+#endif
 
 	pwm_cfg->pwm_dev = of_pwm_get(node, NULL);
 
@@ -3450,6 +3479,7 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 		return rc;
 	}
 
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 	rc = of_property_read_string(node, "label", &led_label);
 	if (rc < 0) {
 		dev_err(&spmi_dev->dev,
@@ -3461,6 +3491,9 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 		is_rgb = 1;
 
 	if (pwm_cfg->mode != MANUAL_MODE || is_rgb) {
+#else
+	if (pwm_cfg->mode != MANUAL_MODE) {
+#endif
 		rc = of_property_read_u32(node, "qcom,pwm-us", &val);
 		if (!rc)
 			pwm_cfg->pwm_period_us = val;
@@ -3471,7 +3504,11 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 	pwm_cfg->use_blink =
 		of_property_read_bool(node, "qcom,use-blink");
 
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 	if (pwm_cfg->mode == LPG_MODE || pwm_cfg->use_blink || is_rgb) {
+#else
+	if (pwm_cfg->mode == LPG_MODE || pwm_cfg->use_blink) {
+#endif
 		pwm_cfg->duty_cycles =
 			devm_kzalloc(&spmi_dev->dev,
 			sizeof(struct pwm_duty_cycles), GFP_KERNEL);
@@ -3495,6 +3532,16 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 			rc =  -EINVAL;
 			goto bad_lpg_params;
 		}
+
+#ifndef CONFIG_MACH_ZUK_Z2_PLUS
+		rc = of_property_read_string(node, "label", &led_label);
+
+		if (rc < 0) {
+				dev_err(&spmi_dev->dev,
+						"Failure reading label, rc = %d\n", rc);
+				return rc;
+		}
+#endif
 
 		if (strcmp(led_label, "kpdbl") == 0)
 			lut_max_size = PWM_GPLED_LUT_MAX_SIZE;
@@ -3540,6 +3587,7 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 			pwm_cfg->duty_cycles->duty_pcts[i] =
 				(int) temp_cfg[i];
 
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 		if(is_rgb){
 			u8 *temp_cfg1;
 
@@ -3594,6 +3642,7 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 				pwm_cfg->duty_cycles1->duty_pcts[i] =
 					(int) temp_cfg1[i];
 		}
+#endif
 
 		rc = of_property_read_u32(node, "qcom,start-idx", &val);
 		if (!rc) {
@@ -3634,6 +3683,7 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 		pwm_cfg->lut_params.idx_len =
 			pwm_cfg->duty_cycles->num_duty_pcts;
 
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 		if(is_rgb){
 			rc = of_property_read_u32(node, "qcom,start-idx", &val);
 			if (!rc) {
@@ -3673,6 +3723,7 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 			pwm_cfg->lut_params1.idx_len =
 				pwm_cfg->duty_cycles1->num_duty_pcts;
 		}
+#endif
 	}
 	return 0;
 
@@ -3807,6 +3858,7 @@ static int qpnp_get_config_rgb(struct qpnp_led_data *led,
 	return 0;
 }
 
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 static ssize_t led_blink_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -3978,6 +4030,7 @@ static struct attribute *ledblink_attrs[] = {
 static const struct attribute_group ledblink_attr_group = {
         .attrs = ledblink_attrs,
 };
+#endif
 
 static int qpnp_get_config_mpp(struct qpnp_led_data *led,
 		struct device_node *node)
@@ -4362,10 +4415,35 @@ static int qpnp_leds_probe(struct spmi_device *spmi)
 		} else if ((led->id == QPNP_ID_RGB_RED) ||
 			(led->id == QPNP_ID_RGB_GREEN) ||
 			(led->id == QPNP_ID_RGB_BLUE)) {
-                        rc = sysfs_create_group(&led->cdev.dev->kobj,
-                                                        &ledblink_attr_group);
-                        if (rc)
-                                goto fail_id_check;
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
+			rc = sysfs_create_group(&led->cdev.dev->kobj,
+							&ledblink_attr_group);
+			if (rc)
+					goto fail_id_check;
+#else
+			if (led->rgb_cfg->pwm_cfg->mode == PWM_MODE) {
+				rc = sysfs_create_group(&led->cdev.dev->kobj,
+					&pwm_attr_group);
+				if (rc)
+					goto fail_id_check;		
+			}		
+			if (led->rgb_cfg->pwm_cfg->use_blink) {		
+				rc = sysfs_create_group(&led->cdev.dev->kobj,		
+					&blink_attr_group);		
+				if (rc)		
+					goto fail_id_check;
+
+				rc = sysfs_create_group(&led->cdev.dev->kobj,		
+					&lpg_attr_group);		
+				if (rc)		
+					goto fail_id_check;		
+			} else if (led->rgb_cfg->pwm_cfg->mode == LPG_MODE) {		
+				rc = sysfs_create_group(&led->cdev.dev->kobj,		
+					&lpg_attr_group);		
+				if (rc)		
+					goto fail_id_check;		
+			}
+#endif
 
 		} else if (led->id == QPNP_ID_KPDBL) {
 			if (led->kpdbl_cfg->pwm_cfg->mode == PWM_MODE) {
@@ -4451,8 +4529,23 @@ static int qpnp_leds_remove(struct spmi_device *spmi)
 		case QPNP_ID_RGB_RED:
 		case QPNP_ID_RGB_GREEN:
 		case QPNP_ID_RGB_BLUE:
-                        sysfs_remove_group(&led_array[i].cdev.dev->kobj,
-                                                        &ledblink_attr_group);
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
+			sysfs_remove_group(&led_array[i].cdev.dev->kobj,
+				&ledblink_attr_group);
+#else
+			if (led_array[i].rgb_cfg->pwm_cfg->mode == PWM_MODE)
+				sysfs_remove_group(&led_array[i].cdev.dev->\
+					kobj, &pwm_attr_group);
+			if (led_array[i].rgb_cfg->pwm_cfg->use_blink) {
+				sysfs_remove_group(&led_array[i].cdev.dev->\
+					kobj, &blink_attr_group);
+				sysfs_remove_group(&led_array[i].cdev.dev->\
+					kobj, &lpg_attr_group);
+			} else if (led_array[i].rgb_cfg->pwm_cfg->mode\
+					== LPG_MODE)
+				sysfs_remove_group(&led_array[i].cdev.dev->\
+					kobj, &lpg_attr_group);
+#endif
 			break;
 		case QPNP_ID_LED_MPP:
 			if (!led_array[i].mpp_cfg->pwm_cfg)

@@ -42,6 +42,8 @@ struct sugov_tunables {
 	unsigned int down_rate_limit_us;
 	bool iowait_boost_enable;
 	bool eval_busy_for_freq;
+	unsigned int nr_threshold;
+	unsigned int FREQ_SHIFT;
 };
 
 struct sugov_policy {
@@ -57,8 +59,6 @@ struct sugov_policy {
 	s64 down_rate_delay_ns;
 	unsigned int next_freq;
 	unsigned int cached_raw_freq;
-	unsigned int nr_threshold;
-	unsigned int FREQ_SHIFT;
 
 	/* The next fields are only needed if fast switch cannot be used. */
 	struct irq_work irq_work;
@@ -232,10 +232,11 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 				  unsigned long util, unsigned long max)
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
+	struct sugov_tunables *tunables = sg_policy->tunables;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	int __read_mostly threshold = sg_policy->nr_threshold;
-	int __read_mostly FREQ_SHIFT = sg_policy->FREQ_SHIFT;
+	int __read_mostly threshold = tunables->nr_threshold;
+	int __read_mostly FREQ_SHIFT = tunables->FREQ_SHIFT;
 	int __read_mostly threads = count_threads(policy);
 
 	if (threads < threshold)
@@ -560,6 +561,35 @@ static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+static ssize_t FREQ_SHIFT_store(struct gov_attr_set *attr_set,
+				      const char *buf, size_t count)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	struct sugov_policy *sg_policy;
+	unsigned int FREQ_SHIFT;
+
+	if (kstrtouint(buf, 10, &FREQ_SHIFT))
+		return -EINVAL;
+
+	tunables->FREQ_SHIFT = FREQ_SHIFT;
+
+	return count;
+}
+static ssize_t nr_threshold_store(struct gov_attr_set *attr_set,
+				      const char *buf, size_t count)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	struct sugov_policy *sg_policy;
+	unsigned int nr_threshold;
+
+	if (kstrtouint(buf, 10, &nr_threshold))
+		return -EINVAL;
+
+	tunables->nr_threshold = nr_threshold;
+
+	return count;
+}
+
 static ssize_t down_rate_limit_us_store(struct gov_attr_set *attr_set,
 					const char *buf, size_t count)
 {
@@ -596,6 +626,22 @@ static ssize_t eval_busy_for_freq_show(struct gov_attr_set *attr_set,
 	return sprintf(buf, "%u\n", tunables->eval_busy_for_freq);
 }
 
+static ssize_t FREQ_SHIFT_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->FREQ_SHIFT);
+}
+
+static ssize_t nr_threshold_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->nr_threshold);
+}
+
 static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
 					 const char *buf, size_t count)
 {
@@ -628,12 +674,16 @@ static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
+static struct governor_attr FREQ_SHIFT = __ATTR_RW(FREQ_SHIFT);
+static struct governor_attr nr_threshold = __ATTR_RW(nr_threshold);
 
 static struct attribute *sugov_attributes[] = {
 	&up_rate_limit_us.attr,
 	&down_rate_limit_us.attr,
 	&iowait_boost_enable.attr,
 	&eval_busy_for_freq.attr,
+	&FREQ_SHIFT.attr,
+	&nr_threshold.attr,
 	NULL
 };
 
@@ -836,14 +886,6 @@ static int sugov_init(struct cpufreq_policy *policy)
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
 
-	if (policy->cpu == 0) {
-		sg_policy->FREQ_SHIFT = 2;
-		sg_policy->nr_threshold = 4;
-	} else {
-		sg_policy->FREQ_SHIFT = 4;
-		sg_policy->nr_threshold = 2;
-	}
-
 	ret = kobject_init_and_add(&tunables->attr_set.kobj, &sugov_tunables_ktype,
 				   get_governor_parent_kobj(policy), "%s",
 				   cpufreq_gov_schedutil.name);
@@ -911,7 +953,13 @@ static int sugov_start(struct cpufreq_policy *policy)
 	sg_policy->work_in_progress = false;
 	sg_policy->need_freq_update = false;
 	sg_policy->cached_raw_freq = 0;
-
+	if (policy->cpu == 0) {
+		sg_policy->tunables->FREQ_SHIFT = 2;
+		sg_policy->tunables->nr_threshold = 6;
+	} else {
+		sg_policy->tunables->FREQ_SHIFT = 4;
+		sg_policy->tunables->nr_threshold = 3;
+	}
 	for_each_cpu(cpu, policy->cpus) {
 		struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, cpu);
 

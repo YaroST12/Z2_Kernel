@@ -178,15 +178,33 @@ static int count_threads(struct cpufreq_policy *policy)
 {
 	int cluster_running;
 #if CONFIG_NR_CPUS == 4
+	/* 2 same clusters, 2+2 */
 	cluster_running = (cpu_rq(policy->cpu)->nr_running +
 				cpu_rq(policy->cpu + 1)->nr_running);
-#else
+	return cluster_running;
+#endif
+#if CONFIG_NR_CPUS == 6
+	if (policy->cpu == 0) {
+		/* Little cluster, CPUs 0-3 */
+		cluster_running = (cpu_rq(policy->cpu)->nr_running +
+			cpu_rq(policy->cpu + 1)->nr_running +
+			cpu_rq(policy->cpu + 2)->nr_running +
+			cpu_rq(policy->cpu + 3)->nr_running);
+	} else {
+		/* Big cluster, CPUs 4-5 */
+		cluster_running = (cpu_rq(policy->cpu)->nr_running +
+			cpu_rq(policy->cpu + 1)->nr_running);
+	}
+	return cluster_running;
+#endif
+#if CONFIG_NR_CPUS == 8
+	/* 2 clusters, 4+4 */
 	cluster_running = (cpu_rq(policy->cpu)->nr_running +
 			cpu_rq(policy->cpu + 1)->nr_running +
 			cpu_rq(policy->cpu + 2)->nr_running +
 			cpu_rq(policy->cpu + 3)->nr_running);
-#endif
 	return cluster_running;
+#endif
 }
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.
@@ -224,7 +242,7 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 		freq = (freq + (freq >> FREQ_SHIFT)) * util / max;
 	else
 		freq = freq * util / max;
-	pr_info_ratelimited("CORE:%i, THREADS:%i", policy->cpu, count_threads(policy));
+
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
 	sg_policy->cached_raw_freq = freq;

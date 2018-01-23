@@ -24,21 +24,8 @@ ARM_ARCH_OPT	:= -mcpu=cortex-a53+crypto+crc \
 # If for some reason compiling with a toolchain that supports neither mcpu or
 # mtune (in which case, wtf?), don't tune at all (march can break assembly)
 KBUILD_CFLAGS	+= $(call cc-option,$(ARM_ARCH_OPT),)
-# Check for binutils support for specific extensions
-lseinstr := $(call as-instr,.arch_extension lse,-DCONFIG_AS_LSE=1)
 
-ifeq ($(CONFIG_ARM64_LSE_ATOMICS), y)
-  ifeq ($(lseinstr),)
-$(warning LSE atomics not supported by binutils)
-  endif
-endif
-
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mno-implicit-float
-else
 KBUILD_CFLAGS	+= -mgeneral-regs-only
-endif
-KBUILD_CFLAGS	+= $(lseinstr)
 KBUILD_CFLAGS	+= -fno-pic
 KBUILD_CFLAGS	+= $(call cc-option, -mpc-relative-literal-loads)
 

@@ -176,12 +176,11 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 
 static int count_threads(struct cpufreq_policy *policy)
 {
-	int cluster_running;
+	int cluster_running = 0;
 #if CONFIG_NR_CPUS == 4
 	/* 2 same clusters, 2+2 */
 	cluster_running = (cpu_rq(policy->cpu)->nr_running +
 				cpu_rq(policy->cpu + 1)->nr_running);
-	return cluster_running;
 #endif
 #if CONFIG_NR_CPUS == 6
 	if (policy->cpu == 0) {
@@ -195,7 +194,6 @@ static int count_threads(struct cpufreq_policy *policy)
 		cluster_running = (cpu_rq(policy->cpu)->nr_running +
 			cpu_rq(policy->cpu + 1)->nr_running);
 	}
-	return cluster_running;
 #endif
 #if CONFIG_NR_CPUS == 8
 	/* 2 clusters, 4+4 */
@@ -203,8 +201,8 @@ static int count_threads(struct cpufreq_policy *policy)
 			cpu_rq(policy->cpu + 1)->nr_running +
 			cpu_rq(policy->cpu + 2)->nr_running +
 			cpu_rq(policy->cpu + 3)->nr_running);
-	return cluster_running;
 #endif
+	return cluster_running;
 }
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.

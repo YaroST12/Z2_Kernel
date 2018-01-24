@@ -657,11 +657,15 @@ KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 # Strip linker
 LDFLAGS		+= --strip-debug -O2
 
+ifneq ($(cc-name),clang)
 # Optimization flags
 KBUILD_CFLAGS	+= -g0 -DNDEBUG \
 		-fivopts \
 		-floop-block \
 		-floop-interchange
+else
+KBUILD_CFLAGS	+= -g0 -DNDEBUG
+endif
 
 # F1xy optimizations
 KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53+crc+crypto \

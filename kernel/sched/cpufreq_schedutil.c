@@ -42,8 +42,6 @@ struct sugov_tunables {
 	unsigned int down_rate_limit_us;
 	bool iowait_boost_enable;
 	bool eval_busy_for_freq;
-	unsigned int nr_threshold;
-	unsigned int FREQ_SHIFT;
 };
 
 struct sugov_policy {
@@ -74,7 +72,6 @@ struct sugov_policy {
 struct sugov_cpu {
 	struct update_util_data update_util;
 	struct sugov_policy *sg_policy;
-	unsigned int cpu;
 
 	bool iowait_boost_pending;
 	unsigned long iowait_boost;
@@ -163,7 +160,7 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 
 	if (policy->fast_switch_enabled) {
 		next_freq = cpufreq_driver_fast_switch(policy, next_freq);
-		if (!next_freq)
+		if (next_freq == CPUFREQ_ENTRY_INVALID)
 			return;
 
 		policy->cur = next_freq;
@@ -174,36 +171,6 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 	}
 }
 
-static int count_threads(struct cpufreq_policy *policy)
-{
-	int cluster_running = 0;
-#if CONFIG_NR_CPUS == 4
-	/* 2 same clusters, 2+2 */
-	cluster_running = (cpu_rq(policy->cpu)->nr_running +
-				cpu_rq(policy->cpu + 1)->nr_running);
-#endif
-#if CONFIG_NR_CPUS == 6
-	if (policy->cpu == 0) {
-		/* Little cluster, CPUs 0-3 */
-		cluster_running = (cpu_rq(policy->cpu)->nr_running +
-			cpu_rq(policy->cpu + 1)->nr_running +
-			cpu_rq(policy->cpu + 2)->nr_running +
-			cpu_rq(policy->cpu + 3)->nr_running);
-	} else {
-		/* Big cluster, CPUs 4-5 */
-		cluster_running = (cpu_rq(policy->cpu)->nr_running +
-			cpu_rq(policy->cpu + 1)->nr_running);
-	}
-#endif
-#if CONFIG_NR_CPUS == 8
-	/* 2 clusters, 4+4 */
-	cluster_running = (cpu_rq(policy->cpu)->nr_running +
-			cpu_rq(policy->cpu + 1)->nr_running +
-			cpu_rq(policy->cpu + 2)->nr_running +
-			cpu_rq(policy->cpu + 3)->nr_running);
-#endif
-	return cluster_running;
-}
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.
  * @sg_policy: schedutil policy object to compute the new frequency for.
@@ -230,17 +197,10 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 				  unsigned long util, unsigned long max)
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
-	struct sugov_tunables *tunables = sg_policy->tunables;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	int __read_mostly threshold = tunables->nr_threshold;
-	int __read_mostly FREQ_SHIFT = tunables->FREQ_SHIFT;
-	int __read_mostly threads = count_threads(policy);
 
-	if (threads < threshold)
-		freq = (freq + (freq >> FREQ_SHIFT)) * util / max;
-	else
-		freq = freq * util / max;
+	freq = (freq + (freq >> 2)) * util / max;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
@@ -343,7 +303,7 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, unsigned long *util,
 #ifdef CONFIG_NO_HZ_COMMON
 static bool sugov_cpu_is_busy(struct sugov_cpu *sg_cpu)
 {
-	unsigned long idle_calls = tick_nohz_get_idle_calls_cpu(sg_cpu->cpu);
+	unsigned long idle_calls = tick_nohz_get_idle_calls();
 	bool ret = idle_calls == sg_cpu->saved_idle_calls;
 
 	sg_cpu->saved_idle_calls = idle_calls;
@@ -559,35 +519,6 @@ static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
-static ssize_t FREQ_SHIFT_store(struct gov_attr_set *attr_set,
-				      const char *buf, size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct sugov_policy *sg_policy;
-	unsigned int FREQ_SHIFT;
-
-	if (kstrtouint(buf, 10, &FREQ_SHIFT))
-		return -EINVAL;
-
-	tunables->FREQ_SHIFT = FREQ_SHIFT;
-
-	return count;
-}
-static ssize_t nr_threshold_store(struct gov_attr_set *attr_set,
-				      const char *buf, size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct sugov_policy *sg_policy;
-	unsigned int nr_threshold;
-
-	if (kstrtouint(buf, 10, &nr_threshold))
-		return -EINVAL;
-
-	tunables->nr_threshold = nr_threshold;
-
-	return count;
-}
-
 static ssize_t down_rate_limit_us_store(struct gov_attr_set *attr_set,
 					const char *buf, size_t count)
 {
@@ -624,22 +555,6 @@ static ssize_t eval_busy_for_freq_show(struct gov_attr_set *attr_set,
 	return sprintf(buf, "%u\n", tunables->eval_busy_for_freq);
 }
 
-static ssize_t FREQ_SHIFT_show(struct gov_attr_set *attr_set,
-					char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-
-	return sprintf(buf, "%u\n", tunables->FREQ_SHIFT);
-}
-
-static ssize_t nr_threshold_show(struct gov_attr_set *attr_set,
-					char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-
-	return sprintf(buf, "%u\n", tunables->nr_threshold);
-}
-
 static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
 					 const char *buf, size_t count)
 {
@@ -672,16 +587,12 @@ static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 static struct governor_attr eval_busy_for_freq = __ATTR_RW(eval_busy_for_freq);
-static struct governor_attr FREQ_SHIFT = __ATTR_RW(FREQ_SHIFT);
-static struct governor_attr nr_threshold = __ATTR_RW(nr_threshold);
 
 static struct attribute *sugov_attributes[] = {
 	&up_rate_limit_us.attr,
 	&down_rate_limit_us.attr,
 	&iowait_boost_enable.attr,
 	&eval_busy_for_freq.attr,
-	&FREQ_SHIFT.attr,
-	&nr_threshold.attr,
 	NULL
 };
 
@@ -830,7 +741,7 @@ initialize:
 		tunables->up_rate_limit_us *= lat;
 		tunables->down_rate_limit_us *= lat;
 	}
-	tunables->eval_busy_for_freq = false;
+	tunables->eval_busy_for_freq = true;
 	
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:
@@ -951,18 +862,11 @@ static int sugov_start(struct cpufreq_policy *policy)
 	sg_policy->work_in_progress = false;
 	sg_policy->need_freq_update = false;
 	sg_policy->cached_raw_freq = 0;
-	if (policy->cpu == 0) {
-		sg_policy->tunables->FREQ_SHIFT = 2;
-		sg_policy->tunables->nr_threshold = 6;
-	} else {
-		sg_policy->tunables->FREQ_SHIFT = 4;
-		sg_policy->tunables->nr_threshold = 3;
-	}
+
 	for_each_cpu(cpu, policy->cpus) {
 		struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, cpu);
 
 		memset(sg_cpu, 0, sizeof(*sg_cpu));
-		sg_cpu->cpu = cpu;
 		sg_cpu->sg_policy = sg_policy;
 		sg_cpu->flags = SCHED_CPUFREQ_DL;
 		sg_cpu->iowait_boost_max = policy->cpuinfo.max_freq;

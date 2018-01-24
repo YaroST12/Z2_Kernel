@@ -74,7 +74,6 @@ struct sugov_policy {
 struct sugov_cpu {
 	struct update_util_data update_util;
 	struct sugov_policy *sg_policy;
-	unsigned int cpu;
 
 	bool iowait_boost_pending;
 	unsigned long iowait_boost;
@@ -163,7 +162,7 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 
 	if (policy->fast_switch_enabled) {
 		next_freq = cpufreq_driver_fast_switch(policy, next_freq);
-		if (!next_freq)
+		if (next_freq == CPUFREQ_ENTRY_INVALID)
 			return;
 
 		policy->cur = next_freq;
@@ -202,16 +201,8 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
-	unsigned int __read_mostly threshold = sg_policy->nr_threshold;
-	unsigned int __read_mostly FREQ_SHIFT = sg_policy->FREQ_SHIFT;
-	/*
-	* We will have schedutil threads running on CPUs 0 and 2.
-	* So we will count running tasks on CPUs 0+(0+1) and 2+(2+1).
-	*/
-	if ((cpu_rq(policy->cpu)->nr_running + cpu_rq(policy->cpu + 1)->nr_running) < threshold)
-		freq = (freq + (freq >> FREQ_SHIFT)) * util / max;
-	else
-		freq = freq * util / max;
+
+	freq = (freq + (freq >> 2)) * util / max;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
@@ -314,7 +305,7 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, unsigned long *util,
 #ifdef CONFIG_NO_HZ_COMMON
 static bool sugov_cpu_is_busy(struct sugov_cpu *sg_cpu)
 {
-	unsigned long idle_calls = tick_nohz_get_idle_calls_cpu(sg_cpu->cpu);
+	unsigned long idle_calls = tick_nohz_get_idle_calls();
 	bool ret = idle_calls == sg_cpu->saved_idle_calls;
 
 	sg_cpu->saved_idle_calls = idle_calls;
@@ -752,7 +743,7 @@ initialize:
 		tunables->up_rate_limit_us *= lat;
 		tunables->down_rate_limit_us *= lat;
 	}
-	tunables->eval_busy_for_freq = false;
+	tunables->eval_busy_for_freq = true;
 	
 	pr_debug("tunables data initialized for cpu[%u]\n", cpu);
 out:
@@ -886,7 +877,6 @@ static int sugov_start(struct cpufreq_policy *policy)
 		struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, cpu);
 
 		memset(sg_cpu, 0, sizeof(*sg_cpu));
-		sg_cpu->cpu = cpu;
 		sg_cpu->sg_policy = sg_policy;
 		sg_cpu->flags = SCHED_CPUFREQ_DL;
 		sg_cpu->iowait_boost_max = policy->cpuinfo.max_freq;

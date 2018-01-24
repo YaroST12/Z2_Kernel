@@ -21,7 +21,7 @@ compile()
 {
 	PATH=${BIN_FOLDER}:${PATH} make O=$objdir -j8 \
 	CC="${CLANG_TCHAIN}" \
-	CLANG_TRIPLE=aarch64-linux-android- \
+	CLANG_TRIPLE=aarch64-linux-gnu- \
 	CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE} \
 	HOSTCC="${CLANG_TCHAIN}"
 }

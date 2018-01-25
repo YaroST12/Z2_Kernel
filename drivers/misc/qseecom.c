@@ -4354,9 +4354,9 @@ int qseecom_start_app(struct qseecom_handle **handle,
 		return -EINVAL;
 	}
 
-	if (strnlen(app_name, MAX_APP_NAME_SIZE) == MAX_APP_NAME_SIZE) {
+	if (strlen(app_name) >= MAX_APP_NAME_SIZE) {
 		pr_err("The app_name (%s) with length %zu is not valid\n",
-			app_name, strnlen(app_name, MAX_APP_NAME_SIZE));
+			app_name, strlen(app_name));
 		return -EINVAL;
 	}
 

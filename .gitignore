@@ -101,3 +101,4 @@ all.config
 # stuff
 /build
 /out
+/out_clang

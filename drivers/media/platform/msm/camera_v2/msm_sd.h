@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,6 +37,9 @@ struct msm_sd_close_ioctl {
 
 #define MSM_SD_NOTIFY_FREEZE \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 30, struct msm_sd_close_ioctl)
+
+#define MSM_SD_UNNOTIFY_FREEZE \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 31, struct msm_sd_close_ioctl)
 /*
  * This is used to install Sequence in msm_sd_register.
  * During msm_close, proper close sequence will be triggered.
@@ -69,6 +72,8 @@ struct msm_sd_req_vb2_q {
 	struct vb2_buffer * (*get_buf)(int session_id, unsigned int stream_id);
 	struct vb2_queue * (*get_vb2_queue)(int session_id,
 		unsigned int stream_id);
+	struct vb2_buffer * (*get_buf_by_idx)(int session_id,
+		unsigned int stream_id, uint32_t index);
 	int (*put_buf)(struct vb2_buffer *vb2_buf, int session_id,
 		unsigned int stream_id);
 	int (*buf_done)(struct vb2_buffer *vb2_buf, int session_id,
@@ -80,6 +85,9 @@ struct msm_sd_req_vb2_q {
 #define MSM_SD_NOTIFY_GET_SD 0x00000001
 #define MSM_SD_NOTIFY_PUT_SD 0x00000002
 #define MSM_SD_NOTIFY_REQ_CB 0x00000003
+
+#define MSM_CAM_GET_IOCTL_ARG_PTR(ptr, \
+	ioctl_ptr, len) memcpy(ptr, ioctl_ptr, len)
 
 int msm_sd_register(struct msm_sd_subdev *msm_subdev);
 int msm_sd_unregister(struct msm_sd_subdev *sd);

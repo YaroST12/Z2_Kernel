@@ -569,6 +569,11 @@ static void goodix_ts_work_func(struct work_struct *work)
 {
 	u8  end_cmd[3] = {GTP_READ_COOR_ADDR >> 8, GTP_READ_COOR_ADDR & 0xFF, 0};
 	u8  point_data[2 + 1 + 8 * GTP_MAX_TOUCH + 1]={GTP_READ_COOR_ADDR >> 8, GTP_READ_COOR_ADDR & 0xFF};
+#if GTP_GESTURE_WAKEUP
+	u8 doze_buf[3] = {0x81, 0x4B};
+	u8 type = ((doze_buf[2] & 0x0F) - 0x0A) + (((doze_buf[2] >> 4) & 0x0F) - 0x0A) * 2;
+	char *direction[4] = {"Right", "Down", "Up", "Left"};
+#endif
 	u8  touch_num = 0;
 	u8  finger = 0;
 	static u16 pre_touch = 0;
@@ -590,11 +595,6 @@ static void goodix_ts_work_func(struct work_struct *work)
 #if GTP_COMPATIBLE_MODE
 	u8 rqst_buf[3] = {0x80, 0x43};  // for GT9XXF
 #endif
-
-#if GTP_GESTURE_WAKEUP
-	u8 doze_buf[3] = {0x81, 0x4B};
-#endif
-
 	GTP_DEBUG_FUNC();
 	ts = container_of(work, struct goodix_ts_data, work);
 	if (ts->enter_update) {
@@ -604,71 +604,46 @@ static void goodix_ts_work_func(struct work_struct *work)
 	if (DOZE_DISABLED != doze_status) {		  
 		ret = gtp_i2c_read(i2c_connect_client, doze_buf, 3);
 		GTP_DEBUG("0x814B = 0x%02X", doze_buf[2]);
-		if (ret > 0)
-		{	 
-			if ((doze_buf[2] == 'a') || (doze_buf[2] == 'b') || (doze_buf[2] == 'c') ||
-				(doze_buf[2] == 'd') || (doze_buf[2] == 'e') || (doze_buf[2] == 'g') || 
-				(doze_buf[2] == 'h') || (doze_buf[2] == 'm') || (doze_buf[2] == 'o') ||
-				(doze_buf[2] == 'q') || (doze_buf[2] == 's') || (doze_buf[2] == 'v') || 
-				(doze_buf[2] == 'w') || (doze_buf[2] == 'y') || (doze_buf[2] == 'z') ||
-				(doze_buf[2] == 0x5E) /* ^ */
-				)
-			{
-				if (doze_buf[2] != 0x5E)
-				{
-					GTP_INFO("Wakeup by gesture(%c), light up the screen!", doze_buf[2]);
-				}
-				else
-				{
-					GTP_INFO("Wakeup by gesture(^), light up the screen!");
-				}
-				doze_status = DOZE_WAKEUP;
-				input_report_key(ts->input_dev, KEY_POWER, 1);
-				input_sync(ts->input_dev);
-				input_report_key(ts->input_dev, KEY_POWER, 0);
-				input_sync(ts->input_dev);
-				// clear 0x814B
-				doze_buf[2] = 0x00;
-				gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-			}
-			else if ( (doze_buf[2] == 0xAA) || (doze_buf[2] == 0xBB) ||
-				(doze_buf[2] == 0xAB) || (doze_buf[2] == 0xBA) )
-			{
-				char *direction[4] = {"Right", "Down", "Up", "Left"};
-				u8 type = ((doze_buf[2] & 0x0F) - 0x0A) + (((doze_buf[2] >> 4) & 0x0F) - 0x0A) * 2;
-				
-				GTP_INFO("%s slide to light up the screen!", direction[type]);
-				doze_status = DOZE_WAKEUP;
-				input_report_key(ts->input_dev, KEY_POWER, 1);
-				input_sync(ts->input_dev);
-				input_report_key(ts->input_dev, KEY_POWER, 0);
-				input_sync(ts->input_dev);
-				// clear 0x814B
-				doze_buf[2] = 0x00;
-				gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-			}
-			else if (0xCC == doze_buf[2])
-			{
-				GTP_INFO("Double click to light up the screen!");
-				doze_status = DOZE_WAKEUP; 
-				input_report_key(ts->input_dev, KEY_FINGERPRINT, 1);
-				input_sync(ts->input_dev);
-				input_report_key(ts->input_dev, KEY_GESTURE_DT, 1);
-				input_sync(ts->input_dev);
-				input_report_key(ts->input_dev, KEY_FINGERPRINT, 0);
-				input_sync(ts->input_dev);
-				input_report_key(ts->input_dev, KEY_GESTURE_DT, 0);
-				input_sync(ts->input_dev);
-				// clear 0x814B
-				doze_buf[2] = 0x00;
-				gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-			}
-			else
-			{
-				// clear 0x814B
-				doze_buf[2] = 0x00;
-				gtp_i2c_write(i2c_connect_client, doze_buf, 3);
-				gtp_enter_doze(ts);
+		if (ret > 0) {
+			switch (doze_buf[2]) {/*
+				case 'a': case 'b': case 'c': case 'd':
+				case 'e': case 'g': case 'h': case 'm':
+				case 'o': case 'q': case 's': case 'v':
+				case 'w': case 'y': case 'z': case 0x5E:
+				case 0xAA: case 0xBB: case 0xAB: case 0xBA:
+					GTP_INFO("Swipe to light up the screen!");
+					doze_status = DOZE_WAKEUP;
+					input_report_key(ts->input_dev, KEY_FINGERPRINT, 1);
+					input_sync(ts->input_dev);
+					input_report_key(ts->input_dev, KEY_POWER, 1);
+					input_sync(ts->input_dev);
+					input_report_key(ts->input_dev, KEY_POWER, 0);
+					input_sync(ts->input_dev);
+					// clear 0x814B
+					doze_buf[2] = 0x00;
+					gtp_i2c_write(i2c_connect_client, doze_buf, 3);
+				break;*/
+				case 0xCC:
+					GTP_INFO("Double click to light up the screen!");
+					doze_status = DOZE_WAKEUP;
+					input_report_key(ts->input_dev, KEY_FINGERPRINT, 1);
+					input_sync(ts->input_dev);
+					input_report_key(ts->input_dev, KEY_GESTURE_DT, 1);
+					input_sync(ts->input_dev);
+					input_report_key(ts->input_dev, KEY_GESTURE_DT, 0);
+					input_sync(ts->input_dev);
+					input_report_key(ts->input_dev, KEY_FINGERPRINT, 0);
+					input_sync(ts->input_dev);
+					// clear 0x814B
+					doze_buf[2] = 0x00;
+					gtp_i2c_write(i2c_connect_client, doze_buf, 3);
+				break;
+				default:
+					// clear 0x814B
+					doze_buf[2] = 0x00;
+					gtp_i2c_write(i2c_connect_client, doze_buf, 3);
+					gtp_enter_doze(ts);
+				break;
 			}
 		}
 		if (ts->use_irq)
@@ -678,7 +653,6 @@ static void goodix_ts_work_func(struct work_struct *work)
 		return;
 	}
 #endif
-
 	ret = gtp_i2c_read(ts->client, point_data, 12);
 	if (ret < 0) {
 		GTP_ERROR("I2C transfer error. errno:%d\n ", ret);
@@ -1823,6 +1797,7 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 #if GTP_GESTURE_WAKEUP
 	input_set_capability(ts->input_dev, EV_KEY, KEY_GESTURE_DT);
 	input_set_capability(ts->input_dev, EV_KEY, KEY_FINGERPRINT);
+	input_set_capability(ts->input_dev, EV_KEY, KEY_POWER);
 #endif 
 
 #if GTP_CHANGE_X2Y

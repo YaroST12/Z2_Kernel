@@ -630,7 +630,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -O3
+KBUILD_CFLAGS	+= -O3 $(call cc-option, -fsanitize=local-init)
 else
 KBUILD_CFLAGS	+= -O2
 endif

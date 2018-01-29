@@ -67,6 +67,7 @@ int adreno_idler(struct devfreq_dev_status stats, struct devfreq *devfreq,
 {
 	/* Boolean to let us know if the display is on*/
 	bool display_on = is_display_on();
+	unsigned int idlefreq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
 
 	if (!adreno_idler_active)
 		return 0;
@@ -74,7 +75,7 @@ int adreno_idler(struct devfreq_dev_status stats, struct devfreq *devfreq,
 	if (stats.busy_time < idleworkload) {
 		/* busy_time >= idleworkload should be considered as a non-idle workload. */
 		idlecount++;
-		if (*freq == devfreq->profile->freq_table[devfreq->profile->max_state - 1]) {
+		if (*freq == idlefreq) {
 			/* Frequency is already at its lowest.
 			   No need to calculate things, so bail out. */
 			return 1;
@@ -82,13 +83,13 @@ int adreno_idler(struct devfreq_dev_status stats, struct devfreq *devfreq,
 		if (idlecount >= idlewait &&
 		    stats.busy_time * 100 < stats.total_time * downdifferential) {
 			/* We are idle for (idlewait + 1)'th time! Ramp down the frequency now. */
-			*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
+			*freq = idlefreq;
 			idlecount--;
 			return 1;
 		}
 	} else if (!display_on) {
 		/* GPU shouldn't be used for much while display is off, so ramp down the frequency */
-		*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
+		*freq = idlefreq;
 		return 1;
 	} else {
 		idlecount = 0;

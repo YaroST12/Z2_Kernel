@@ -8474,7 +8474,6 @@ static int cpu_cgroup_can_attach(struct cgroup_subsys_state *css,
 				 struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
-	struct cgroup_subsys_state *css;
 	int ret = 0;
 
 	cgroup_taskset_for_each(task, tset) {

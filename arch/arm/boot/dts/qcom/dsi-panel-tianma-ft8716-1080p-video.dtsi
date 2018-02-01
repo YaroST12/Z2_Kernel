@@ -37,8 +37,8 @@
 		qcom,suspend-ulps-enabled;
 		qcom,ulps-enabled;
 		qcom,panel-allow-phy-poweroff;
-		qcom,partial-update-enabled;
-
+		qcom,partial-update-enabled = "single_roi";
+		qcom,panel-roi-alignment = <1080 8 1080 8 1080 8>;
 		qcom,mdss-dsi-on-command = [
 			15 00 00 00 00 00 02 51 ff
 			15 00 00 00 00 00 02 53 2c

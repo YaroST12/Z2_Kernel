@@ -30,12 +30,13 @@
 #include "msm_isp_stats_util.h"
 #include "msm_sd.h"
 #include "msm_isp48.h"
+/*
 #include "msm_isp47.h"
 #include "msm_isp46.h"
 #include "msm_isp44.h"
 #include "msm_isp40.h"
 #include "msm_isp32.h"
-
+*/
 static struct msm_sd_req_vb2_q vfe_vb2_ops;
 static struct msm_isp_buf_mgr vfe_buf_mgr;
 static struct msm_vfe_common_dev_data vfe_common_data;

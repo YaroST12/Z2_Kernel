@@ -169,7 +169,7 @@ struct dl_bandwidth {
 
 static inline int dl_bandwidth_enabled(void)
 {
-	return sysctl_sched_rt_runtime >= 0;
+	return 0;
 }
 
 extern struct dl_bw *dl_bw_of(int i);

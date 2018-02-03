@@ -418,17 +418,6 @@ KBUILD_CFLAGS   := -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -std=gnu89 $(CLANG_FLAGS) -w
-		   
-# Kryo doesn't need 835769/843419 erratum fixes.
-# Some toolchains enable those fixes automatically, so opt-out.
-KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
-KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
-LDFLAGS_vmlinux	+= $(call ld-option, --no-fix-cortex-a53-835769)
-LDFLAGS_vmlinux	+= $(call ld-option, --no-fix-cortex-a53-843419)
-LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-835769)
-LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-843419)
-LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-835769)
-LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-843419)
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -650,27 +639,10 @@ KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 
-###########################
-# FLASH OPTMIZATION SETUP #
-###########################
-
 # Strip linker
 LDFLAGS		+= --strip-debug -O3
 
-ifneq ($(cc-name),clang)
-# Optimization flags
-KBUILD_CFLAGS	+= -g0 -DNDEBUG \
-		-fivopts \
-		-floop-block \
-		-floop-interchange
-else
-KBUILD_CFLAGS	+= -g0 -DNDEBUG
-endif
-
-# F1xy optimizations
-KBUILD_CFLAGS	+= -O3 -mcpu=kryo \
-		-pipe \
-		-fno-pic
+KBUILD_CFLAGS	+= -O3 -pipe
 
 # These flags need a special toolchain so split them off
 KBUILD_CFLAGS	+= $(call cc-option,-mlow-precision-recip-sqrt,) \

@@ -228,10 +228,8 @@ static void fpc1020_irq_work(struct work_struct *work)
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 
 	if (!fpc1020->screen_on) {
-		__pm_wakeup_event(&fpc1020->wakeup, 5000);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 1);
 		input_sync(fpc1020->input_dev);
-		msleep(1);
 		input_report_key(fpc1020->input_dev, KEY_FINGERPRINT, 0);
 		input_sync(fpc1020->input_dev);
 	}
@@ -241,8 +239,11 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
-	queue_work(fpc1020->fpc1020_wq, &fpc1020->irq_work);
-	
+	if (!fpc1020->screen_on)
+		__pm_wakeup_event(&fpc1020->wakeup, 5000);
+
+	queue_work_on(0, fpc1020->fpc1020_wq, &fpc1020->irq_work);
+
 	return IRQ_HANDLED;
 }
 

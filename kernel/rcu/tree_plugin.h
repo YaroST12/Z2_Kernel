@@ -1426,7 +1426,6 @@ module_param(rcu_idle_lazy_gp_delay, int, 0644);
 
 extern int tick_nohz_active;
 
-#ifndef CONFIG_RCU_NOCB_CPU_ALL
 /*
  * Try to advance callbacks for all flavors of RCU on the current CPU, but
  * only if it has been awhile since the last time we did so.  Afterwards,
@@ -1464,7 +1463,7 @@ static bool __maybe_unused rcu_try_advance_all_cbs(void)
 	}
 	return cbs_ready;
 }
-#endif
+
 /*
  * Allow the CPU to enter dyntick-idle mode unless it has callbacks ready
  * to invoke.  If the CPU has callbacks, try to advance them.  Tell the

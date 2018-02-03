@@ -356,6 +356,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	if (!fpc1020->screen_on) {
 		__pm_relax(&fpc1020->wakeup);
 		set_fingerprintd_nice(-1);
+		enable_irq_wake(fpc1020->irq);
 	}
 }
 
@@ -459,7 +460,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 	}
 	set_fpc_irq(fpc1020, true);
 	wakeup_source_init(&fpc1020->wakeup, "fpc_wakeup");
-	enable_irq_wake(fpc1020->irq);
 	spin_lock_init(&fpc1020->irq_lock);
 	
 	retval = fpc1020_initial_irq(fpc1020);

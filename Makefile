@@ -297,8 +297,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -std=gnu89
-HOSTCXXFLAGS = -O2
+HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -std=gnu89
+HOSTCXXFLAGS = -O3
 
 ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
 HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter \
@@ -655,7 +655,7 @@ KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 ###########################
 
 # Strip linker
-LDFLAGS		+= --strip-debug -O2
+LDFLAGS		+= --strip-debug -O3
 
 ifneq ($(cc-name),clang)
 # Optimization flags
@@ -668,7 +668,7 @@ KBUILD_CFLAGS	+= -g0 -DNDEBUG
 endif
 
 # F1xy optimizations
-KBUILD_CFLAGS	+= -O2 -mcpu=cortex-a53+crc+crypto \
+KBUILD_CFLAGS	+= -O3 -mcpu=kryo \
 		-pipe \
 		-fno-pic
 

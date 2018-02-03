@@ -12,7 +12,7 @@ export CLANG_TCHAIN="${HOME}/build/z2/linux-x86/clang-4536805/bin/clang"
 export LD_LIBRARY_PATH="${TOOL_CHAIN_PATH}/../lib"
 export PATH=$PATH:${TOOL_CHAIN_PATH}
 export objdir="${kernel_dir}/out_clang"
-export builddir="${kernel_dir}/build"
+export builddir="${kernel_dir}/build_clang"
 cd $kernel_dir
 make_a_fucking_defconfig() 
 {

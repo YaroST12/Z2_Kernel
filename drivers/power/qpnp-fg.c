@@ -2261,14 +2261,9 @@ static int bound_soc(int soc)
 
 static int soc_remap(struct fg_chip *chip, int soc)
 {
-        int mapped_soc = 0;
+	int mapped_soc = 0;
 
-        if(soc >= 90)
-        {
-                mapped_soc = bound_soc(soc + 1);
-        } else {
-                mapped_soc = bound_soc(soc);
-	}
+	mapped_soc = bound_soc(soc);
 
 	return mapped_soc;
 }

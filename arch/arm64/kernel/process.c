@@ -22,7 +22,7 @@
 
 #include <linux/compat.h>
 #include <linux/export.h>
-#include <linux/sched.h>
+#include <linux/sched.h>#include <asm/stacktrace.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/stddef.h>
@@ -52,6 +52,7 @@
 #include <asm/mmu_context.h>
 #include <asm/processor.h>
 #include <asm/stacktrace.h>
+#include <asm/tlbflush.h>
 
 #ifdef CONFIG_CC_STACKPROTECTOR
 #include <linux/stackprotector.h>
@@ -440,6 +441,13 @@ static void tls_thread_switch(struct task_struct *next)
 	: : "r" (tpidr), "r" (tpidrro));
 }
 
+static void tlb_flush_thread(struct task_struct *prev)
+{
+	/* Flush the prev task&apos;s TLB entries */
+	if (prev->mm)
+		flush_tlb_mm(prev->mm);
+}
+
 /* Restore the UAO state depending on next's addr_limit */
 static void uao_thread_switch(struct task_struct *next)
 {
@@ -464,6 +472,7 @@ struct task_struct *__switch_to(struct task_struct *prev,
 	hw_breakpoint_thread_switch(next);
 	contextidr_thread_switch(next);
 	uao_thread_switch(next);
+	tlb_flush_thread(prev);
 
 	/*
 	 * Complete any pending TLB or cache maintenance on this CPU in case

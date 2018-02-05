@@ -619,6 +619,8 @@ static void goodix_ts_work_func(struct work_struct *work)
 					input_sync(ts->input_dev);
 					input_report_key(ts->input_dev, KEY_POWER, 0);
 					input_sync(ts->input_dev);
+					input_report_key(ts->input_dev, KEY_FINGERPRINT, 0);
+					input_sync(ts->input_dev);
 					// clear 0x814B
 					doze_buf[2] = 0x00;
 					gtp_i2c_write(i2c_connect_client, doze_buf, 3);

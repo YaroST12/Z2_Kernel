@@ -621,56 +621,39 @@
 
 			red_led: qcom,rgb_0 {
 				label = "rgb";
-				linux,name = "led:rgb_red";
+				qcom,id = <3>;
 				qcom,mode = "pwm";
 				pwms = <&pmi8994_pwm_3 0 0>;
 				qcom,pwm-us = <1000>;
-				qcom,start-idx=<0>;
-				//qcom,ramp-step-ms=<75>;
-				qcom,duty-pcts=[00 12 24 36 48 63 63 63 48 36 24 12 00];
-				qcom,duty-pcts1=[00 16];
-				qcom,lut-flags=<17>;
-				qcom,pause-lo=<3000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
-				qcom,id = <3>;
-				qcom,use-blink;
+				linux,name = "red";
+				linux,default-trigger =
+					"battery-charging";
 			};
 
 			green_led: qcom,rgb_1 {
 				label = "rgb";
-				linux,name = "led:rgb_green";
+				qcom,id = <4>;
 				qcom,mode = "pwm";
 				pwms = <&pmi8994_pwm_2 0 0>;
 				qcom,pwm-us = <1000>;
-				qcom,start-idx=<0>;
-				//qcom,ramp-step-ms=<75>;
-				qcom,duty-pcts=[00 12 24 36 48 63 63 63 48 36 24 12 00];
-				qcom,duty-pcts1=[00 16];
-				qcom,lut-flags=<17>;
-				qcom,pause-lo=<3000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
-				qcom,id = <4>;
-				qcom,use-blink;
+				linux,name = "green";
+				linux,default-trigger = "battery-full";
 			};
 
 			blue_led: qcom,rgb_2 {
 				label = "rgb";
-				linux,name = "led:rgb_blue";
+				qcom,id = <5>;
 				qcom,mode = "pwm";
 				pwms = <&pmi8994_pwm_1 0 0>;
 				qcom,pwm-us = <1000>;
-				qcom,start-idx=<0>;
-				//qcom,ramp-step-ms=<75>;
-				qcom,duty-pcts=[00 12 24 36 48 63 63 63 48 36 24 12 00];
-				qcom,duty-pcts1=[00 16];
-				qcom,lut-flags=<17>;
-				qcom,pause-lo=<3000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
-				qcom,id = <5>;
-				qcom,use-blink;
+				linux,name = "blue";
+				linux,default-trigger = "boot-indication";
 			};
 		};
 

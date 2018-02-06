@@ -378,7 +378,16 @@ CFLAGS_KERNEL	=
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 
-OPT_FLAGS := -mcpu=kryo -fvectorize -fslp-vectorize -fopenmp
+OPT_FLAGS := -O3 -mcpu=kryo -fvectorize \
+		-fslp-vectorize -fopenmp \
+		-funsafe-math-optimizations \
+		-mllvm -polly \
+		-mllvm -polly-run-dce \
+		-mllvm -polly-run-inliner \
+		-mllvm -polly-opt-fusion=max \
+		-mllvm -polly-ast-use-context \
+		-mllvm -polly-detect-keep-going \
+		-mllvm -polly-vectorizer=stripmine
 
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)

@@ -309,14 +309,12 @@ static inline void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 
 static DEFINE_PER_CPU(unsigned long, freq_scale) = SCHED_CAPACITY_SCALE;
 static DEFINE_PER_CPU(unsigned long, max_freq_scale) = SCHED_CAPACITY_SCALE;
-static DEFINE_PER_CPU(unsigned long, min_freq_scale);
 
 static void
 scale_freq_capacity(struct cpufreq_policy *policy, struct cpufreq_freqs *freqs)
 {
 	unsigned long cur = freqs ? freqs->new : policy->cur;
 	unsigned long scale = (cur << SCHED_CAPACITY_SHIFT) / policy->max;
-	unsigned long max_scale, min_scale;
 	struct cpufreq_cpuinfo *cpuinfo = &policy->cpuinfo;
 	int cpu;
 
@@ -329,20 +327,14 @@ scale_freq_capacity(struct cpufreq_policy *policy, struct cpufreq_freqs *freqs)
 	if (freqs)
 		return;
 
-	max_scale = (policy->max << SCHED_CAPACITY_SHIFT) / cpuinfo->max_freq;
+	scale = (policy->max << SCHED_CAPACITY_SHIFT) / cpuinfo->max_freq;
+
 	pr_debug("cpus %*pbl cur max/max freq %u/%u kHz max freq scale %lu\n",
 		 cpumask_pr_args(policy->cpus), policy->max, cpuinfo->max_freq,
-		 max_scale);
+		 scale);
 
-	min_scale = (policy->min << SCHED_CAPACITY_SHIFT) / cpuinfo->max_freq;
-	pr_debug("cpus %*pbl cur min/max freq %u/%u kHz min freq scale %lu\n",
-		 cpumask_pr_args(policy->cpus), policy->min, cpuinfo->max_freq,
-		 min_scale);
-
-	for_each_cpu(cpu, policy->cpus) {
-		per_cpu(max_freq_scale, cpu) = max_scale;
-		per_cpu(min_freq_scale, cpu) = min_scale;
-	}
+	for_each_cpu(cpu, policy->cpus)
+		per_cpu(max_freq_scale, cpu) = scale;
 }
 
 unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu)
@@ -353,11 +345,6 @@ unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu)
 unsigned long cpufreq_scale_max_freq_capacity(int cpu)
 {
 	return per_cpu(max_freq_scale, cpu);
-}
-
-unsigned long cpufreq_scale_min_freq_capacity(int cpu)
-{
-	return per_cpu(min_freq_scale, cpu);
 }
 
 static void __cpufreq_notify_transition(struct cpufreq_policy *policy,

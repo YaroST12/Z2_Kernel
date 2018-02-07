@@ -5000,7 +5000,7 @@ struct energy_env {
 	struct task_struct	*p;
 };
 
-static int cpu_util_wake(int cpu, struct task_struct *p, bool for_ediff);
+static int cpu_util_wake(int cpu, struct task_struct *p);
 
 /*
  * __cpu_norm_util() returns the cpu util relative to a specific capacity,
@@ -5032,7 +5032,7 @@ static unsigned long group_max_util(struct energy_env *eenv)
 	int cpu;
 
 	for_each_cpu(cpu, sched_group_cpus(eenv->sg_cap)) {
-		util = cpu_util_wake(cpu, eenv->p, true);
+		util = cpu_util_wake(cpu, eenv->p);
 
 		/*
 		 * If we are looking at the target CPU specified by the eenv,
@@ -5076,7 +5076,7 @@ long group_norm_util(struct energy_env *eenv, struct sched_group *sg)
 	int cpu;
 
 	for_each_cpu(cpu, sched_group_cpus(sg)) {
-		util = cpu_util_wake(cpu, eenv->p, true);
+		util = cpu_util_wake(cpu, eenv->p);
 
 		/*
 		 * If we are looking at the target CPU specified by the eenv,
@@ -5143,7 +5143,7 @@ static int group_idle_state(struct energy_env *eenv, struct sched_group *sg)
 	 * will be (worst case - no concurrent execution) after moving the task
 	 */
 	for_each_cpu(i, sched_group_cpus(sg)) {
-		grp_util += cpu_util_wake(i, eenv->p, false);
+		grp_util += cpu_util_wake(i, eenv->p);
 		if (unlikely(i == eenv->trg_cpu))
 			grp_util += src_in_grp ? -eenv->util_delta : eenv->util_delta;
 	}
@@ -5179,11 +5179,9 @@ end:
 	return state;
 }
 
-static int cpu_util_wake(int cpu, struct task_struct *p, bool for_ediff);
-
 static unsigned long capacity_spare_wake(int cpu, struct task_struct *p)
 {
-	return max_t(long, capacity_of(cpu) - cpu_util_wake(cpu, p, false), 0); 
+	return max_t(long, capacity_of(cpu) - cpu_util_wake(cpu, p), 0); 
 }
 
 /*
@@ -5876,7 +5874,7 @@ done:
  * cpu_util_wake: Compute cpu utilization with any contributions from
  * the waking task p removed.
  */
-static int cpu_util_wake(int cpu, struct task_struct *p, bool for_ediff)
+static int cpu_util_wake(int cpu, struct task_struct *p)
 {
 	unsigned long util, capacity;
 
@@ -5889,7 +5887,7 @@ static int cpu_util_wake(int cpu, struct task_struct *p, bool for_ediff)
 	 */
 	if (!walt_disabled && sysctl_sched_use_walt_cpu_util &&
 	    p->state == TASK_WAKING)
-		return for_ediff ? cpu_util_cuml(cpu, p) : cpu_util(cpu);
+		return cpu_util(cpu);
 #endif
 	/* Task has no contribution or is new */
 	if (cpu != task_cpu(p) || !p->se.avg.last_update_time)
@@ -5967,7 +5965,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			 * so prev_cpu will receive a negative bias due to the double
 			 * accounting. However, the blocked utilization may be zero.
 			 */
-			wake_util = cpu_util_wake(i, p, false);
+			wake_util = cpu_util_wake(i, p);
 			new_util = wake_util + task_util(p);
 
 			/*

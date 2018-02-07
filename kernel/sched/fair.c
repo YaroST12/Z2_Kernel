@@ -5909,7 +5909,7 @@ static int start_cpu(bool boosted)
 }
 
 static inline int find_best_target(struct task_struct *p, int *backup_cpu,
-				   int prev_cpu, bool boosted, bool prefer_idle)
+				   bool boosted, bool prefer_idle)
 {
 	unsigned long best_idle_min_cap_orig = ULONG_MAX;
 	unsigned long min_util = boosted_task_util(p);
@@ -6265,7 +6265,7 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu, int sync
 	sync_entity_load_avg(&p->se);
 
 	/* Find a cpu with sufficient capacity */
-	tmp_target = find_best_target(p, &tmp_backup, prev_cpu, boosted, prefer_idle);
+	tmp_target = find_best_target(p, &tmp_backup, prev_cpu, boosted);
 
 	if (tmp_target >= 0) {
 		target_cpu = tmp_target;

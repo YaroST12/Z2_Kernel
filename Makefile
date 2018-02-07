@@ -378,9 +378,8 @@ CFLAGS_KERNEL	=
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 
-OPT_FLAGS := -O3 -mcpu=kryo -fvectorize \
+OPT_FLAGS := -O3 -mcpu=cortex-a53 -fvectorize \
 		-fslp-vectorize -fopenmp \
-		-funsafe-math-optimizations \
 		-mllvm -polly \
 		-mllvm -polly-run-dce \
 		-mllvm -polly-run-inliner \

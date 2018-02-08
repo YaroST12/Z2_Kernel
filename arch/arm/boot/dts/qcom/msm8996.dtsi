@@ -176,12 +176,10 @@ energy-costs {
 					584 586
 					630 651
 					666 732
-#ifndef CONFIG_UNDERCLOCK_8996
 					711 827
 					743 865
 					763 925
 					812 1040
-#endif
 				>;
 				idle-cost-data = <
 					8 8 0 0
@@ -235,12 +233,10 @@ energy-costs {
 					584 32
 					630 41
 					666 42
-#ifndef CONFIG_UNDERCLOCK_8996
 					711 46
 					743 49
 					763 52
 					812 62
-#endif
 				>;
 				idle-cost-data = <
 					42 42 42 0

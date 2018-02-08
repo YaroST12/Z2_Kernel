@@ -1141,11 +1141,6 @@ static int qbt1000_read_spi_conn_properties(struct device_node *node,
 
 	/* obtain number of clocks from hw config */
 	clkcnt = of_property_count_strings(node, "clock-names");
-	if (IS_ERR_VALUE(drvdata->clock_count)) {
-			dev_err(drvdata->dev, "%s: Failed to get clock names\n",
-				__func__);
-			return -EINVAL;
-	}
 
 	/* sanity check for max clock count */
 	if (clkcnt > 16) {

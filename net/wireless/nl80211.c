@@ -5600,7 +5600,7 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 				    tmp) {
 			enum ieee80211_band band = nla_type(attr);
 
-			if (band < 0 || band >= IEEE80211_NUM_BANDS) {
+			if (band >= IEEE80211_NUM_BANDS) {
 				err = -EINVAL;
 				goto out_free;
 			}
@@ -7876,7 +7876,7 @@ static int nl80211_set_tx_bitrate_mask(struct sk_buff *skb,
 		enum ieee80211_band band = nla_type(tx_rates);
 		int err;
 
-		if (band < 0 || band >= IEEE80211_NUM_BANDS)
+		if (band >= IEEE80211_NUM_BANDS)
 			return -EINVAL;
 		sband = rdev->wiphy.bands[band];
 		if (sband == NULL)

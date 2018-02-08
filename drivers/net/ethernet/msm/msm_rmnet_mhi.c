@@ -675,7 +675,7 @@ static int rmnet_mhi_ioctl_extended(struct net_device *dev, struct ifreq *ifr)
 
 	switch (ext_cmd.extended_ioctl) {
 	case RMNET_IOCTL_SET_MRU:
-		if ((0 > ext_cmd.u.data) || (ext_cmd.u.data > MHI_MAX_MRU)) {
+		if (ext_cmd.u.data > MHI_MAX_MRU) {
 			rmnet_log(MSG_CRITICAL,
 				 "Can't set MRU, value %u is invalid\n",
 				 ext_cmd.u.data);

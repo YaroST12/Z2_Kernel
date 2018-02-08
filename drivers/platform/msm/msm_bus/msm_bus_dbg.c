@@ -594,8 +594,7 @@ static ssize_t  msm_bus_dbg_update_request_write(struct file *file,
 					" found\n");
 				found = 0;
 			}
-			if ((index < 0) ||
-					(index > cldata->pdata->num_usecases)) {
+			if (index > cldata->pdata->num_usecases) {
 				MSM_BUS_DBG("Invalid index!\n");
 				rt_mutex_unlock(&msm_bus_dbg_cllist_lock);
 				res = -EINVAL;

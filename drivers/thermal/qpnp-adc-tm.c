@@ -1277,10 +1277,6 @@ static int qpnp_adc_tm_get_trip_temp(struct thermal_zone_device *thermal,
 
 	btm_chan = adc_tm_sensor->btm_channel_num;
 	rc = qpnp_adc_tm_get_btm_idx(btm_chan, &btm_chan_idx);
-	if (rc < 0) {
-		pr_err("Invalid btm channel idx\n");
-		return rc;
-	}
 
 	reg_low_thr_lsb = adc_tm_data[btm_chan_idx].low_thr_lsb_addr;
 	reg_low_thr_msb = adc_tm_data[btm_chan_idx].low_thr_msb_addr;
@@ -1326,10 +1322,6 @@ static int qpnp_adc_tm_get_trip_temp(struct thermal_zone_device *thermal,
 
 	rc = qpnp_adc_tm_scale_voltage_therm_pu2(chip->vadc_dev, reg,
 								&result);
-	if (rc < 0) {
-		pr_err("Failed to lookup the therm thresholds\n");
-		return rc;
-	}
 
 	*temp = result;
 

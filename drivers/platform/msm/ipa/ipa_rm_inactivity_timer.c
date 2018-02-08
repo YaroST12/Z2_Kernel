@@ -112,8 +112,7 @@ int ipa_rm_inactivity_timer_init(enum ipa_rm_resource_name resource_name,
 {
 	IPA_RM_DBG_LOW("%s: resource %d\n", __func__, resource_name);
 
-	if (resource_name < 0 ||
-	    resource_name >= IPA_RM_RESOURCE_MAX) {
+	if (resource_name >= IPA_RM_RESOURCE_MAX) {
 		IPA_RM_ERR("%s: Invalid parameter\n", __func__);
 		return -EINVAL;
 	}
@@ -153,8 +152,7 @@ int ipa_rm_inactivity_timer_destroy(enum ipa_rm_resource_name resource_name)
 {
 	IPA_RM_DBG_LOW("%s: resource %d\n", __func__, resource_name);
 
-	if (resource_name < 0 ||
-	    resource_name >= IPA_RM_RESOURCE_MAX) {
+	if (resource_name >= IPA_RM_RESOURCE_MAX) {
 		IPA_RM_ERR("%s: Invalid parameter\n", __func__);
 		return -EINVAL;
 	}
@@ -194,8 +192,7 @@ int ipa_rm_inactivity_timer_request_resource(
 
 	IPA_RM_DBG_LOW("%s: resource %d\n", __func__, resource_name);
 
-	if (resource_name < 0 ||
-	    resource_name >= IPA_RM_RESOURCE_MAX) {
+	if (resource_name >= IPA_RM_RESOURCE_MAX) {
 		IPA_RM_ERR("%s: Invalid parameter\n", __func__);
 		return -EINVAL;
 	}
@@ -238,8 +235,7 @@ int ipa_rm_inactivity_timer_release_resource(
 
 	IPA_RM_DBG_LOW("%s: resource %d\n", __func__, resource_name);
 
-	if (resource_name < 0 ||
-	    resource_name >= IPA_RM_RESOURCE_MAX) {
+	if (resource_name >= IPA_RM_RESOURCE_MAX) {
 		IPA_RM_ERR("%s: Invalid parameter\n", __func__);
 		return -EINVAL;
 	}

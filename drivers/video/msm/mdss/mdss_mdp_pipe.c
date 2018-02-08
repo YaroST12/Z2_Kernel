@@ -3012,33 +3012,17 @@ void mdss_mdp_pipe_calc_pixel_extn(struct mdss_mdp_pipe *pipe)
 				pipe->scaler.num_ext_pxls_btm[i] -= 1;
 		}
 
-		if (pipe->scaler.num_ext_pxls_left[i] >= 0)
-			pipe->scaler.left_rpt[i] =
-				pipe->scaler.num_ext_pxls_left[i];
-		else
-			pipe->scaler.left_ftch[i] =
-				pipe->scaler.num_ext_pxls_left[i];
+		pipe->scaler.left_rpt[i] =
+			pipe->scaler.num_ext_pxls_left[i];
 
-		if (pipe->scaler.num_ext_pxls_right[i] >= 0)
-			pipe->scaler.right_rpt[i] =
-				pipe->scaler.num_ext_pxls_right[i];
-		else
-			pipe->scaler.right_ftch[i] =
-				pipe->scaler.num_ext_pxls_right[i];
+		pipe->scaler.right_rpt[i] =
+			pipe->scaler.num_ext_pxls_right[i];
 
-		if (pipe->scaler.num_ext_pxls_top[i] >= 0)
-			pipe->scaler.top_rpt[i] =
-				pipe->scaler.num_ext_pxls_top[i];
-		else
-			pipe->scaler.top_ftch[i] =
-				pipe->scaler.num_ext_pxls_top[i];
+		pipe->scaler.top_rpt[i] =
+			pipe->scaler.num_ext_pxls_top[i];
 
-		if (pipe->scaler.num_ext_pxls_btm[i] >= 0)
-			pipe->scaler.btm_rpt[i] =
-				pipe->scaler.num_ext_pxls_btm[i];
-		else
-			pipe->scaler.btm_ftch[i] =
-				pipe->scaler.num_ext_pxls_btm[i];
+		pipe->scaler.btm_rpt[i] =
+			pipe->scaler.num_ext_pxls_btm[i];
 
 		pr_debug("plane repeat=%d, left=%d, right=%d, top=%d, btm=%d\n",
 				i, pipe->scaler.left_rpt[i],

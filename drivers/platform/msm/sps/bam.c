@@ -730,11 +730,6 @@ static inline u32 bam_get_register_offset(void *base, enum bam_regs reg,
 		else
 			index = (bam_type == SPS_BAM_NDP_4K) ? 0x4 : 0x1000;
 	}
-	if (index < 0) {
-		SPS_ERR(dev, "%s:Failed to find register offset index\n",
-			__func__);
-		return index;
-	}
 
 	offset = *(ptr_reg + reg) + (index * param);
 	return offset;
@@ -761,11 +756,6 @@ static inline u32 bam_read_reg(void *base, enum bam_regs reg, u32 param)
 		return SPS_ERROR;
 	}
 	offset = bam_get_register_offset(base, reg, param);
-	if (offset < 0) {
-		SPS_ERR(dev, "%s:Failed to get the register offset\n",
-			__func__);
-		return offset;
-	}
 	val = ioread32(dev->base + offset);
 	SPS_DBG(dev, "sps:bam 0x%pK(va) offset 0x%x reg 0x%x r_val 0x%x.\n",
 			dev->base, offset, reg, val);
@@ -794,11 +784,6 @@ static inline u32 bam_read_reg_field(void *base, enum bam_regs reg, u32 param,
 	}
 	shift = find_first_bit((void *)&mask, 32);
 	offset = bam_get_register_offset(base, reg, param);
-	if (offset < 0) {
-		SPS_ERR(dev, "%s:Failed to get the register offset\n",
-			__func__);
-		return offset;
-	}
 	val = ioread32(dev->base + offset);
 	val &= mask;		/* clear other bits */
 	val >>= shift;
@@ -828,11 +813,6 @@ static inline void bam_write_reg(void *base, enum bam_regs reg,
 		return;
 	}
 	offset = bam_get_register_offset(base, reg, param);
-	if (offset < 0) {
-		SPS_ERR(dev, "%s:Failed to get the register offset\n",
-			__func__);
-		return;
-	}
 	iowrite32(val, dev->base + offset);
 	SPS_DBG(dev, "sps:bam 0x%pK(va) write reg 0x%x w_val 0x%x.\n",
 			dev->base, offset, val);
@@ -860,11 +840,6 @@ static inline void bam_write_reg_field(void *base, enum bam_regs reg,
 	}
 	shift = find_first_bit((void *)&mask, 32);
 	offset = bam_get_register_offset(base, reg, param);
-	if (offset < 0) {
-		SPS_ERR(dev, "%s:Failed to get the register offset\n",
-			__func__);
-		return;
-	}
 	tmp = ioread32(dev->base + offset);
 
 	tmp &= ~mask;		/* clear written bits */

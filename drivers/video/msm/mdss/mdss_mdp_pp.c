@@ -4118,11 +4118,6 @@ int mdss_mdp_argc_config(struct msm_fb_data_type *mfd,
 	disp_num = PP_BLOCK(config->block) - MDP_LOGICAL_BLOCK_DISP_0;
 	ctl = mfd_to_ctl(mfd);
 	num = (ctl && ctl->mixer_left) ? ctl->mixer_left->num : -1;
-	if (num < 0) {
-		pr_err("invalid mfd index %d config\n",
-				mfd->index);
-		return -EPERM;
-	}
 	switch (PP_LOCAT(config->block)) {
 	case MDSS_PP_LM_CFG:
 		/*
@@ -5171,10 +5166,7 @@ static int pp_hist_collect(struct mdp_histogram_data *hist,
 	}
 	writel_relaxed(0, hist_info->base);
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
-	if (sum < 0) {
-		pr_err("failed to get the hist data, sum = %d\n", sum);
-		ret = sum;
-	} else if (expect_sum && sum != expect_sum) {
+	if (expect_sum && sum != expect_sum) {
 		pr_err("hist error: bin sum incorrect! (%d/%d)\n",
 			sum, expect_sum);
 		ret = -EINVAL;
@@ -6423,12 +6415,6 @@ static int pp_ad_attenuate_bl(struct mdss_ad_info *ad, u32 bl, u32 *bl_out)
 	u32 shift = 0, ratio_temp = 0;
 	u32 n, lut_interval, bl_att;
 
-	if (bl < 0 || ad->init.alpha < 0) {
-		pr_err("Invalid input: backlight = %d, alpha = %d\n", bl,
-			ad->init.alpha);
-		return -EINVAL;
-	}
-
 	if (ad->init.alpha == 0) {
 		pr_debug("alpha = %d, hence no attenuation needed\n",
 			ad->init.alpha);
@@ -6478,7 +6464,7 @@ static int pp_ad_linearize_bl(struct mdss_ad_info *ad, u32 bl, u32 *bl_out,
 	uint32_t *bl_lut = NULL;
 	int ret = -EINVAL;
 
-	if (bl < 0 || bl > ad->bl_mfd->panel_info->bl_max) {
+	if (bl > ad->bl_mfd->panel_info->bl_max) {
 		pr_err("Invalid backlight input: bl = %d, bl_max = %d\n", bl,
 			ad->bl_mfd->panel_info->bl_max);
 		return -EINVAL;
@@ -6645,7 +6631,7 @@ static int is_valid_calib_dspp_addr(char __iomem *ptr)
 			ret = MDP_PP_OPS_READ | MDP_PP_OPS_WRITE;
 			break;
 		/* Dither enable/disable */
-		} else if ((ptr == base + MDSS_MDP_REG_DSPP_DITHER_DEPTH)) {
+		} else if (ptr == base + MDSS_MDP_REG_DSPP_DITHER_DEPTH) {
 			ret = MDP_PP_OPS_READ | MDP_PP_OPS_WRITE;
 			break;
 		/* Six zone and mem color */

@@ -995,9 +995,6 @@ enum msm_isp_ioctl_cmd_code {
 	_IOWR('V', MSM_ISP_MAP_BUF_START_MULTI_PASS_FE, \
 		struct msm_vfe_fetch_eng_multi_pass_start)
 
-#define VIDIOC_MSM_ISP_AHB_CLK_CFG \
-	_IOWR('V', BASE_VIDIOC_PRIVATE+25, struct msm_isp_ahb_clk_cfg)
-
 #define VIDIOC_MSM_ISP_CFG_HW_STATE \
 	_IOWR('V', MSM_ISP_CFG_HW_STATE, \
 		struct msm_vfe_axi_stream_cfg_cmd)

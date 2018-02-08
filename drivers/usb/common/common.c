@@ -39,9 +39,6 @@ const char *usb_otg_state_string(enum usb_otg_state state)
 		[OTG_STATE_B_SUSPEND] = "b_suspend",
 	};
 
-	if (state < 0 || state >= ARRAY_SIZE(names))
-		return "UNDEFINED";
-
 	return names[state];
 }
 EXPORT_SYMBOL_GPL(usb_otg_state_string);
@@ -57,7 +54,7 @@ static const char *const speed_names[] = {
 
 const char *usb_speed_string(enum usb_device_speed speed)
 {
-	if (speed < 0 || speed >= ARRAY_SIZE(speed_names))
+	if (speed >= ARRAY_SIZE(speed_names))
 		speed = USB_SPEED_UNKNOWN;
 	return speed_names[speed];
 }
@@ -77,7 +74,7 @@ const char *usb_state_string(enum usb_device_state state)
 		[USB_STATE_SUSPENDED] = "suspended",
 	};
 
-	if (state < 0 || state >= ARRAY_SIZE(names))
+	if (state >= ARRAY_SIZE(names))
 		return "UNKNOWN";
 
 	return names[state];

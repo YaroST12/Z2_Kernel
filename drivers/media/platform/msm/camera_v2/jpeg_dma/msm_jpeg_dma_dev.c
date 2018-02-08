@@ -922,8 +922,7 @@ static int msm_jpegdma_s_crop(struct file *file, void *fh,
 	if (crop->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
 		return -EINVAL;
 
-	if (crop->c.left < 0 || crop->c.top < 0 ||
-	    crop->c.height < 0 || crop->c.width < 0)
+	if (crop->c.left < 0 || crop->c.top < 0)
 		return -EINVAL;
 
 	/* Upscale is not supported */

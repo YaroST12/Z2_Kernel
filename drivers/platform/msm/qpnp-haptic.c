@@ -881,10 +881,6 @@ static int qpnp_hap_parse_buffer_dt(struct qpnp_hap *hap)
 	if (hap->use_play_irq) {
 		hap->play_irq = spmi_get_irq_byname(hap->spmi,
 					NULL, "play-irq");
-		if (hap->play_irq < 0) {
-			dev_err(&spmi->dev, "Unable to get play irq\n");
-			return hap->play_irq;
-		}
 	}
 
 	return 0;
@@ -2491,10 +2487,6 @@ static int qpnp_hap_parse_dt(struct qpnp_hap *hap)
 	if (hap->use_sc_irq) {
 		hap->sc_irq = spmi_get_irq_byname(hap->spmi,
 					NULL, "sc-irq");
-		if (hap->sc_irq < 0) {
-			dev_err(&spmi->dev, "Unable to get sc irq\n");
-			return hap->sc_irq;
-		}
 	}
 
 	if (of_find_property(spmi->dev.of_node, "vcc_pon-supply", NULL))

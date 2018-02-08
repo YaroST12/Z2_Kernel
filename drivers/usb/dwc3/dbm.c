@@ -458,11 +458,6 @@ int dwc3_dbm_disable_update_xfer(struct dbm *dbm, u8 usb_ep)
 
 	dbm_ep = find_matching_dbm_ep(dbm, usb_ep);
 
-	if (dbm_ep < 0) {
-		pr_err("usb ep index %d has no corresponding dbm ep\n", usb_ep);
-		return -ENODEV;
-	}
-
 	data = msm_dbm_read_reg(dbm, DBM_DISABLE_UPDXFER);
 	data |= (0x1 << dbm_ep);
 	msm_dbm_write_reg(dbm, DBM_DISABLE_UPDXFER, data);

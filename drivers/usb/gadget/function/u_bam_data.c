@@ -1527,10 +1527,6 @@ int bam_data_connect(struct data_port *gr, enum transport_type trans,
 	dst_connection_idx = usb_bam_get_connection_idx(usb_bam_type,
 			IPA_P_BAM, PEER_PERIPHERAL_TO_USB, USB_BAM_DEVICE,
 			dev_port_num);
-	if (src_connection_idx < 0 || dst_connection_idx < 0) {
-		pr_err("%s: usb_bam_get_connection_idx failed\n", __func__);
-		return ret;
-	}
 
 	port = bam2bam_data_ports[port_num];
 

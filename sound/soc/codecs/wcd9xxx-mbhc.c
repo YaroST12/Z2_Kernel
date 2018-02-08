@@ -3326,7 +3326,6 @@ static void wcd9xxx_correct_swch_plug(struct work_struct *work)
 		if ((mbhc->current_plug == PLUG_TYPE_HEADPHONE &&
 		    wrk_complete) ||
 		    mbhc->current_plug == PLUG_TYPE_GND_MIC_SWAP ||
-		    mbhc->current_plug == PLUG_TYPE_INVALID ||
 		    (plug_type == PLUG_TYPE_INVALID && wrk_complete)) {
 			/* Enable removal detection */
 			wcd9xxx_cleanup_hs_polling(mbhc);

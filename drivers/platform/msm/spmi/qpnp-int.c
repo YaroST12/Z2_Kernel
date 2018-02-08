@@ -508,7 +508,7 @@ static int qpnpint_irq_domain_map(struct irq_domain *d,
 
 	pr_debug("hwirq = %lu\n", hwirq);
 
-	if (hwirq < 0 || hwirq >= QPNPINT_NR_IRQS) {
+	if (hwirq >= QPNPINT_NR_IRQS) {
 		pr_err("hwirq %lu out of bounds\n", hwirq);
 		return -EINVAL;
 	}
@@ -624,10 +624,6 @@ static int __qpnpint_handle_irq(struct spmi_controller *spmi_ctrl,
 		return -EINVAL;
 
 	hwirq = qpnpint_encode_hwirq(spec);
-	if (hwirq < 0) {
-		pr_err("invalid irq spec passed\n");
-		return -EINVAL;
-	}
 
 	domain = chip_lookup[busno]->domain;
 	irq = irq_find_mapping(domain, hwirq);

@@ -23,6 +23,7 @@
 #include <linux/compat.h>
 #include <linux/export.h>
 #include <linux/sched.h>
+#include <asm/stacktrace.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/stddef.h>

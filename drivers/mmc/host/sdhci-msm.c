@@ -1055,8 +1055,7 @@ retry:
 			if (tuned_phase_cnt)
 				last_good_phase =
 					tuned_phases[tuned_phase_cnt-1];
-			else if (msm_host->saved_tuning_phase !=
-					INVALID_TUNING_PHASE)
+			else
 				last_good_phase = msm_host->saved_tuning_phase;
 
 			rc = msm_config_cm_dll_phase(host, last_good_phase);
@@ -1501,7 +1500,7 @@ static int sdhci_msm_pm_qos_parse_irq(struct device *dev,
 				ret);
 			goto out;
 		}
-		if (cpu < 0 || cpu >= num_possible_cpus()) {
+		if (cpu >= num_possible_cpus()) {
 			dev_err(dev, "%s: invalid irq cpu %d (NR_CPUS=%d)\n",
 				__func__, cpu, num_possible_cpus());
 			ret = -EINVAL;

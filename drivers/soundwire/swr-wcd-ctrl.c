@@ -316,7 +316,6 @@ static ssize_t swrm_debug_write(struct file *filp,
 		/* write */
 		rc = get_parameters(lbuf, param, 2);
 		if ((param[0] <= SWR_MSTR_MAX_REG_ADDR) &&
-			(param[1] <= 0xFFFFFFFF) &&
 			(rc == 0))
 			rc = dbgswrm->write(dbgswrm->handle, param[0],
 					    param[1]);

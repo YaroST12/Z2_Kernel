@@ -1405,10 +1405,6 @@ static int msm_tsens_get_temp(int sensor_client_id, unsigned long *temp)
 	pr_debug("sensor_client_id:%d\n", sensor_client_id);
 
 	sensor_hw_num = get_tsens_sensor_for_client_id(tmdev, sensor_client_id);
-	if (sensor_hw_num < 0) {
-		pr_err("cannot read the temperature\n");
-		return sensor_hw_num;
-	}
 	pr_debug("sensor_hw_num:%d\n", sensor_hw_num);
 
 	if (tmdev->tsens_type == TSENS_TYPE2) {

@@ -435,7 +435,7 @@ static void process_log_range_report(uint8_t *buf, uint32_t len,
 	struct diag_ctrl_log_range *log_range = NULL;
 	struct diag_log_mask_t *mask_ptr = NULL;
 
-	if (!buf || peripheral >= NUM_PERIPHERALS || len < 0)
+	if (!buf || peripheral >= NUM_PERIPHERALS)
 		return;
 
 	header = (struct diag_ctrl_log_range_report *)ptr;

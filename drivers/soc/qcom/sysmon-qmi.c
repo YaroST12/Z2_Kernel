@@ -312,7 +312,7 @@ int sysmon_send_event(struct subsys_desc *dest_desc,
 	const char *dest_ss = dest_desc->name;
 	int ret;
 
-	if (notif < 0 || notif >= SUBSYS_NOTIF_TYPE_COUNT || event_ss == NULL
+	if (notif >= SUBSYS_NOTIF_TYPE_COUNT || event_ss == NULL
 		|| dest_ss == NULL)
 		return -EINVAL;
 

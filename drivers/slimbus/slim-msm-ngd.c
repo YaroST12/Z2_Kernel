@@ -264,22 +264,8 @@ static int ngd_get_tid(struct slim_controller *ctrl, struct slim_msg_txn *txn,
 	unsigned long flags;
 
 	spin_lock_irqsave(&ctrl->txn_lock, flags);
-	if (ctrl->last_tid <= 255) {
-		dev->msg_cnt = ctrl->last_tid;
-		ctrl->last_tid++;
-	} else {
-		int i;
-		for (i = 0; i < 256; i++) {
-			dev->msg_cnt = ((dev->msg_cnt + 1) & 0xFF);
-			if (ctrl->txnt[dev->msg_cnt] == NULL)
-				break;
-		}
-		if (i >= 256) {
-			dev_err(&ctrl->dev, "out of TID");
-			spin_unlock_irqrestore(&ctrl->txn_lock, flags);
-			return -ENOMEM;
-		}
-	}
+	dev->msg_cnt = ctrl->last_tid;
+	ctrl->last_tid++;
 	ctrl->txnt[dev->msg_cnt] = txn;
 	txn->tid = dev->msg_cnt;
 	txn->comp = done;

@@ -161,7 +161,7 @@ int sysmon_send_event_no_qmi(struct subsys_desc *dest_desc,
 	if (ss == NULL)
 		return -EINVAL;
 
-	if (event_desc == NULL || notif < 0 || notif >= SUBSYS_NOTIF_TYPE_COUNT
+	if (event_desc == NULL || notif >= SUBSYS_NOTIF_TYPE_COUNT
 			|| notif_name[notif] == NULL)
 		return -EINVAL;
 

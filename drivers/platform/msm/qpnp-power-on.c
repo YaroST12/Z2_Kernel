@@ -1391,11 +1391,6 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 		case PON_KPDPWR:
 			cfg->state_irq = spmi_get_irq_byname(pon->spmi,
 							NULL, "kpdpwr");
-			if (cfg->state_irq < 0) {
-				dev_err(&pon->spmi->dev,
-					"Unable to get kpdpwr irq\n");
-				return cfg->state_irq;
-			}
 
 			rc = of_property_read_u32(pp, "qcom,support-reset",
 							&cfg->support_reset);
@@ -1418,11 +1413,6 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 			if (cfg->use_bark) {
 				cfg->bark_irq = spmi_get_irq_byname(pon->spmi,
 							NULL, "kpdpwr-bark");
-				if (cfg->bark_irq < 0) {
-					dev_err(&pon->spmi->dev,
-					"Unable to get kpdpwr-bark irq\n");
-					return cfg->bark_irq;
-				}
 			}
 
 			/* If the value read from REVISION2 register is 0x00,
@@ -1443,12 +1433,6 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 		case PON_RESIN:
 			cfg->state_irq = spmi_get_irq_byname(pon->spmi,
 							NULL, "resin");
-			if (cfg->state_irq < 0) {
-				dev_err(&pon->spmi->dev,
-					"Unable to get resin irq\n");
-				return cfg->bark_irq;
-			}
-
 			rc = of_property_read_u32(pp, "qcom,support-reset",
 							&cfg->support_reset);
 
@@ -1502,11 +1486,6 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 			if (cfg->use_bark) {
 				cfg->bark_irq = spmi_get_irq_byname(pon->spmi,
 							NULL, "resin-bark");
-				if (cfg->bark_irq < 0) {
-					dev_err(&pon->spmi->dev,
-					"Unable to get resin-bark irq\n");
-					return cfg->bark_irq;
-				}
 			}
 
 			if (pon->pon_ver == QPNP_PON_GEN1_V1) {
@@ -1523,11 +1502,6 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 		case PON_CBLPWR:
 			cfg->state_irq = spmi_get_irq_byname(pon->spmi,
 							NULL, "cblpwr");
-			if (cfg->state_irq < 0) {
-				dev_err(&pon->spmi->dev,
-						"Unable to get cblpwr irq\n");
-				return rc;
-			}
 			break;
 		case PON_KPDPWR_RESIN:
 			rc = of_property_read_u32(pp, "qcom,support-reset",
@@ -1551,11 +1525,6 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 			if (cfg->use_bark) {
 				cfg->bark_irq = spmi_get_irq_byname(pon->spmi,
 						NULL, "kpdpwr-resin-bark");
-				if (cfg->bark_irq < 0) {
-					dev_err(&pon->spmi->dev,
-					"Unable to get kpdpwr-resin-bark irq\n");
-					return cfg->bark_irq;
-				}
 			}
 
 			if (pon->pon_ver == QPNP_PON_GEN1_V1) {

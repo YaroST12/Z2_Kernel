@@ -3073,7 +3073,7 @@ static void _sps_producer_callback(struct sps_event_notify *notify)
 	}
 
 	req_info = req_info & 0x00ff;
-	if (req_info < 0 || req_info >= MAX_QCE_ALLOC_BAM_REQ) {
+	if (req_info >= MAX_QCE_ALLOC_BAM_REQ) {
 		pr_warn("request information %d out of range\n", req_info);
 		return;
 	}

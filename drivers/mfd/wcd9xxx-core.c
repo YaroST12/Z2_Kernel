@@ -648,7 +648,7 @@ int wcd9xxx_get_current_power_state(struct wcd9xxx *wcd9xxx,
 		return -EINVAL;
 	}
 
-	if ((region < 0) || (region >= WCD9XXX_MAX_PWR_REGIONS)) {
+	if (region >= WCD9XXX_MAX_PWR_REGIONS) {
 		dev_err(wcd9xxx->dev, "%s: region index %d out of bounds\n",
 			__func__, region);
 		return -EINVAL;
@@ -684,7 +684,7 @@ int wcd9xxx_set_power_state(struct wcd9xxx *wcd9xxx,
 		return -EINVAL;
 	}
 
-	if ((region < 0) || (region >= WCD9XXX_MAX_PWR_REGIONS)) {
+	if (region >= WCD9XXX_MAX_PWR_REGIONS) {
 		dev_err(wcd9xxx->dev, "%s: region index %d out of bounds\n",
 			__func__, region);
 		return -EINVAL;

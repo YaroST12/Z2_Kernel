@@ -339,7 +339,7 @@ static void ipa_uc_event_handler(enum ipa_irq_type interrupt,
 
 	feature = EXTRACT_UC_FEATURE(ipa_ctx->uc_ctx.uc_sram_mmio->eventOp);
 
-	if (0 > feature || IPA_HW_FEATURE_MAX <= feature) {
+	if (IPA_HW_FEATURE_MAX <= feature) {
 		IPAERR("Invalid feature %u for event %u\n",
 			feature, ipa_ctx->uc_ctx.uc_sram_mmio->eventOp);
 		IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
@@ -433,7 +433,7 @@ static void ipa_uc_response_hdlr(enum ipa_irq_type interrupt,
 
 	feature = EXTRACT_UC_FEATURE(ipa_ctx->uc_ctx.uc_sram_mmio->responseOp);
 
-	if (0 > feature || IPA_HW_FEATURE_MAX <= feature) {
+	if (IPA_HW_FEATURE_MAX <= feature) {
 		IPAERR("Invalid feature %u for event %u\n",
 			feature, ipa_ctx->uc_ctx.uc_sram_mmio->eventOp);
 		IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
@@ -708,7 +708,7 @@ void ipa_uc_register_handlers(enum ipa_hw_features feature,
 			      struct ipa_uc_hdlrs *hdlrs)
 {
 
-	if (0 > feature || IPA_HW_FEATURE_MAX <= feature) {
+	if (IPA_HW_FEATURE_MAX <= feature) {
 		IPAERR("Feature %u is invalid, not registering hdlrs\n",
 		       feature);
 		return;

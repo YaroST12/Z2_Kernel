@@ -123,12 +123,6 @@ static int32_t msm_ois_data_config(struct msm_ois_ctrl_t *o_ctrl,
 		pr_err("failed : invalid slave_info ");
 		return -EINVAL;
 	}
-	/* fill ois slave info*/
-	if (strlcpy(o_ctrl->oboard_info->ois_name, slave_info->ois_name,
-		sizeof(o_ctrl->oboard_info->ois_name)) < 0) {
-		pr_err("failed: copy_from_user");
-		return -EFAULT;
-	}
 	memcpy(&(o_ctrl->oboard_info->opcode), &(slave_info->opcode),
 		sizeof(struct msm_ois_opcode));
 	o_ctrl->oboard_info->i2c_slaveaddr = slave_info->i2c_addr;

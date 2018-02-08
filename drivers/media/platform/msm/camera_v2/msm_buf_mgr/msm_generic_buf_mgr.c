@@ -326,7 +326,6 @@ static int msm_buf_mngr_handle_cont_cmd(struct msm_buf_mngr_device *dev,
 	size_t size;
 
 	if ((cont_cmd->cmd >= MSM_CAMERA_BUF_MNGR_CONT_MAX) ||
-		(cont_cmd->cmd < 0) ||
 		(cont_cmd->cnt > VB2_MAX_FRAME) ||
 		(cont_cmd->cont_fd < 0)) {
 		pr_debug("Invalid arg passed Cmd:%d, cnt:%d, fd:%d\n",

@@ -2307,11 +2307,6 @@ static int msm_spi_bam_get_resources(struct msm_spi *dd,
 	}
 
 	dd->bam.irq = platform_get_irq_byname(pdev, "spi_bam_irq");
-	if (dd->bam.irq < 0) {
-		dev_warn(&pdev->dev, "%s: Missing spi_bam_irq entry in DT",
-			__func__);
-		return -EINVAL;
-	}
 
 	dd->dma_init = msm_spi_bam_init;
 	dd->dma_teardown = msm_spi_bam_teardown;

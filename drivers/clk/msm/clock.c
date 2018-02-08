@@ -1195,8 +1195,8 @@ static void populate_clock_opp_table(struct device_node *np,
 	char clk_handle_name[MAX_LEN_OPP_HANDLE];
 	char clk_store_volt_corner[MAX_LEN_OPP_HANDLE];
 	size_t i;
-	int n, len, count, uv = 0;
-	unsigned long rate, ret = 0;
+	int n, len, count, uv = 0, ret = 0;
+	unsigned long rate;
 	bool store_vcorner;
 
 	/* Iterate across all clocks in the clock controller */

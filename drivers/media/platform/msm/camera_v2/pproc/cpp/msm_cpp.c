@@ -3269,11 +3269,6 @@ STREAM_BUFF_END:
 		if (clock_settings.clock_rate > 0) {
 			msm_cpp_core_clk_idx = msm_cpp_get_clock_index(cpp_dev,
 				"cpp_core_clk");
-			if (msm_cpp_core_clk_idx < 0) {
-				pr_err(" Fail to get clock index\n");
-				mutex_unlock(&cpp_dev->mutex);
-				return -EINVAL;
-			}
 			rc = msm_cpp_update_bandwidth_setting(cpp_dev,
 					clock_settings.avg,
 					clock_settings.inst);

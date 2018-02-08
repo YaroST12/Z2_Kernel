@@ -91,8 +91,7 @@ int ipa_rm_create_resource(struct ipa_rm_create_params *create_params)
 	}
 	IPA_RM_DBG("%s\n", ipa_rm_resource_str(create_params->name));
 
-	if (create_params->floor_voltage < 0 ||
-		create_params->floor_voltage >= IPA_VOLTAGE_MAX) {
+	if (create_params->floor_voltage >= IPA_VOLTAGE_MAX) {
 		IPA_RM_ERR("invalid voltage %d\n",
 			create_params->floor_voltage);
 		return -EINVAL;
@@ -1044,7 +1043,7 @@ bail:
  */
 const char *ipa_rm_resource_str(enum ipa_rm_resource_name resource_name)
 {
-	if (resource_name < 0 || resource_name >= IPA_RM_RESOURCE_MAX)
+	if (resource_name >= IPA_RM_RESOURCE_MAX)
 		return "INVALID RESOURCE";
 
 	return resource_name_to_str[resource_name];

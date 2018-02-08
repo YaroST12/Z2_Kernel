@@ -897,7 +897,7 @@ int rmnet_vnd_add_tc_flow(uint32_t id, uint32_t map_flow, uint32_t tc_flow)
 	int r;
 	unsigned long flags;
 
-	if ((id < 0) || (id >= RMNET_DATA_MAX_VND) || !rmnet_devices[id]) {
+	if ((id >= RMNET_DATA_MAX_VND) || !rmnet_devices[id]) {
 		LOGM("Invalid VND id [%d]", id);
 		return RMNET_CONFIG_NO_SUCH_DEVICE;
 	}
@@ -975,7 +975,7 @@ int rmnet_vnd_del_tc_flow(uint32_t id, uint32_t map_flow, uint32_t tc_flow)
 	unsigned long flags;
 	int rc = RMNET_CONFIG_OK;
 
-	if ((id < 0) || (id >= RMNET_DATA_MAX_VND) || !rmnet_devices[id]) {
+	if ((id >= RMNET_DATA_MAX_VND) || !rmnet_devices[id]) {
 		LOGM("Invalid VND id [%d]", id);
 		return RMNET_CONFIG_NO_SUCH_DEVICE;
 	}

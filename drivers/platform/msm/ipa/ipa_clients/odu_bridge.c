@@ -520,7 +520,7 @@ static int odu_bridge_set_mode(enum odu_bridge_mode mode)
 
 	ODU_BRIDGE_FUNC_ENTRY();
 
-	if (mode < 0 || mode >= ODU_BRIDGE_MODE_MAX) {
+	if (mode >= ODU_BRIDGE_MODE_MAX) {
 		ODU_BRIDGE_ERR("Unsupported mode: %d\n", mode);
 		return -EFAULT;
 	}

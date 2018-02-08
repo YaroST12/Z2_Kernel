@@ -377,10 +377,6 @@ static int get_device_tree_data(struct spi_device *spi)
 
 	epm_gpio_num = of_get_named_gpio(spi->dev.of_node,
 						"qcom,epm-enable-gpio", 0);
-	if (epm_gpio_num < 0) {
-		dev_err(&spi->dev, "missing global en gpio num\n");
-		return -ENODEV;
-	}
 
 	epm_adc = devm_kzalloc(&spi->dev,
 			sizeof(struct epm_adc_drv) +

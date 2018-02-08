@@ -246,10 +246,6 @@ static void ion_secure_cma_free(struct ion_buffer *buffer)
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
 	source_vm = get_secure_vmid(buffer->flags);
-	if (source_vm < 0) {
-		pr_err("%s: Failed to get secure vmid\n", __func__);
-		return;
-	}
 	dest_vmid = VMID_HLOS;
 	dest_perms = PERM_READ | PERM_WRITE | PERM_EXEC;
 

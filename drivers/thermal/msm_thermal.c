@@ -1936,7 +1936,7 @@ static int send_temperature_band(enum msm_thermal_phase_ctrl phase,
 	unsigned int band = req_band;
 	uint32_t key, resource, resource_id;
 
-	if (phase < 0 || phase >= MSM_PHASE_CTRL_NR ||
+	if (phase >= MSM_PHASE_CTRL_NR ||
 		req_band <= 0 || req_band >= MSM_TEMP_MAX_NR) {
 		pr_err("Invalid input\n");
 		ret = -EINVAL;
@@ -2116,8 +2116,7 @@ static int request_optimum_current(struct psm_rail *rail, enum ocr_request req)
 {
 	int ret = 0;
 
-	if ((!rail) || (req >= OPTIMUM_CURRENT_NR) ||
-		(req < 0)) {
+	if ((!rail) || (req >= OPTIMUM_CURRENT_NR)) {
 		pr_err("Invalid input %d\n", req);
 		ret = -EINVAL;
 		goto request_ocr_exit;
@@ -2650,7 +2649,7 @@ static int do_vdd_mx(void)
 		}
 	}
 
-	if ((dis_cnt == thresh[MSM_VDD_MX_RESTRICTION].thresh_ct)) {
+	if (dis_cnt == thresh[MSM_VDD_MX_RESTRICTION].thresh_ct) {
 		ret = remove_vdd_mx_restriction();
 		if (ret)
 			pr_err("Failed to remove vdd mx restriction\n");

@@ -2278,7 +2278,7 @@ int afe_spdif_port_start(u16 port_id, struct afe_spdif_port_config *spdif_port,
 	}
 
 	port_index = afe_get_port_index(port_id);
-	if ((port_index >= 0) && (port_index < AFE_MAX_PORTS)) {
+	if (port_index < AFE_MAX_PORTS) {
 		this_afe.afe_sample_rates[port_index] = rate;
 	} else {
 		pr_err("%s: Invalid port index %d\n", __func__, port_index);
@@ -2548,7 +2548,7 @@ int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
 	}
 
 	port_index = afe_get_port_index(port_id);
-	if ((port_index >= 0) && (port_index < AFE_MAX_PORTS)) {
+	if (port_index < AFE_MAX_PORTS) {
 		this_afe.afe_sample_rates[port_index] = rate;
 	} else {
 		pr_err("%s: Invalid port index %d\n", __func__, port_index);
@@ -2686,7 +2686,7 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		this_afe.aanc_info.aanc_tx_port_sample_rate = rate;
 		port_index =
 			afe_get_port_index(this_afe.aanc_info.aanc_rx_port);
-		if ((port_index >= 0) && (port_index < AFE_MAX_PORTS)) {
+		if (port_index < AFE_MAX_PORTS) {
 			this_afe.aanc_info.aanc_rx_port_sample_rate =
 				this_afe.afe_sample_rates[port_index];
 		} else {
@@ -2795,7 +2795,7 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	}
 
 	port_index = afe_get_port_index(port_id);
-	if ((port_index >= 0) && (port_index < AFE_MAX_PORTS)) {
+	if (port_index < AFE_MAX_PORTS) {
 		this_afe.afe_sample_rates[port_index] = rate;
 		/*
 		 * If afe_port_start() for tx port called before
@@ -4818,7 +4818,7 @@ int afe_close(int port_id)
 	}
 
 	port_index = afe_get_port_index(port_id);
-	if ((port_index >= 0) && (port_index < AFE_MAX_PORTS)) {
+	if (port_index < AFE_MAX_PORTS) {
 		this_afe.afe_sample_rates[port_index] = 0;
 		this_afe.topology[port_index] = 0;
 	} else {

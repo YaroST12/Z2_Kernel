@@ -1040,7 +1040,6 @@ static void __print_buf(struct seq_file *s, struct mdss_mdp_data *buf,
 		seq_printf(s, "pnum=%d ", buf->last_pipe->num);
 
 	seq_printf(s, "state=%s addr=%pa size=%lu ",
-		buf->state < ARRAY_SIZE(buf_stat_stmap) &&
 		buf_stat_stmap[buf->state] ? buf_stat_stmap[buf->state] : "?",
 		&buf->p[0].addr, buf->p[0].len);
 

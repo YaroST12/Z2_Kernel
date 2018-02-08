@@ -129,9 +129,6 @@ EXPORT_SYMBOL(glink_get_xprt_enum_string);
 const char *glink_get_xprt_state_string(
 				enum transport_state_e enum_id)
 {
-	if (enum_id >= ARRAY_SIZE(xprt_st_string))
-		return NULL;
-
 	return xprt_st_string[enum_id];
 }
 EXPORT_SYMBOL(glink_get_xprt_state_string);
@@ -145,9 +142,6 @@ EXPORT_SYMBOL(glink_get_xprt_state_string);
 const char *glink_get_ch_state_string(
 				enum local_channel_state_e enum_id)
 {
-	if (enum_id >= ARRAY_SIZE(ch_st_string))
-		return NULL;
-
 	return ch_st_string[enum_id];
 }
 EXPORT_SYMBOL(glink_get_ch_state_string);

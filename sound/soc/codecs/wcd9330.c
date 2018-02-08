@@ -6209,13 +6209,11 @@ static int tomtom_codec_enable_slimvi_feedback(struct snd_soc_dapm_widget *w,
 				__func__, ret);
 		if (!dai->bus_down_in_recovery)
 			ret = tomtom_codec_enable_slim_chmask(dai, false);
-		if (ret < 0) {
-			ret = wcd9xxx_disconnect_port(core,
-				&dai->wcd9xxx_ch_list,
-				dai->grph);
-			pr_debug("%s: Disconnect TX port, ret = %d\n",
-				__func__, ret);
-		}
+		ret = wcd9xxx_disconnect_port(core,
+			&dai->wcd9xxx_ch_list,
+			dai->grph);
+		pr_debug("%s: Disconnect TX port, ret = %d\n",
+			__func__, ret);
 
 		snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_TX_CLK_EN_B2_CTL,
 				0xC, 0x0);

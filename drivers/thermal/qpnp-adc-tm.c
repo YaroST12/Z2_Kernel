@@ -1645,10 +1645,6 @@ static int qpnp_adc_tm_get_trip_temp(struct thermal_zone_device *thermal,
 
 	btm_chan = adc_tm_sensor->btm_channel_num;
 	rc = qpnp_adc_tm_get_btm_idx(chip, btm_chan, &btm_chan_idx);
-	if (rc < 0) {
-		pr_err("Invalid btm channel idx\n");
-		return rc;
-	}
 
 	if (!chip->adc_tm_hc) {
 		reg_low_thr_lsb = adc_tm_data[btm_chan_idx].low_thr_lsb_addr;
@@ -1699,12 +1695,17 @@ static int qpnp_adc_tm_get_trip_temp(struct thermal_zone_device *thermal,
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	rc = qpnp_adc_tm_scale_voltage_therm_pu2(chip->vadc_dev,
 					chip->adc->adc_prop, reg, &result);
 	if (rc < 0) {
 		pr_err("Failed to lookup the therm thresholds\n");
 		return rc;
 	}
+=======
+	rc = qpnp_adc_tm_scale_voltage_therm_pu2(chip->vadc_dev, reg,
+								&result);
+>>>>>>> 4449cce6351a... treewide: fix more 'tautological-compare' warnings
 
 	*temp = result;
 

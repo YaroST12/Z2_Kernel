@@ -7425,8 +7425,7 @@ static int fg_dischg_gain_dt_init(struct fg_chip *chip)
 	}
 
 	for (i = 0; i < VOLT_GAIN_MAX; i++) {
-		if (chip->dischg_gain.soc[i] < 0 ||
-				chip->dischg_gain.soc[i] > 100) {
+		if (chip->dischg_gain.soc[i] > 100) {
 			pr_err("Incorrect dischg-voltage-gain-soc\n");
 			goto out;
 		}

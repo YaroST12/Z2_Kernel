@@ -1660,25 +1660,17 @@ static struct msm_serial_hslite_platform_data
 	if (pdata->config_gpio) {
 		pdata->uart_tx_gpio = of_get_named_gpio(node,
 					"qcom,tx-gpio", 0);
-		if (pdata->uart_tx_gpio < 0)
-				return ERR_PTR(pdata->uart_tx_gpio);
 
 		pdata->uart_rx_gpio = of_get_named_gpio(node,
 					"qcom,rx-gpio", 0);
-		if (pdata->uart_rx_gpio < 0)
-				return ERR_PTR(pdata->uart_rx_gpio);
 
 		/* check if 4-wire UART, then get cts/rfr GPIOs. */
 		if (pdata->config_gpio == 4) {
 			pdata->uart_cts_gpio = of_get_named_gpio(node,
 						"qcom,cts-gpio", 0);
-			if (pdata->uart_cts_gpio < 0)
-				return ERR_PTR(pdata->uart_cts_gpio);
 
 			pdata->uart_rfr_gpio = of_get_named_gpio(node,
 						"qcom,rfr-gpio", 0);
-			if (pdata->uart_rfr_gpio < 0)
-				return ERR_PTR(pdata->uart_rfr_gpio);
 		}
 	}
 

@@ -693,9 +693,6 @@ static int mdss_dsi_phy_calc_param_phy_rev_1(struct dsi_phy_t_clk_param *t_clk,
 	if (rc)
 		goto error;
 
-	if (t_param->hs_rqst.program_value < 0)
-		t_param->hs_rqst.program_value = 0;
-
 	/* t_clk_zero calculation */
 	t_param->clk_zero.mipi_min = (300 - clk_prep_actual);
 	t_param->clk_zero.rec_min = (DIV_ROUND_UP(t_param->clk_zero.mipi_min

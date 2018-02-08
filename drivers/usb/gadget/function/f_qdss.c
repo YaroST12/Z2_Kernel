@@ -736,10 +736,6 @@ static int qdss_dpl_ipa_connect(int port_num)
 	usb_bam_type = usb_bam_get_bam_type(gadget->name);
 	dst_connection_idx = usb_bam_get_connection_idx(usb_bam_type, IPA_P_BAM,
 				PEER_PERIPHERAL_TO_USB, USB_BAM_DEVICE, 1);
-	if (dst_connection_idx < 0) {
-		pr_err("usb_bam_get_connection_idx failed\n");
-		return ret;
-	}
 
 	ret = ipa_data_connect(gp, port_num, 0, dst_connection_idx);
 	if (ret) {

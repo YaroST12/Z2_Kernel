@@ -454,7 +454,7 @@ static inline u64 hdmi_8996_v2_get_post_div_lt_2g(u64 bclk, u64 vco_range)
 
 static inline u64 hdmi_8996_v2_get_post_div_gt_2g(u64 hsclk)
 {
-	if (hsclk >= 0 && hsclk <= 3)
+	if (hsclk <= 3)
 		return hsclk + 1;
 
 	return HDMI_64B_ERR_VAL;

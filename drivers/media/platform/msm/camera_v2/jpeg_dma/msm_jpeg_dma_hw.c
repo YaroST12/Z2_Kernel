@@ -813,10 +813,6 @@ static int msm_jpegdma_hw_calc_speed(struct msm_jpegdma_device *dma,
 	}
 
 	real_clock = clk_round_rate(dma->clk[core_clk_idx], calc_rate);
-	if (real_clock < 0) {
-		dev_err(dma->dev, "Can not round core clock\n");
-		return -EINVAL;
-	}
 
 	speed->bus_ab = calc_rate * 2;
 	speed->bus_ib = (real_clock *

@@ -194,8 +194,7 @@ mhi_state_transition_error:
 	kfree(mhi_dev_ctxt->ev_ring_props);
 	mhi_rem_pm_sysfs(&pcie_device->dev);
 sysfs_config_err:
-	for (; i >= 0; --i)
-		free_irq(pcie_device->irq + i, &pcie_device->dev);
+	free_irq(pcie_device->irq + i, &pcie_device->dev);
 	debugfs_remove_recursive(mhi_pcie_dev->mhi_ctxt.mhi_parent_folder);
 msi_config_err:
 	pci_disable_device(pcie_device);

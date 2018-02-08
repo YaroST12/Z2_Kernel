@@ -474,7 +474,7 @@ static int hdcp_lib_enable_encryption(struct hdcp_lib_handle *handle)
 			rsp_buf, QSEECOM_ALIGN(sizeof(
 			struct hdcp_set_hw_key_rsp)));
 
-	if ((rc < 0) || (rsp_buf->status < 0)) {
+	if (rc < 0) {
 		pr_err("qseecom cmd failed with err = %d status = %d\n",
 			rc, rsp_buf->status);
 		rc = -EINVAL;
@@ -627,7 +627,7 @@ static int hdcp_lib_txmtr_init(struct hdcp_lib_handle *handle)
 
 	if ((rc < 0) || (rsp_buf->status != HDCP_SUCCESS) ||
 		(rsp_buf->commandid != HDCP_TXMTR_INIT) ||
-		(rsp_buf->msglen <= 0) || (rsp_buf->message == NULL)) {
+		(rsp_buf->msglen <= 0)) {
 		pr_err("qseecom cmd failed with err = %d, status = %d\n",
 			rc, rsp_buf->status);
 		rc = -EINVAL;
@@ -690,8 +690,7 @@ static int hdcp_lib_txmtr_deinit(struct hdcp_lib_handle *handle)
 		QSEECOM_ALIGN(sizeof(struct hdcp_deinit_req)), rsp_buf,
 			QSEECOM_ALIGN(sizeof(struct hdcp_deinit_rsp)));
 
-	if ((rc < 0) || (rsp_buf->status < 0) ||
-			(rsp_buf->commandid != HDCP_TXMTR_DEINIT)) {
+	if ((rc < 0) || (rsp_buf->commandid != HDCP_TXMTR_DEINIT)) {
 		pr_err("qseecom cmd failed with err = %d status = %d\n",
 					rc, rsp_buf->status);
 		rc = -EINVAL;
@@ -739,9 +738,8 @@ static void hdcp_lib_stream(struct hdcp_lib_handle *handle)
 	QSEECOM_ALIGN(sizeof(struct hdcp_query_stream_type_req)), rsp_buf,
 		QSEECOM_ALIGN(sizeof(struct hdcp_query_stream_type_rsp)));
 
-	if ((rc < 0) || (rsp_buf->status < 0) || (rsp_buf->msglen <= 0) ||
-		(rsp_buf->commandid != HDCP_TXMTR_QUERY_STREAM_TYPE) ||
-				(rsp_buf->msg == NULL)) {
+	if ((rc < 0) || (rsp_buf->msglen <= 0) ||
+		(rsp_buf->commandid != HDCP_TXMTR_QUERY_STREAM_TYPE)) {
 		pr_err("qseecom cmd failed with err=%d status=%d\n",
 			rc, rsp_buf->status);
 		rc = -EINVAL;
@@ -1271,9 +1269,8 @@ static void hdcp_lib_msg_recvd(struct hdcp_lib_handle *handle)
 		goto exit;
 	}
 
-	if ((rc < 0) || (rsp_buf->status < 0) || (rsp_buf->msglen <= 0) ||
-		(rsp_buf->commandid != HDCP_TXMTR_PROCESS_RECEIVED_MESSAGE) ||
-				(rsp_buf->msg == NULL)) {
+	if ((rc < 0) || (rsp_buf->msglen <= 0) ||
+		(rsp_buf->commandid != HDCP_TXMTR_PROCESS_RECEIVED_MESSAGE)) {
 		pr_err("qseecom cmd failed with err=%d status=%d\n",
 			rc, rsp_buf->status);
 		rc = -EINVAL;

@@ -116,7 +116,7 @@ static int32_t msm_cci_set_clk_param(struct cci_device *cci_dev,
 	enum cci_i2c_master_t master = c_ctrl->cci_info->cci_i2c_master;
 	enum i2c_freq_mode_t i2c_freq_mode = c_ctrl->cci_info->i2c_freq_mode;
 
-	if ((i2c_freq_mode >= I2C_MAX_MODES) || (i2c_freq_mode < 0)) {
+	if ((i2c_freq_mode >= I2C_MAX_MODES)) {
 		pr_err("%s:%d invalid i2c_freq_mode = %d",
 			__func__, __LINE__, i2c_freq_mode);
 		return -EINVAL;
@@ -830,7 +830,7 @@ static int32_t msm_cci_i2c_read(struct v4l2_subdev *sd,
 	master = c_ctrl->cci_info->cci_i2c_master;
 	read_cfg = &c_ctrl->cfg.cci_i2c_read_cfg;
 
-	if (master >= MASTER_MAX || master < 0) {
+	if (master >= MASTER_MAX) {
 		pr_err("%s:%d Invalid I2C master %d\n",
 			__func__, __LINE__, master);
 		return -EINVAL;
@@ -1014,8 +1014,7 @@ static int32_t msm_cci_i2c_read_bytes(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
-	if (c_ctrl->cci_info->cci_i2c_master >= MASTER_MAX
-			|| c_ctrl->cci_info->cci_i2c_master < 0) {
+	if (c_ctrl->cci_info->cci_i2c_master >= MASTER_MAX) {
 		pr_err("%s:%d Invalid I2C master addr\n", __func__, __LINE__);
 		return -EINVAL;
 	}
@@ -1248,7 +1247,7 @@ static struct msm_cam_clk_info *msm_cci_get_clk(struct cci_device *cci_dev,
 	enum i2c_freq_mode_t i2c_freq_mode = c_ctrl->cci_info->i2c_freq_mode;
 	struct device_node *of_node = cci_dev->pdev->dev.of_node;
 
-	if ((i2c_freq_mode >= I2C_MAX_MODES) || (i2c_freq_mode < 0)) {
+	if (i2c_freq_mode >= I2C_MAX_MODES) {
 		pr_err("%s:%d invalid i2c_freq_mode %d\n",
 			__func__, __LINE__, i2c_freq_mode);
 		return NULL;
@@ -1329,7 +1328,7 @@ static int32_t msm_cci_init(struct v4l2_subdev *sd,
 		CDBG("%s ref_count %d\n", __func__, cci_dev->ref_count);
 		master = c_ctrl->cci_info->cci_i2c_master;
 		CDBG("%s:%d master %d\n", __func__, __LINE__, master);
-		if (master < MASTER_MAX && master >= 0) {
+		if (master < MASTER_MAX) {
 			mutex_lock(&cci_dev->cci_master_info[master].mutex);
 			flush_workqueue(cci_dev->write_wq[master]);
 			/* Re-initialize the completion */
@@ -1560,8 +1559,7 @@ static int32_t msm_cci_write(struct v4l2_subdev *sd,
 		return rc;
 	}
 
-	if (c_ctrl->cci_info->cci_i2c_master >= MASTER_MAX
-			|| c_ctrl->cci_info->cci_i2c_master < 0) {
+	if (c_ctrl->cci_info->cci_i2c_master >= MASTER_MAX) {
 		pr_err("%s:%d Invalid I2C master addr\n", __func__, __LINE__);
 		return -EINVAL;
 	}

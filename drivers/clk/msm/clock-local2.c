@@ -1899,9 +1899,6 @@ static int postdiv_reg_set_div(struct div_clk *clk, int div)
 		}
 	}
 
-	if (mask < 0)
-		return -EINVAL;
-
 	spin_lock_irqsave(&clk->c.lock, flags);
 	parent = clk->c.parent;
 	if (parent->count && parent->ops->disable)

@@ -172,8 +172,7 @@ int msm_camera_get_clk_info(struct platform_device *pdev,
 	return rc;
 
 err4:
-	for (--i; i >= 0; i--)
-		devm_clk_put(&pdev->dev, (*clk_ptr)[i]);
+	devm_clk_put(&pdev->dev, (*clk_ptr)[i]);
 err3:
 	devm_kfree(&pdev->dev, rates);
 err2:
@@ -251,8 +250,7 @@ int msm_camera_get_clk_info_and_rates(
 			sizeof(uint32_t), GFP_KERNEL);
 		if (!rates[i]) {
 			rc = -ENOMEM;
-			for (--i; i >= 0; i--)
-				devm_kfree(&pdev->dev, rates[i]);
+			devm_kfree(&pdev->dev, rates[i]);
 			goto err3;
 		}
 	}
@@ -298,8 +296,7 @@ int msm_camera_get_clk_info_and_rates(
 	return rc;
 
 err5:
-	for (--i; i >= 0; i--)
-		devm_clk_put(&pdev->dev, clks[i]);
+	devm_clk_put(&pdev->dev, clks[i]);
 err4:
 	for (i = 0; i < *num_set; i++)
 		devm_kfree(&pdev->dev, rates[i]);

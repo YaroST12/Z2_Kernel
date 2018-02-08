@@ -330,10 +330,6 @@ static int ipa2_active_clients_log_init(void)
 			GFP_KERNEL);
 	active_clients_table_buf = kzalloc(sizeof(
 			char[IPA2_ACTIVE_CLIENTS_TABLE_BUF_SIZE]), GFP_KERNEL);
-	if (ipa_ctx->ipa2_active_clients_logging.log_buffer == NULL) {
-		IPAERR("Active Clients Logging memory allocation failed");
-		goto bail;
-	}
 	for (i = 0; i < IPA2_ACTIVE_CLIENTS_LOG_BUFFER_SIZE_LINES; i++) {
 		ipa_ctx->ipa2_active_clients_logging.log_buffer[i] =
 			ipa_ctx->ipa2_active_clients_logging.log_buffer[0] +

@@ -1311,7 +1311,7 @@ int rpm_regulator_set_mode(struct rpm_regulator *regulator,
 	if (rc)
 		return rc;
 
-	if (mode < 0 || mode >= ARRAY_SIZE(mode_mapping)) {
+	if (mode >= ARRAY_SIZE(mode_mapping)) {
 		vreg_err(regulator, "invalid mode requested: %d\n", mode);
 		return -EINVAL;
 	}

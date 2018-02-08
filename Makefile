@@ -384,7 +384,7 @@ POLLY_FLAGS := -mllvm -polly \
 		-mllvm -polly-opt-fusion=max \
 		-mllvm -polly-ast-use-context \
 		-mllvm -polly-detect-keep-going \
-		-mllvm -polly-vectorizer=stripmine \
+		-mllvm -polly-vectorizer=stripmine
 
 OPT_FLAGS := -O3 \
 		-fopenmp \
@@ -392,8 +392,8 @@ OPT_FLAGS := -O3 \
 		-fslp-vectorize \
 		-fno-signed-zeros \
 		-fno-standalone-debug \
-		-mcpu=kryo -mcrc \
 		-freroll-loops -mhvx -mhvx-double \
+		-mcpu=kryo -mcrc -ffp-contract=fast \
 		$(POLLY_FLAGS)
 
 ifeq ($(cc-name),clang)

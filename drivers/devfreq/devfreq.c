@@ -1148,6 +1148,7 @@ static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
 	switch (event) {
+		case STATE_NOTIFIER_BOOST:
 		case STATE_NOTIFIER_ACTIVE:
 			schedule_work(&wake_boost_work);
 			break;

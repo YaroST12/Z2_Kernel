@@ -74,6 +74,7 @@ struct timeval prev_timeval;
 /* Global pointer to all of the data for the driver */
 static struct boost_policy *boost_policy_g;
 
+static struct notifier_block notif;
 static uint32_t get_boost_state(struct boost_policy *b);
 static void set_boost_bit(struct boost_policy *b, uint32_t state);
 static void clear_boost_bit(struct boost_policy *b, uint32_t state);
@@ -365,6 +366,30 @@ free_b:
 	return NULL;
 }
 
+static int state_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
+{
+	struct boost_policy *b = boost_policy_g;
+	struct fp_config *fp = &b->fp;
+	switch (event) {
+		case STATE_NOTIFIER_BOOST:
+			queue_delayed_work(b->wq, &fp->boost_work,
+				msecs_to_jiffies(FP_BOOST_MS));
+			pr_err("fp:STATE_NOTIFIER_BOOST\n");
+			break;
+		case STATE_NOTIFIER_ACTIVE:
+			pr_err("fp:STATE_NOTIFIER_ACTIVE\n");
+			break;
+		case STATE_NOTIFIER_SUSPEND:
+			pr_err("fp:STATE_NOTIFIER_SUSPEND\n");
+			break;
+		default:
+			break;
+	}
+
+	return NOTIFY_OK;
+}
+
 static int __init cpu_fp_init(void)
 {
 	struct boost_policy *b;
@@ -395,6 +420,8 @@ static int __init cpu_fp_init(void)
 		pr_err("Failed to register input handler, err: %d\n", ret);
 		goto free_mem;
 	}
+	notif.notifier_call = state_notifier_callback;
+	state_register_client(&notif);
 
 	ret = sysfs_fp_init();
 	if (ret)

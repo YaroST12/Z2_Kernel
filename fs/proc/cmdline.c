@@ -26,7 +26,7 @@ static const struct file_operations cmdline_proc_fops = {
 
 static int __init proc_cmdline_init(void)
 {
-	char *offset_addr, *cmd = new_command_line;
+	char *offset_addr = NULL, *cmd = new_command_line;
 
 	strcpy(cmd, saved_command_line);
 

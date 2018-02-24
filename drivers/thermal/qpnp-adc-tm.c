@@ -1695,17 +1695,8 @@ static int qpnp_adc_tm_get_trip_temp(struct thermal_zone_device *thermal,
 		return -EINVAL;
 	}
 
-<<<<<<< HEAD
-	rc = qpnp_adc_tm_scale_voltage_therm_pu2(chip->vadc_dev,
+	rc = qpnp_adc_tm_scale_voltage_therm_pu2(chip->vadc_dev, 
 					chip->adc->adc_prop, reg, &result);
-	if (rc < 0) {
-		pr_err("Failed to lookup the therm thresholds\n");
-		return rc;
-	}
-=======
-	rc = qpnp_adc_tm_scale_voltage_therm_pu2(chip->vadc_dev, reg,
-								&result);
->>>>>>> 4449cce6351a... treewide: fix more 'tautological-compare' warnings
 
 	*temp = result;
 

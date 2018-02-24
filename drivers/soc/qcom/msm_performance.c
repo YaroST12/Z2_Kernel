@@ -2464,7 +2464,7 @@ static int __ref msm_performance_cpu_callback(struct notifier_block *nfb,
 		return NOTIFY_OK;
 
 	for (i = 0; i < num_clusters; i++) {
-		if (managed_clusters[i]->cpus == NULL)
+		if (!managed_clusters[i]->cpus)
 			return NOTIFY_OK;
 		if (cpumask_test_cpu(cpu, managed_clusters[i]->cpus)) {
 			i_cl = managed_clusters[i];
@@ -2480,7 +2480,7 @@ static int __ref msm_performance_cpu_callback(struct notifier_block *nfb,
 		 * Prevent onlining of a managed CPU if max_cpu criteria is
 		 * already satisfied
 		 */
-		if (i_cl->offlined_cpus == NULL)
+		if (!i_cl->offlined_cpus)
 			return NOTIFY_OK;
 		if (i_cl->max_cpu_request <=
 					num_online_managed(i_cl->cpus)) {
@@ -2491,7 +2491,7 @@ static int __ref msm_performance_cpu_callback(struct notifier_block *nfb,
 		cpumask_clear_cpu(cpu, i_cl->offlined_cpus);
 
 	} else if (action == CPU_DEAD) {
-		if (i_cl->offlined_cpus == NULL)
+		if (!i_cl->offlined_cpus)
 			return NOTIFY_OK;
 		if (cpumask_test_cpu(cpu, i_cl->offlined_cpus))
 			return NOTIFY_OK;
@@ -2692,10 +2692,8 @@ error:
 	for (i = 0; i < num_clusters; i++) {
 		if (!managed_clusters[i])
 			break;
-		if (managed_clusters[i]->offlined_cpus)
-			free_cpumask_var(managed_clusters[i]->offlined_cpus);
-		if (managed_clusters[i]->cpus)
-			free_cpumask_var(managed_clusters[i]->cpus);
+		free_cpumask_var(managed_clusters[i]->offlined_cpus);
+		free_cpumask_var(managed_clusters[i]->cpus);
 		kfree(managed_clusters[i]);
 	}
 	kfree(managed_clusters);

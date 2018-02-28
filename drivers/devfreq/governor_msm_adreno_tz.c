@@ -386,6 +386,8 @@ extern int adreno_idler(struct devfreq_dev_status stats, struct devfreq *devfreq
 #endif
 
 #if 1
+static int adrenoboost_debug(struct devfreq *devfreq, unsigned long *freq,
+				u32 *flag, int jump_dir);
 /*
 * mapping gpu level calculated linear conservation half curve
 * values into a bell curve of conservation (lower is higher freq level)
@@ -550,6 +552,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 		level += val;
 		level = max(level, 0);
 		level = min_t(int, level, devfreq->profile->max_state - 1);
+		adrenoboost_debug(devfreq, freq, flag, 0);
 		priv->bin.last_level = level;
 	} else {
 		if (val) {
@@ -562,6 +565,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 			*/
 			if (val<0 && priv->bin.cycles_keeping_level <
 				conservation_map_up[ last_level ]) {
+				adrenoboost_debug(devfreq, freq, flag, 1);
 			} else
 			/*
 			* going downwards in frequency let it happen hard in
@@ -569,6 +573,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 			*/
 			if (val>0 && priv->bin.cycles_keeping_level <
 				conservation_map_down[ last_level ])  {
+				adrenoboost_debug(devfreq, freq, flag, 2);
 			} else
 			{
 				level += val;
@@ -578,6 +583,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 				priv->bin.cycles_keeping_level = 0;
 				// set new last level
 				priv->bin.last_level = level;
+				adrenoboost_debug(devfreq, freq, flag, 0);
 			}
 		}
 	}
@@ -594,6 +600,28 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	*freq = devfreq->profile->freq_table[level];
 	return 0;
 }
+
+#if 1
+static int adrenoboost_debug(struct devfreq *devfreq, unsigned long *freq,
+				u32 *flag, int jump_dir)
+{
+	struct devfreq_msm_adreno_tz_data *priv = devfreq->data;
+	struct devfreq_dev_status stats;
+	int val, level = 0;
+	int last_level = priv->bin.last_level;
+	if (!jump_dir)
+		pr_info("ADRENO jumping\n");
+	else if (jump_dir == 1)
+		pr_info("ADRENO NOT jumping UP\n");
+	else
+		pr_info("ADRENO NOT jumping DOWN\n");
+	pr_info("level = %d last_level = %d total=%d busy=%d original busy_time=%d\n",
+			level, priv->bin.last_level,
+			(int)priv->bin.total_time,
+			(int)priv->bin.busy_time, (int)stats.busy_time);
+	return 0;
+}
+#endif
 
 static int tz_notify(struct notifier_block *nb, unsigned long type, void *devp)
 {

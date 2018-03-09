@@ -242,10 +242,12 @@ static int do_cpu_boost(struct notifier_block *nb,
 	struct ib_config *ib = &b->ib;
 	uint32_t boost_freq, state;
 	unsigned int min_freq_boosted;
+	bool reject_boost =
+		(policy->cur >= (ib->freq[policy->cpu] * 7 / 10));
 	bool initd = !is_initd(current->comm);
 	bool ret;
 
-	if (action != CPUFREQ_ADJUST || unlikely(initd))
+	if (action != CPUFREQ_ADJUST || unlikely(initd) || reject_boost)
 		return NOTIFY_OK;
 
 	state = get_boost_state(b);

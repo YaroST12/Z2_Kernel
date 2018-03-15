@@ -825,7 +825,7 @@ config DOUBLE_TAP
 	 If you say yes here, you get support Bosch double tap sensor function
 
 config SENSORS_HALL
-	tristate "Rohm hall ic"
+	bool "Rohm hall ic"
 	depends on INPUT
 	default y
 	help

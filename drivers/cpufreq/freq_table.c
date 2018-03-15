@@ -33,21 +33,12 @@ bool policy_has_boost_freq(struct cpufreq_policy *policy)
 }
 EXPORT_SYMBOL_GPL(policy_has_boost_freq);
 
-extern unsigned int overfreq_enable;
-
-#if defined CONFIG_PRODUCT_Z2_PLUS || defined CONFIG_PRODUCT_Z2_ROW
-extern unsigned int overfreq_enable;
-#endif
-
 int cpufreq_frequency_table_cpuinfo(struct cpufreq_policy *policy,
 				    struct cpufreq_frequency_table *table)
 {
 	struct cpufreq_frequency_table *pos;
 	unsigned int min_freq = ~0;
 	unsigned int max_freq = 0;
-#if defined CONFIG_PRODUCT_Z2_PLUS || defined CONFIG_PRODUCT_Z2_ROW
-	unsigned int nax_freq = 0; // the second max freq
-#endif
 	unsigned int freq;
 
 	cpufreq_for_each_valid_entry(pos, table) {
@@ -60,29 +51,12 @@ int cpufreq_frequency_table_cpuinfo(struct cpufreq_policy *policy,
 		pr_debug("table entry %u: %u kHz\n", (int)(pos - table), freq);
 		if (freq < min_freq)
 			min_freq = freq;
-#if defined CONFIG_PRODUCT_Z2_PLUS || defined CONFIG_PRODUCT_Z2_ROW
-		if (freq > max_freq) {
-			nax_freq = max_freq;
-			max_freq = freq;
-		} else if (freq > nax_freq && freq < max_freq) {
-			nax_freq = freq;
-		}
-#else
 		if (freq > max_freq)
 			max_freq = freq;
-#endif
 	}
 
 	policy->min = policy->cpuinfo.min_freq = min_freq;
-#if defined CONFIG_PRODUCT_Z2_PLUS || defined CONFIG_PRODUCT_Z2_ROW
-	if (overfreq_enable){
-		policy->max = policy->cpuinfo.max_freq = max_freq;
-	} else {
-		policy->max = policy->cpuinfo.max_freq = nax_freq;
-	}
-#else
 	policy->max = policy->cpuinfo.max_freq = max_freq;
-#endif
 
 	if (policy->min == ~0)
 		return -EINVAL;

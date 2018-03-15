@@ -60,7 +60,9 @@ static void scm_disable_sdi(void);
 * There is no API from TZ to re-enable the registers.
 * So the SDI cannot be re-enabled when it already by-passed.
 */
-static int download_mode = 1;
+
+/* set default download mode as 0 to avoid device enter dump */
+static int download_mode = 0;
 #else
 static const int download_mode;
 #endif
@@ -277,14 +279,13 @@ static void msm_restart_prepare(const char *cmd)
 	 * Kill download mode if master-kill switch is set
 	 */
 
-	set_dload_mode(download_mode && restart_mode == RESTART_DLOAD);
+	set_dload_mode(download_mode &&
+			(in_panic || restart_mode == RESTART_DLOAD));
 #endif
 
 	if (qpnp_pon_check_hard_reset_stored()) {
 		/* Set warm reset as true when device is in dload mode */
-		if (get_dload_mode() ||
-			((cmd != NULL && cmd[0] != '\0') &&
-			!strcmp(cmd, "edl")))
+		if (get_dload_mode() || (cmd != NULL && cmd[0] != '\0'))
 			need_warm_reset = true;
 	} else {
 		need_warm_reset = (get_dload_mode() ||
@@ -292,6 +293,13 @@ static void msm_restart_prepare(const char *cmd)
 				strcmp(cmd, "userrequested")));
 	}
 
+	if (cmd != NULL) {
+		if ((!strncmp(cmd, "bootloader", 10)) ||
+				(!strncmp(cmd, "recovery", 8)) ||
+					(in_panic))
+			need_warm_reset = true;
+	}
+	need_warm_reset = true;
 	/* Hard reset the PMIC unless memory contents must be maintained. */
 	if (need_warm_reset) {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
@@ -299,7 +307,10 @@ static void msm_restart_prepare(const char *cmd)
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 	}
 
-	if (cmd != NULL) {
+	if (in_panic) {
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
+		__raw_writel(0x77665501, restart_reason);
+	} else if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
@@ -308,6 +319,10 @@ static void msm_restart_prepare(const char *cmd)
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_RECOVERY);
 			__raw_writel(0x77665502, restart_reason);
+		} else if (!strncmp(cmd, "testmode", 8)) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_TESTMODE);
+			__raw_writel(0x77665504, restart_reason);
 		} else if (!strcmp(cmd, "rtc")) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_RTC);
@@ -336,10 +351,10 @@ static void msm_restart_prepare(const char *cmd)
 			enable_emergency_dload_mode();
 #endif
 		} else {
+			pr_notice("%s : cmd is %s, set to reboot mode\n", __func__, cmd);
+			qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
 			__raw_writel(0x77665501, restart_reason);
 		}
-	} else if (in_panic) {
-		__raw_writel(0x77665501, restart_reason);
 	}
 
 	flush_cache_all();

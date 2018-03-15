@@ -25,7 +25,7 @@
 
 static inline unsigned long __xchg(unsigned long x, volatile void *ptr, int size)
 {
-	unsigned long ret, tmp;
+	unsigned long ret = 0, tmp;
 
 	switch (size) {
 	case 1:
@@ -83,7 +83,7 @@ static inline unsigned long __xchg(unsigned long x, volatile void *ptr, int size
 static inline unsigned long __cmpxchg(volatile void *ptr, unsigned long old,
 				      unsigned long new, int size)
 {
-	unsigned long oldval = 0, res;
+	unsigned long oldval = 0, res = 0;
 
 	switch (size) {
 	case 1:

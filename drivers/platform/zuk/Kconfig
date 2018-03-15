@@ -18,9 +18,13 @@ menu "Zuk board selection"
 	config MACH_ZUK_Z2_PLUS
 		bool "ZUK_Z2_Plus_board"
 		select MACH_ZUK_MSM8996
+		select PRODUCT_Z2_PLUS
 		help
 		  Support for Zuk Z2 Plus variant
 
+	config PRODUCT_Z2_PLUS
+    	bool "z2_plus"
+	  	  
 	config MACH_ZUK_Z2_ROW
 		bool "ZUK_Z2_ROW_board"
 		select MACH_ZUK_MSM8996

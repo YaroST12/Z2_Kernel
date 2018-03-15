@@ -326,7 +326,7 @@ struct msm_vfe_axi_stream_request_cmd {
 	uint32_t controllable_output;
 	uint32_t burst_len;
 	/* Flag indicating memory input stream */
-	enum msm_stream_rdi_input_type rdi_input_type;
+	enum msm_stream_memory_input_t memory_input;
 };
 
 struct msm_vfe32_axi_stream_request_cmd {

@@ -200,7 +200,6 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
-	.enable_anc_mic_detect = false,
 	.key_code[0] = BTN_0,
 	.key_code[1] = BTN_1,
 	.key_code[2] = BTN_2,
@@ -229,11 +228,10 @@ static int headset_standard_get_parm_set(const char *val, struct kernel_param *k
 	if (1 == headset_standard_get) {
 		if (-1 == gnd_mic_gpio_state)
 			headset_type_standard = 0;
-		else {
+		else
 			headset_type_standard = gnd_mic_gpio_state;
 			printk(KERN_INFO "%s enter, headset_type_standard = %d\n",
 			__func__, headset_type_standard);
-        }
 	} else {
 		printk(KERN_INFO "enter %s, clear the headset/headphone type\n", __func__);
 			headset_type_standard = -1;
@@ -3959,8 +3957,6 @@ static int msm8996_init_wsa_dev(struct platform_device *pdev,
 	card->codec_conf = msm8996_codec_conf;
 	card->aux_dev = msm8996_aux_dev;
 
-
-
 	return 0;
 }
 
@@ -4045,7 +4041,7 @@ static int msm8996_asoc_machine_probe(struct platform_device *pdev)
 	}
 
 	ret = msm8996_init_wsa_dev(pdev, card);
-#if defined CONFIG_PRODUCT_Z2_PLUS
+#if defined CONFIG_MACH_ZUK_Z2_PLUS
 	if (ret){
 		if(wsa_dev_id == 0x21170214)
 			printk("msm8996_init_wsa_dev wsa_dev_id:%llx\n", wsa_dev_id);

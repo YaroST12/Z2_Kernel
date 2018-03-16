@@ -591,11 +591,6 @@ config TI_DRV2667
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called ti_drv2667.
-config FPC1020_REE
-    tristate "FPC1020 fingerprint sensor support"
-    help
-      The FPC1020 is a fingerprint sensor for smartphone, only manage
-      IRQ & HW reset gpio in the REE side.
 
 config QPNP_MISC
 	tristate "QPNP Misc Peripheral"

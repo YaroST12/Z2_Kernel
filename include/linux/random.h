@@ -7,7 +7,7 @@
 #define _LINUX_RANDOM_H
 
 #include <linux/list.h>
-#include <linux/once.h>
+//#include <linux/once.h>
 
 #include <uapi/linux/random.h>
 

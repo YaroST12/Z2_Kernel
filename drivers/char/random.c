@@ -2088,7 +2088,7 @@ EXPORT_SYMBOL(get_random_u32);
  * @start is returned.
  */
 unsigned long
-randomize_page(unsigned long start, unsigned long range)
+randomize_range(unsigned long start, unsigned long range)
 {
 	if (!PAGE_ALIGNED(start)) {
 		range -= PAGE_ALIGN(start) - start;

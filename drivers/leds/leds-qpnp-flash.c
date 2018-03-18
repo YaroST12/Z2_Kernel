@@ -695,7 +695,7 @@ qpnp_flash_led_get_max_avail_current(struct flash_node_data *flash_node,
 			usleep_range(FLASH_LED_CURRENT_READING_DELAY_MIN,
 				FLASH_LED_CURRENT_READING_DELAY_MAX);
 		}
-
+#ifndef CONFIG_MACH_ZUK_Z2_PLUS
 		led->battery_psy->get_property(led->battery_psy,
 				POWER_SUPPLY_PROP_FLASH_CURRENT_MAX, &prop);
 		if (!prop.intval) {
@@ -705,6 +705,15 @@ qpnp_flash_led_get_max_avail_current(struct flash_node_data *flash_node,
 		}
 
 		max_curr_avail_ma = (prop.intval / FLASH_LED_UA_PER_MA);
+#else
+		/* 
+		* We use modified battery percentage checking
+		* Flashlight refuses to flash properly with it.
+		* Says that battery is too low.
+		* Sad emoji.
+		*/
+		max_curr_avail_ma = FLASH_LED_UA_PER_MA;
+#endif
 	}
 
 	/* When thermal mitigation is available, this logic

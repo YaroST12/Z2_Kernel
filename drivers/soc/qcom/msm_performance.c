@@ -371,6 +371,7 @@ device_param_cb(managed_online_cpus, &param_ops_managed_online_cpus,
  */
 static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 {
+#if 0
 	int i, j, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
@@ -427,6 +428,7 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	}
 	put_online_cpus();
 
+#endif
 	return 0;
 }
 

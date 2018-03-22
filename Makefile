@@ -376,7 +376,7 @@ CFLAGS_KERNEL	=
 AFLAGS_KERNEL	=
 
 GEN_FLAGS := -O3 -fopenmp -funroll-loops \
-				-mtune=kryo
+				-mcpu=kryo
 
 POLLY_FLAGS := -mllvm -polly \
 				-mllvm -polly-run-dce \

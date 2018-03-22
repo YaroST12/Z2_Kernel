@@ -141,6 +141,10 @@
 	qcom,gpu-quirk-critical-packets;
 	qcom,gpu-quirk-fault-detect-mask;
 
+	/* Disable wake on touch */
+	qcom,disable-wake-on-touch;
+
+	qcom,disable-busy-time-burst;
 	qcom,gpu-pwrlevel-bins {
 		#address-cells = <1>;
 		#size-cells = <0>;

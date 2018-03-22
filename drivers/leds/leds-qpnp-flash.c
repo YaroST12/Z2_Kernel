@@ -1213,7 +1213,7 @@ static int qpnp_flash_led_prepare_v1(struct led_trigger *trig, int options,
 	struct led_classdev *led_cdev = trigger_to_lcdev(trig);
 	struct flash_node_data *flash_node;
 	struct qpnp_flash_led *led;
-	int rc;
+	int rc = 0;
 
 	if (!led_cdev) {
 		pr_err("Invalid led_trigger provided\n");

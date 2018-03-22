@@ -20,7 +20,7 @@
 #include <linux/ftrace.h>
 #include <linux/mm.h>
 #include <linux/msm_adreno_devfreq.h>
-#include <linux/display_state.h>
+#include <linux/state_notifier.h>
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
@@ -733,7 +733,7 @@ static int tz_suspend(struct devfreq *devfreq)
 	struct devfreq_msm_adreno_tz_data *priv = devfreq->data;
 	unsigned int scm_data[2] = {0, 0};
 	__secure_tz_reset_entry2(scm_data, sizeof(scm_data), priv->is_64);
-	display_on = is_display_on();
+	display_on = !state_suspended;
 	suspended = true;
 
 	priv->bin.total_time = 0;
@@ -779,7 +779,7 @@ static int tz_handler(struct devfreq *devfreq, unsigned int event, void *data)
 	case DEVFREQ_GOV_RESUME:
 		spin_lock(&suspend_lock);
 		suspend_time += suspend_time_ms();
-		display_on = is_display_on();
+		display_on = !state_suspended;
 		suspended = false;
 		/* Reset the suspend_start when gpu resumes */
 		suspend_start = 0;

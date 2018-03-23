@@ -335,7 +335,7 @@ static struct cpufreq_driver msm_cpufreq_driver = {
  */
 #define UNDERCLK_MAX_PERFCL_MSM8996PRO	2150400
 #define UNDERCLK_MAX_PWRCL_MSM8996PRO	1516800
-#define UNDERCLK_MAX_PERFCL_MSM8996	1824000
+#define UNDERCLK_MAX_PERFCL_MSM8996	2150400
 #define UNDERCLK_MAX_PWRCL_MSM8996	1478400
 static bool no_cpu_underclock;
 

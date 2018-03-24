@@ -39,6 +39,8 @@ static struct mutex        v4l2_event_mtx;
 
 static struct pm_qos_request msm_v4l2_pm_qos_request;
 
+static struct pm_qos_request msm_v4l2_pm_qos_request;
+
 static struct msm_queue_head *msm_session_q;
 
 /* This variable represent daemon status
@@ -681,37 +683,6 @@ static int __msm_close_destry_session_notify_apps(void *d1, void *d2)
 	return 0;
 }
 
-static int __msm_wakeup_all_cmdack_session_stream(void *d1, void *d2)
-{
-	struct msm_stream *stream = d1;
-	struct msm_session *session = d2;
-	struct msm_command_ack *cmd_ack = NULL;
-	unsigned long spin_flags = 0;
-
-	cmd_ack = msm_queue_find(&session->command_ack_q,
-		struct msm_command_ack, list,
-		__msm_queue_find_command_ack_q,
-		&stream->stream_id);
-	if (cmd_ack) {
-		spin_lock_irqsave(&(session->command_ack_q.lock),
-			spin_flags);
-		complete(&cmd_ack->wait_complete);
-		spin_unlock_irqrestore(&(session->command_ack_q.lock),
-			spin_flags);
-	}
-	return 0;
-}
-
-static int __msm_close_wakeup_all_cmdack_session(void *d1, void *d2)
-{
-	struct msm_stream  *stream = NULL;
-	struct msm_session *session = d1;
-
-	stream = msm_queue_find(&session->stream_q, struct msm_stream,
-		list, __msm_wakeup_all_cmdack_session_stream, d1);
-	return 0;
-}
-
 static long msm_private_ioctl(struct file *file, void *fh,
 	bool valid_prio, unsigned int cmd, void *arg)
 {
@@ -1026,9 +997,6 @@ static int msm_close(struct file *filep)
 	msm_queue_traverse_action(msm_session_q, struct msm_session, list,
 		__msm_close_destry_session_notify_apps, NULL);
 
-	msm_queue_traverse_action(msm_session_q, struct msm_session, list,
-		__msm_close_wakeup_all_cmdack_session, NULL);
-
 	spin_lock_irqsave(&msm_eventq_lock, flags);
 	msm_eventq = NULL;
 	spin_unlock_irqrestore(&msm_eventq_lock, flags);
@@ -1331,6 +1299,10 @@ static int msm_probe(struct platform_device *pdev)
 	if (WARN_ON(rc < 0))
 		goto media_fail;
 
+	if (WARN_ON((rc == media_entity_init(&pvdev->vdev->entity,
+			0, NULL, 0)) < 0))
+		goto entity_fail;
+
 	pvdev->vdev->entity.type = MEDIA_ENT_T_DEVNODE_V4L;
 	pvdev->vdev->entity.group_id = QCAMERA_VNODE_GROUP_ID;
 #endif
@@ -1375,14 +1347,14 @@ static int msm_probe(struct platform_device *pdev)
 
 	cam_debugfs_root = debugfs_create_dir(MSM_CAM_LOGSYNC_FILE_BASEDIR,
 						NULL);
-	if (IS_ERR_OR_NULL(cam_debugfs_root)) {
+	if (!cam_debugfs_root) {
 		pr_warn("NON-FATAL: failed to create logsync base directory\n");
 	} else {
-		if (IS_ERR_OR_NULL(debugfs_create_file(MSM_CAM_LOGSYNC_FILE_NAME,
+		if (!debugfs_create_file(MSM_CAM_LOGSYNC_FILE_NAME,
 					 0666,
 					 cam_debugfs_root,
 					 NULL,
-					 &logsync_fops)))
+					 &logsync_fops))
 			pr_warn("NON-FATAL: failed to create logsync debugfs file\n");
 	}
 

@@ -283,18 +283,18 @@ static int msm_isp_enable_debugfs(struct vfe_device *vfe_dev,
 
 	snprintf(dirname, sizeof(dirname), "msm_isp%d", vfe_dev->pdev->id);
 	debugfs_base = debugfs_create_dir(dirname, NULL);
-	if (IS_ERR_OR_NULL(debugfs_base))
+	if (!debugfs_base)
 		return -ENOMEM;
-	if (IS_ERR_OR_NULL(debugfs_create_file("stats", S_IRUGO | S_IWUSR, debugfs_base,
-		vfe_dev, &vfe_debugfs_error)))
-		return -ENOMEM;
-
-	if (IS_ERR_OR_NULL(debugfs_create_file("bw_req_history", S_IRUGO | S_IWUSR,
-		debugfs_base, isp_req_hist, &bw_history_ops)))
+	if (!debugfs_create_file("stats", S_IRUGO | S_IWUSR, debugfs_base,
+		vfe_dev, &vfe_debugfs_error))
 		return -ENOMEM;
 
-	if (IS_ERR_OR_NULL(debugfs_create_file("ub_info", S_IRUGO | S_IWUSR,
-		debugfs_base, vfe_dev, &ub_info_ops)))
+	if (!debugfs_create_file("bw_req_history", S_IRUGO | S_IWUSR,
+		debugfs_base, isp_req_hist, &bw_history_ops))
+		return -ENOMEM;
+
+	if (!debugfs_create_file("ub_info", S_IRUGO | S_IWUSR,
+		debugfs_base, vfe_dev, &ub_info_ops))
 		return -ENOMEM;
 
 	return 0;
@@ -679,6 +679,7 @@ int vfe_hw_probe(struct platform_device *pdev)
 	spin_lock_init(&vfe_dev->shared_data_lock);
 	spin_lock_init(&vfe_dev->reg_update_lock);
 	spin_lock_init(&req_history_lock);
+	spin_lock_init(&vfe_dev->completion_lock);
 	media_entity_init(&vfe_dev->subdev.sd.entity, 0, NULL, 0);
 	vfe_dev->subdev.sd.entity.type = MEDIA_ENT_T_V4L2_SUBDEV;
 	vfe_dev->subdev.sd.entity.group_id = MSM_CAMERA_SUBDEV_VFE;

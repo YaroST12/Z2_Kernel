@@ -19,6 +19,8 @@
 #include "msm_camera_dt_util.h"
 #include "msm_cci.h"
 
+#include <linux/proc_fs.h>
+
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
@@ -26,16 +28,6 @@ DEFINE_MSM_MUTEX(msm_flash_mutex);
 
 static struct v4l2_file_operations msm_flash_v4l2_subdev_fops;
 static struct led_trigger *torch_trigger;
-
-static const struct of_device_id msm_flash_i2c_dt_match[] = {
-	{.compatible = "qcom,camera-flash"},
-	{}
-};
-
-static const struct i2c_device_id msm_flash_i2c_id[] = {
-	{"qcom,camera-flash", (kernel_ulong_t)NULL},
-	{ }
-};
 
 static const struct of_device_id msm_flash_dt_match[] = {
 	{.compatible = "qcom,camera-flash", .data = NULL},
@@ -52,16 +44,6 @@ static struct msm_flash_table *flash_table[] = {
 	&msm_pmic_flash_table
 };
 
-static struct msm_camera_i2c_fn_t msm_flash_qup_func_tbl = {
-	.i2c_read = msm_camera_qup_i2c_read,
-	.i2c_read_seq = msm_camera_qup_i2c_read_seq,
-	.i2c_write = msm_camera_qup_i2c_write,
-	.i2c_write_table = msm_camera_qup_i2c_write_table,
-	.i2c_write_seq_table = msm_camera_qup_i2c_write_seq_table,
-	.i2c_write_table_w_microdelay =
-		msm_camera_qup_i2c_write_table_w_microdelay,
-};
-
 static struct msm_camera_i2c_fn_t msm_sensor_cci_func_tbl = {
 	.i2c_read = msm_camera_cci_i2c_read,
 	.i2c_read_seq = msm_camera_cci_i2c_read_seq,
@@ -73,6 +55,9 @@ static struct msm_camera_i2c_fn_t msm_sensor_cci_func_tbl = {
 	.i2c_util = msm_sensor_cci_i2c_util,
 	.i2c_poll =  msm_camera_cci_i2c_poll,
 };
+
+
+static int32_t torch_status = 0;
 
 void msm_torch_brightness_set(struct led_classdev *led_cdev,
 				enum led_brightness value)
@@ -172,7 +157,7 @@ static int32_t msm_flash_i2c_write_table(
 	conf_array.size = settings->size;
 
 	/* Validate the settings size */
-	if ((!conf_array.size) || (conf_array.size > MAX_I2C_REG_SET)) {
+	if((!conf_array.size) || (conf_array.size > MAX_I2C_REG_SET)) {
 		pr_err("failed: invalid size %d", conf_array.size);
 		return -EINVAL;
 	}
@@ -417,6 +402,8 @@ static int32_t msm_flash_off(struct msm_flash_ctrl_t *flash_ctrl,
 	if (flash_ctrl->switch_trigger)
 		led_trigger_event(flash_ctrl->switch_trigger, 0);
 
+	torch_status = 0;
+
 	CDBG("Exit\n");
 	return 0;
 }
@@ -535,8 +522,7 @@ static int32_t msm_flash_init_prepare(
 	struct msm_flash_cfg_data_t flash_data_k;
 	struct msm_flash_init_info_t flash_init_info;
 	int32_t i = 0;
-
-	if (!is_compat_task()) {
+	if(!is_compat_task()) {
 		/*for 64-bit usecase,it need copy the data to local memory*/
 		flash_data_k.cfg_type = flash_data->cfg_type;
 		for (i = 0; i < MAX_LED_TRIGGERS; i++) {
@@ -548,7 +534,7 @@ static int32_t msm_flash_init_prepare(
 
 		flash_data_k.cfg.flash_init_info = &flash_init_info;
 		if (copy_from_user(&flash_init_info,
-			(void __user *)(flash_data->cfg.flash_init_info),
+			(void *)(flash_data->cfg.flash_init_info),
 			sizeof(struct msm_flash_init_info_t))) {
 			pr_err("%s copy_from_user failed %d\n",
 				__func__, __LINE__);
@@ -576,7 +562,7 @@ static int32_t msm_flash_init_prepare(
 
 	flash_data_k.cfg.flash_init_info = &flash_init_info;
 	if (copy_from_user(&flash_init_info,
-		(void __user *)(flash_data->cfg.flash_init_info),
+		(void *)(flash_data->cfg.flash_init_info),
 		sizeof(struct msm_flash_init_info_t))) {
 		pr_err("%s copy_from_user failed %d\n",
 			__func__, __LINE__);
@@ -619,6 +605,9 @@ static int32_t msm_flash_low(
 	}
 	if (flash_ctrl->switch_trigger)
 		led_trigger_event(flash_ctrl->switch_trigger, 1);
+
+	torch_status = 1;
+	
 	CDBG("Exit\n");
 	return 0;
 }
@@ -646,7 +635,7 @@ static int32_t msm_flash_high(
 				curr = flash_data->flash_current[i];
 			} else {
 				curr = flash_ctrl->flash_op_current[i];
-				pr_debug("LED flash_current[%d] clamped %d\n",
+				CDBG("LED flash_current[%d] clamped %d\n",
 					i, curr);
 			}
 			CDBG("high_flash_current[%d] = %d", i, curr);
@@ -663,6 +652,11 @@ static int32_t msm_flash_release(
 	struct msm_flash_ctrl_t *flash_ctrl)
 {
 	int32_t rc = 0;
+	if (flash_ctrl->flash_state == MSM_CAMERA_FLASH_RELEASE) {
+		pr_err("%s:%d Invalid flash state = %d",
+			__func__, __LINE__, flash_ctrl->flash_state);
+		return 0;
+	}
 
 	rc = flash_ctrl->func_tbl->camera_flash_off(flash_ctrl, NULL);
 	if (rc < 0) {
@@ -690,49 +684,24 @@ static int32_t msm_flash_config(struct msm_flash_ctrl_t *flash_ctrl,
 		rc = msm_flash_init_prepare(flash_ctrl, flash_data);
 		break;
 	case CFG_FLASH_RELEASE:
-		if (flash_ctrl->flash_state != MSM_CAMERA_FLASH_RELEASE) {
+		if (flash_ctrl->flash_state == MSM_CAMERA_FLASH_INIT)
 			rc = flash_ctrl->func_tbl->camera_flash_release(
 				flash_ctrl);
-		} else {
-			CDBG(pr_fmt("Invalid state : %d\n"),
-				flash_ctrl->flash_state);
-		}
 		break;
 	case CFG_FLASH_OFF:
-		if ((flash_ctrl->flash_state != MSM_CAMERA_FLASH_RELEASE) &&
-			(flash_ctrl->flash_state != MSM_CAMERA_FLASH_OFF)) {
+		if (flash_ctrl->flash_state == MSM_CAMERA_FLASH_INIT)
 			rc = flash_ctrl->func_tbl->camera_flash_off(
 				flash_ctrl, flash_data);
-			if (!rc)
-				flash_ctrl->flash_state = MSM_CAMERA_FLASH_OFF;
-		} else {
-			CDBG(pr_fmt("Invalid state : %d\n"),
-				flash_ctrl->flash_state);
-		}
 		break;
 	case CFG_FLASH_LOW:
-		if ((flash_ctrl->flash_state == MSM_CAMERA_FLASH_OFF) ||
-			(flash_ctrl->flash_state == MSM_CAMERA_FLASH_INIT)) {
+		if (flash_ctrl->flash_state == MSM_CAMERA_FLASH_INIT)
 			rc = flash_ctrl->func_tbl->camera_flash_low(
 				flash_ctrl, flash_data);
-			if (!rc)
-				flash_ctrl->flash_state = MSM_CAMERA_FLASH_LOW;
-		} else {
-			CDBG(pr_fmt("Invalid state : %d\n"),
-				flash_ctrl->flash_state);
-		}
 		break;
 	case CFG_FLASH_HIGH:
-		if ((flash_ctrl->flash_state == MSM_CAMERA_FLASH_OFF) ||
-			(flash_ctrl->flash_state == MSM_CAMERA_FLASH_INIT)) {
+		if (flash_ctrl->flash_state == MSM_CAMERA_FLASH_INIT)
 			rc = flash_ctrl->func_tbl->camera_flash_high(
 				flash_ctrl, flash_data);
-			if (!rc)
-				flash_ctrl->flash_state = MSM_CAMERA_FLASH_HIGH;
-		} else {
-			CDBG(pr_fmt("Invalid state : %d\n"),
-				flash_ctrl->flash_state);
-		}
 		break;
 	default:
 		rc = -EFAULT;
@@ -1031,11 +1000,9 @@ static int32_t msm_flash_get_dt_data(struct device_node *of_node,
 	/* Read the gpio information from device tree */
 	rc = msm_sensor_driver_get_gpio_data(
 		&(fctrl->power_info.gpio_conf), of_node);
-	if (-ENODEV == rc) {
-		pr_notice("No valid flash GPIOs data\n");
-		rc = 0;
-	} else if (rc < 0) {
-		pr_err("Error flash GPIOs rc %d\n", rc);
+	if (rc < 0) {
+		pr_err("%s:%d msm_sensor_driver_get_gpio_data failed rc %d\n",
+			__func__, __LINE__, rc);
 		return rc;
 	}
 
@@ -1132,74 +1099,136 @@ static long msm_flash_subdev_fops_ioctl(struct file *file,
 }
 #endif
 
-static int msm_camera_flash_i2c_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
+static struct msm_flash_ctrl_t fctrl;
+
+ssize_t proc_flash_led_write (struct file *file, const char __user *buf, size_t nbytes, loff_t *ppos)
 {
-	int32_t rc = 0;
-	struct msm_flash_ctrl_t *flash_ctrl = NULL;
+	char string[128];
 
-	CDBG("Enter\n");
-
-	if (client == NULL) {
-		pr_err("msm_flash_i2c_probe: client is null\n");
-		return -EINVAL;
+	uint32_t i = 0;
+	memset(string,0x0,128);
+	if(copy_from_user(string, buf, nbytes))
+		return -EFAULT;
+	pr_err("proc_flash_led_write %d bytes ,%x,%s,\n",(int)nbytes,string[nbytes-1],string);
+	if (!strncmp((const char *)string, (const char *)"on",2))
+	{
+		CDBG("proc_flash_led_write on called\n");
+		for (i = 0; i < fctrl.torch_num_sources; i++)
+			if (fctrl.torch_trigger[i])
+				led_trigger_event(fctrl.torch_trigger[i], fctrl.torch_op_current[i]);
+		if (fctrl.switch_trigger)
+			led_trigger_event(fctrl.switch_trigger, 1);
+		torch_status = 1;
 	}
-
-	flash_ctrl = kzalloc(sizeof(struct msm_flash_ctrl_t), GFP_KERNEL);
-	if (!flash_ctrl)
-		return -ENOMEM;
-
-	memset(flash_ctrl, 0, sizeof(struct msm_flash_ctrl_t));
-
-	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
-		pr_err("i2c_check_functionality failed\n");
-		kfree(flash_ctrl);
-		return -EINVAL;
+	else if (!strncmp((const char *)string, (const char *)"off",3))
+	{
+		CDBG("proc_flash_led_write off called\n");
+		for (i = 0; i < fctrl.flash_num_sources; i++)
+			if (fctrl.flash_trigger[i])
+				led_trigger_event(fctrl.flash_trigger[i], 0);
+		for (i = 0; i < fctrl.torch_num_sources; i++)
+			if (fctrl.torch_trigger[i])
+				led_trigger_event(fctrl.torch_trigger[i], 0);
+		if (fctrl.switch_trigger)
+			led_trigger_event(fctrl.switch_trigger, 0);
+		torch_status = 0;
 	}
-
-	rc = msm_flash_get_dt_data(client->dev.of_node, flash_ctrl);
-	if (rc < 0) {
-		pr_err("%s:%d msm_flash_get_dt_data failed\n",
-			__func__, __LINE__);
-		kfree(flash_ctrl);
-		return -EINVAL;
+	else if (!strncmp((const char *)string, (const char *)"led1_on",7))
+	{
+		CDBG("proc_flash_led_write led1_on called\n");
+		if (fctrl.torch_trigger[0])
+			led_trigger_event(fctrl.torch_trigger[0], fctrl.torch_op_current[0]);
+		if (fctrl.switch_trigger)
+			led_trigger_event(fctrl.switch_trigger, 1);
+		torch_status = 1;
 	}
-
-	flash_ctrl->flash_state = MSM_CAMERA_FLASH_RELEASE;
-	flash_ctrl->power_info.dev = &client->dev;
-	flash_ctrl->flash_device_type = MSM_CAMERA_I2C_DEVICE;
-	flash_ctrl->flash_mutex = &msm_flash_mutex;
-	flash_ctrl->flash_i2c_client.i2c_func_tbl = &msm_flash_qup_func_tbl;
-	flash_ctrl->flash_i2c_client.client = client;
-
-	/* Initialize sub device */
-	v4l2_subdev_init(&flash_ctrl->msm_sd.sd, &msm_flash_subdev_ops);
-	v4l2_set_subdevdata(&flash_ctrl->msm_sd.sd, flash_ctrl);
-
-	flash_ctrl->msm_sd.sd.internal_ops = &msm_flash_internal_ops;
-	flash_ctrl->msm_sd.sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
-	snprintf(flash_ctrl->msm_sd.sd.name,
-		ARRAY_SIZE(flash_ctrl->msm_sd.sd.name),
-		"msm_camera_flash");
-	media_entity_init(&flash_ctrl->msm_sd.sd.entity, 0, NULL, 0);
-	flash_ctrl->msm_sd.sd.entity.type = MEDIA_ENT_T_V4L2_SUBDEV;
-	flash_ctrl->msm_sd.sd.entity.group_id = MSM_CAMERA_SUBDEV_FLASH;
-	flash_ctrl->msm_sd.close_seq = MSM_SD_CLOSE_2ND_CATEGORY | 0x1;
-	msm_sd_register(&flash_ctrl->msm_sd);
-
-	CDBG("%s:%d flash sd name = %s", __func__, __LINE__,
-		flash_ctrl->msm_sd.sd.entity.name);
-	msm_flash_v4l2_subdev_fops = v4l2_subdev_fops;
-#ifdef CONFIG_COMPAT
-	msm_flash_v4l2_subdev_fops.compat_ioctl32 =
-		msm_flash_subdev_fops_ioctl;
-#endif
-	flash_ctrl->msm_sd.sd.devnode->fops = &msm_flash_v4l2_subdev_fops;
-
-	CDBG("probe success\n");
-	return rc;
+	else if (!strncmp((const char *)string, (const char *)"led1_off",8))
+	{
+		CDBG("proc_flash_led_write led1_on called\n");
+		if (fctrl.torch_trigger[0])
+			led_trigger_event(fctrl.torch_trigger[0],0);
+		if (fctrl.switch_trigger)
+			led_trigger_event(fctrl.switch_trigger, 0);
+		torch_status = 0;
+	}
+	else if (!strncmp((const char *)string, (const char *)"led2_on",7))
+	{
+		CDBG("proc_flash_led_write led2_on called\n");
+		if (fctrl.torch_trigger[1])
+			led_trigger_event(fctrl.torch_trigger[1], fctrl.torch_op_current[1]);
+		if (fctrl.switch_trigger)
+			led_trigger_event(fctrl.switch_trigger, 1);
+		torch_status = 1;
+    }
+    else if (!strncmp((const char *)string, (const char *)"led2_off",8))
+    {
+		CDBG("proc_flash_led_write led2_off called\n");
+		if (fctrl.torch_trigger[0])
+			led_trigger_event(fctrl.torch_trigger[1],0);
+		if (fctrl.switch_trigger)
+			led_trigger_event(fctrl.switch_trigger, 0);
+		torch_status = 0;
+    }
+    else if (!strncmp((const char *)string, (const char *)"flash1_on",9))
+    {
+        CDBG("proc_flash_led_write flash1_on called\n");
+        if (fctrl.flash_trigger[0])
+            led_trigger_event(fctrl.flash_trigger[0], 800);
+        if (fctrl.switch_trigger)
+            led_trigger_event(fctrl.switch_trigger, 1);
+    }
+    else if (!strncmp((const char *)string, (const char *)"flash1_off",10))
+    {
+        CDBG("proc_flash_led_write flash1_off called\n");
+        if (fctrl.flash_trigger[0])
+            led_trigger_event(fctrl.flash_trigger[0], 0);
+        if (fctrl.switch_trigger)
+            led_trigger_event(fctrl.switch_trigger, 0);
+    }
+    else if (!strncmp((const char *)string, (const char *)"flash2_on",9))
+    {
+        CDBG("proc_flash_led_write flash2_on called\n");
+        if (fctrl.flash_trigger[1])
+            led_trigger_event(fctrl.flash_trigger[1], 800);
+        if (fctrl.switch_trigger)
+            led_trigger_event(fctrl.switch_trigger, 1);
+    }
+    else if (!strncmp((const char *)string, (const char *)"flash2_off",10))
+    {
+        CDBG("proc_flash_led_write flash2_off called\n");
+        if (fctrl.flash_trigger[1])
+            led_trigger_event(fctrl.flash_trigger[1], 0);
+        if (fctrl.switch_trigger)
+            led_trigger_event(fctrl.switch_trigger, 0);
+   }
+    else
+   {
+       CDBG("proc_flash_led_write default called\n");
+   }
+    return nbytes;
 }
+ssize_t proc_flash_led_read (struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
+{
+	char  kbuff[128];
+	memset(kbuff,0x0,128);
 
+	if(buf != NULL && nbytes > 2){
+		if(torch_status)
+			strcpy(kbuff,"on\n");
+		else
+			strcpy(kbuff,"off\n");
+	}
+	if(copy_to_user(buf,kbuff,strlen(kbuff)+1))
+		return -EFAULT;
+	else
+		return strlen(kbuff)+1;
+}
+EXPORT_SYMBOL(proc_flash_led_write);
+const struct file_operations proc_flash_led_operations = {
+	.owner	= THIS_MODULE,
+	.write	= proc_flash_led_write,
+	.read	= proc_flash_led_read,
+};
 static int32_t msm_flash_platform_probe(struct platform_device *pdev)
 {
 	int32_t rc = 0;
@@ -1274,22 +1303,16 @@ static int32_t msm_flash_platform_probe(struct platform_device *pdev)
 	if (flash_ctrl->flash_driver_type == FLASH_DRIVER_PMIC)
 		rc = msm_torch_create_classdev(pdev, flash_ctrl);
 
+
+	if (flash_ctrl->flash_driver_type == FLASH_DRIVER_PMIC){
+		proc_create_data("CTP_FLASH_CTRL", S_IFREG | S_IWUGO | S_IWUSR |S_IRUGO, NULL, &proc_flash_led_operations, NULL);
+		proc_create_data("CTP_TORCH_CTRL", S_IFREG | S_IWUGO | S_IWUSR |S_IRUGO, NULL, &proc_flash_led_operations, NULL);
+		memcpy(&fctrl,flash_ctrl,sizeof(struct msm_flash_ctrl_t));
+	}
+
 	CDBG("probe success\n");
 	return rc;
 }
-
-MODULE_DEVICE_TABLE(of, msm_flash_i2c_dt_match);
-
-static struct i2c_driver msm_flash_i2c_driver = {
-	.id_table = msm_flash_i2c_id,
-	.probe  = msm_camera_flash_i2c_probe,
-	.remove = __exit_p(msm_camera_flash_i2c_remove),
-	.driver = {
-		.name = "qcom,camera-flash",
-		.owner = THIS_MODULE,
-		.of_match_table = msm_flash_i2c_dt_match,
-	},
-};
 
 MODULE_DEVICE_TABLE(of, msm_flash_dt_match);
 
@@ -1307,13 +1330,6 @@ static int __init msm_flash_init_module(void)
 	int32_t rc = 0;
 	CDBG("Enter\n");
 	rc = platform_driver_register(&msm_flash_platform_driver);
-	if (!rc)
-		return rc;
-
-	pr_err("platform probe for flash failed");
-
-	/* Perform i2c probe if platform probe fails. */
-	rc = i2c_add_driver(&msm_flash_i2c_driver);
 	if (rc)
 		pr_err("platform probe for flash failed");
 
@@ -1323,7 +1339,6 @@ static int __init msm_flash_init_module(void)
 static void __exit msm_flash_exit_module(void)
 {
 	platform_driver_unregister(&msm_flash_platform_driver);
-	i2c_del_driver(&msm_flash_i2c_driver);
 	return;
 }
 

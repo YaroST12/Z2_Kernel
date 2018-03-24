@@ -55,6 +55,10 @@ int msm_jpeg_platform_set_clk_rate(struct msm_jpeg_device *pgmn_dev,
 	/* retrieve clock index from list of clocks */
 	msm_jpeg_idx = msm_jpeg_get_clock_index(pgmn_dev,
 		"core_clk");
+	if (msm_jpeg_idx < 0)  {
+		JPEG_PR_ERR("%s:Fail to get clock index\n", __func__);
+		return -EINVAL;
+	}
 
 	/* set the rate */
 	msm_camera_clk_set_rate(&pgmn_dev->pdev->dev,

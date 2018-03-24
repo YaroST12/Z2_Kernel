@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -53,10 +53,8 @@
 
 #ifdef CONFIG_MSM_CAMERA_AUTOMOTIVE
 #define UB_CFG_POLICY MSM_WM_UB_EQUAL_SLICING
-#define VFE47_NUM_WM 4
 #else
 #define UB_CFG_POLICY MSM_WM_UB_CFG_DEFAULT
-#define VFE47_NUM_WM 7
 #endif
 
 static uint32_t stats_base_addr[] = {
@@ -253,43 +251,6 @@ static int32_t msm_vfe47_init_dt_parms(struct vfe_device *vfe_dev,
 	return 0;
 }
 
-static enum cam_ahb_clk_vote msm_isp47_get_cam_clk_vote(
-	 enum msm_vfe_ahb_clk_vote vote)
-{
-	switch (vote) {
-	case MSM_ISP_CAMERA_AHB_SVS_VOTE:
-		return CAM_AHB_SVS_VOTE;
-	case MSM_ISP_CAMERA_AHB_TURBO_VOTE:
-		return CAM_AHB_TURBO_VOTE;
-	case MSM_ISP_CAMERA_AHB_NOMINAL_VOTE:
-		return CAM_AHB_NOMINAL_VOTE;
-	case MSM_ISP_CAMERA_AHB_SUSPEND_VOTE:
-		return CAM_AHB_SUSPEND_VOTE;
-	}
-	return 0;
-}
-
-static int msm_isp47_ahb_clk_cfg(struct vfe_device *vfe_dev,
-			struct msm_isp_ahb_clk_cfg *ahb_cfg)
-{
-	int rc = 0;
-	enum cam_ahb_clk_vote vote;
-
-	vote = msm_isp47_get_cam_clk_vote(ahb_cfg->vote);
-
-	if (vote && vfe_dev->ahb_vote != vote) {
-		rc = cam_config_ahb_clk(NULL, 0,
-			(ISP_VFE0 == vfe_dev->pdev->id ?
-			CAM_AHB_CLIENT_VFE0 : CAM_AHB_CLIENT_VFE1), vote);
-		if (rc)
-			pr_err("%s: failed to set ahb vote to %x\n",
-				__func__, vote);
-		else
-			vfe_dev->ahb_vote = vote;
-	}
-	return rc;
-}
-
 int msm_vfe47_init_hardware(struct vfe_device *vfe_dev)
 {
 	int rc = -1;
@@ -300,6 +261,12 @@ int msm_vfe47_init_hardware(struct vfe_device *vfe_dev)
 	else
 		id = CAM_AHB_CLIENT_VFE1;
 
+	rc = cam_config_ahb_clk(NULL, 0, id, CAM_AHB_SVS_VOTE);
+	if (rc < 0) {
+		pr_err("%s: failed to vote for AHB\n", __func__);
+		goto ahb_vote_fail;
+	}
+
 	rc = vfe_dev->hw_info->vfe_ops.platform_ops.enable_regulators(
 								vfe_dev, 1);
 	if (rc)
@@ -309,13 +276,6 @@ int msm_vfe47_init_hardware(struct vfe_device *vfe_dev)
 							vfe_dev, 1);
 	if (rc)
 		goto clk_enable_failed;
-
-	rc = cam_config_ahb_clk(NULL, 0, id, CAM_AHB_SVS_VOTE);
-	if (rc < 0) {
-		pr_err("%s: failed to vote for AHB\n", __func__);
-		goto ahb_vote_fail;
-	}
-	vfe_dev->ahb_vote = CAM_AHB_SVS_VOTE;
 
 	vfe_dev->common_data->dual_vfe_res->vfe_base[vfe_dev->pdev->id] =
 		vfe_dev->vfe_base;
@@ -334,14 +294,13 @@ irq_enable_fail:
 	msm_isp_update_bandwidth(ISP_VFE0 + vfe_dev->pdev->id, 0, 0);
 bw_enable_fail:
 	vfe_dev->common_data->dual_vfe_res->vfe_base[vfe_dev->pdev->id] = NULL;
-	if (cam_config_ahb_clk(NULL, 0, id, CAM_AHB_SUSPEND_VOTE) < 0)
-		pr_err("%s: failed to remove vote for AHB\n", __func__);
-	vfe_dev->ahb_vote = CAM_AHB_SUSPEND_VOTE;
-ahb_vote_fail:
 	vfe_dev->hw_info->vfe_ops.platform_ops.enable_clks(vfe_dev, 0);
 clk_enable_failed:
 	vfe_dev->hw_info->vfe_ops.platform_ops.enable_regulators(vfe_dev, 0);
 enable_regulators_failed:
+	if (cam_config_ahb_clk(NULL, 0, id, CAM_AHB_SUSPEND_VOTE) < 0)
+		pr_err("%s: failed to remove vote for AHB\n", __func__);
+ahb_vote_fail:
 	return rc;
 }
 
@@ -360,6 +319,9 @@ void msm_vfe47_release_hardware(struct vfe_device *vfe_dev)
 	msm_isp_flush_tasklet(vfe_dev);
 
 	vfe_dev->common_data->dual_vfe_res->vfe_base[vfe_dev->pdev->id] = NULL;
+	vfe_dev->hw_info->vfe_ops.platform_ops.enable_clks(
+							vfe_dev, 0);
+	vfe_dev->hw_info->vfe_ops.platform_ops.enable_regulators(vfe_dev, 0);
 
 	msm_isp_update_bandwidth(ISP_VFE0 + vfe_dev->pdev->id, 0, 0);
 
@@ -370,12 +332,6 @@ void msm_vfe47_release_hardware(struct vfe_device *vfe_dev)
 
 	if (cam_config_ahb_clk(NULL, 0, id, CAM_AHB_SUSPEND_VOTE) < 0)
 		pr_err("%s: failed to vote for AHB\n", __func__);
-
-	vfe_dev->ahb_vote = CAM_AHB_SUSPEND_VOTE;
-
-	vfe_dev->hw_info->vfe_ops.platform_ops.enable_clks(
-							vfe_dev, 0);
-	vfe_dev->hw_info->vfe_ops.platform_ops.enable_regulators(vfe_dev, 0);
 }
 
 void msm_vfe47_init_hardware_reg(struct vfe_device *vfe_dev)
@@ -425,9 +381,13 @@ void msm_vfe47_clear_status_reg(struct vfe_device *vfe_dev)
 void msm_vfe47_process_reset_irq(struct vfe_device *vfe_dev,
 	uint32_t irq_status0, uint32_t irq_status1)
 {
+	unsigned long flags;
+
 	if (irq_status0 & (1 << 31)) {
+		spin_lock_irqsave(&vfe_dev->completion_lock, flags);
 		complete(&vfe_dev->reset_complete);
 		vfe_dev->reset_pending = 0;
+		spin_unlock_irqrestore(&vfe_dev->completion_lock, flags);
 	}
 }
 
@@ -550,7 +510,7 @@ void msm_vfe47_process_error_status(struct vfe_device *vfe_dev)
 		pr_err("%s: status dsp error\n", __func__);
 }
 
-void msm_vfe47_read_irq_status_and_clear(struct vfe_device *vfe_dev,
+void msm_vfe47_read_irq_status(struct vfe_device *vfe_dev,
 	uint32_t *irq_status0, uint32_t *irq_status1)
 {
 	*irq_status0 = msm_camera_io_r(vfe_dev->vfe_base + 0x6C);
@@ -573,13 +533,6 @@ void msm_vfe47_read_irq_status_and_clear(struct vfe_device *vfe_dev,
 		vfe_dev->error_info.violation_status =
 		msm_camera_io_r(vfe_dev->vfe_base + 0x7C);
 
-}
-
-void msm_vfe47_read_irq_status(struct vfe_device *vfe_dev,
-	uint32_t *irq_status0, uint32_t *irq_status1)
-{
-	*irq_status0 = msm_camera_io_r(vfe_dev->vfe_base + 0x6C);
-	*irq_status1 = msm_camera_io_r(vfe_dev->vfe_base + 0x70);
 }
 
 void msm_vfe47_process_reg_update(struct vfe_device *vfe_dev,
@@ -740,8 +693,11 @@ long msm_vfe47_reset_hardware(struct vfe_device *vfe_dev,
 {
 	long rc = 0;
 	uint32_t reset;
+	unsigned long flags;
 
+	spin_lock_irqsave(&vfe_dev->completion_lock, flags);
 	init_completion(&vfe_dev->reset_complete);
+	spin_unlock_irqrestore(&vfe_dev->completion_lock, flags);
 
 	if (blocking_call)
 		vfe_dev->reset_pending = 1;
@@ -854,12 +810,6 @@ void msm_vfe47_axi_clear_wm_irq_mask(struct vfe_device *vfe_dev,
 {
 	msm_vfe47_config_irq(vfe_dev, (1 << (stream_info->wm[0] + 8)), 0,
 				MSM_ISP_IRQ_DISABLE);
-}
-
-void msm_vfe47_axi_clear_irq_mask(struct vfe_device *vfe_dev)
-{
-	msm_camera_io_w_mb(0x0, vfe_dev->vfe_base + 0x5C);
-	msm_camera_io_w_mb(0x0, vfe_dev->vfe_base + 0x60);
 }
 
 void msm_vfe47_cfg_framedrop(void __iomem *vfe_base,
@@ -1086,65 +1036,6 @@ int msm_vfe47_start_fetch_engine(struct vfe_device *vfe_dev,
 	return 0;
 }
 
-int msm_vfe47_start_fetch_engine_multi_pass(struct vfe_device *vfe_dev,
-	void *arg)
-{
-	int rc = 0;
-	uint32_t bufq_handle = 0;
-	struct msm_isp_buffer *buf = NULL;
-	struct msm_vfe_fetch_eng_multi_pass_start *fe_cfg = arg;
-	struct msm_isp_buffer_mapped_info mapped_info;
-
-	if (vfe_dev->fetch_engine_info.is_busy == 1) {
-		pr_err("%s: fetch engine busy\n", __func__);
-		return -EINVAL;
-	}
-
-	memset(&mapped_info, 0, sizeof(struct msm_isp_buffer_mapped_info));
-
-	vfe_dev->fetch_engine_info.session_id = fe_cfg->session_id;
-	vfe_dev->fetch_engine_info.stream_id = fe_cfg->stream_id;
-	vfe_dev->fetch_engine_info.offline_mode = fe_cfg->offline_mode;
-	vfe_dev->fetch_engine_info.fd = fe_cfg->fd;
-
-	if (!fe_cfg->offline_mode) {
-		bufq_handle = vfe_dev->buf_mgr->ops->get_bufq_handle(
-			vfe_dev->buf_mgr, fe_cfg->session_id,
-			fe_cfg->stream_id);
-		vfe_dev->fetch_engine_info.bufq_handle = bufq_handle;
-
-		mutex_lock(&vfe_dev->buf_mgr->lock);
-		rc = vfe_dev->buf_mgr->ops->get_buf_by_index(
-			vfe_dev->buf_mgr, bufq_handle, fe_cfg->buf_idx, &buf);
-		mutex_unlock(&vfe_dev->buf_mgr->lock);
-		if (rc < 0 || !buf) {
-			pr_err("%s: No fetch buffer rc= %d buf= %pK\n",
-				__func__, rc, buf);
-			return -EINVAL;
-		}
-		mapped_info = buf->mapped_info[0];
-		buf->state = MSM_ISP_BUFFER_STATE_DISPATCHED;
-	} else {
-		rc = vfe_dev->buf_mgr->ops->map_buf(vfe_dev->buf_mgr,
-			&mapped_info, fe_cfg->fd);
-		if (rc < 0) {
-			pr_err("%s: can not map buffer\n", __func__);
-			return -EINVAL;
-		}
-	}
-
-	vfe_dev->fetch_engine_info.buf_idx = fe_cfg->buf_idx;
-	vfe_dev->fetch_engine_info.is_busy = 1;
-
-	msm_camera_io_w(mapped_info.paddr + fe_cfg->input_buf_offset,
-		vfe_dev->vfe_base + 0x2F4);
-	msm_camera_io_w_mb(0x100000, vfe_dev->vfe_base + 0x80);
-	msm_camera_io_w_mb(0x200000, vfe_dev->vfe_base + 0x80);
-
-	ISP_DBG("%s:VFE%d Fetch Engine ready\n", __func__, vfe_dev->pdev->id);
-
-	return 0;
-}
 void msm_vfe47_cfg_fetch_engine(struct vfe_device *vfe_dev,
 	struct msm_vfe_pix_cfg *pix_cfg)
 {
@@ -1174,13 +1065,10 @@ void msm_vfe47_cfg_fetch_engine(struct vfe_device *vfe_dev,
 
 		x_size_word = msm_isp_cal_word_per_line(
 			vfe_dev->axi_data.src_info[VFE_PIX_0].input_format,
-			fe_cfg->buf_width);
+			fe_cfg->fetch_width);
 		msm_camera_io_w((x_size_word - 1) << 16,
 			vfe_dev->vfe_base + 0x30c);
 
-		x_size_word = msm_isp_cal_word_per_line(
-			vfe_dev->axi_data.src_info[VFE_PIX_0].input_format,
-			fe_cfg->fetch_width);
 		msm_camera_io_w(x_size_word << 16 |
 			(temp & 0x3FFF) << 2 | VFE47_FETCH_BURST_LEN,
 			vfe_dev->vfe_base + 0x310);
@@ -1791,7 +1679,7 @@ void msm_vfe47_cfg_axi_ub(struct vfe_device *vfe_dev,
 {
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
 
-	axi_data->wm_ub_cfg_policy = UB_CFG_POLICY;
+	axi_data->wm_ub_cfg_policy = MSM_WM_UB_CFG_DEFAULT;
 	if (axi_data->wm_ub_cfg_policy == MSM_WM_UB_EQUAL_SLICING)
 		msm_vfe47_cfg_axi_ub_equal_slicing(vfe_dev);
 	else
@@ -2709,7 +2597,7 @@ void msm_vfe47_get_halt_restart_mask(uint32_t *irq0_mask,
 }
 
 static struct msm_vfe_axi_hardware_info msm_vfe47_axi_hw_info = {
-	.num_wm = VFE47_NUM_WM,
+	.num_wm = 7,
 	.num_comp_mask = 3,
 	.num_rdi = 3,
 	.num_rdi_master = 3,
@@ -2739,8 +2627,6 @@ struct msm_vfe_hardware_info vfe47_hw_info = {
 	.vfe_ops = {
 		.irq_ops = {
 			.read_irq_status = msm_vfe47_read_irq_status,
-			.read_irq_status_and_clear =
-				msm_vfe47_read_irq_status_and_clear,
 			.process_camif_irq = msm_vfe47_process_input_irq,
 			.process_reset_irq = msm_vfe47_process_reset_irq,
 			.process_halt_irq = msm_vfe47_process_halt_irq,
@@ -2760,8 +2646,6 @@ struct msm_vfe_hardware_info vfe47_hw_info = {
 			.clear_comp_mask = msm_vfe47_axi_clear_comp_mask,
 			.cfg_wm_irq_mask = msm_vfe47_axi_cfg_wm_irq_mask,
 			.clear_wm_irq_mask = msm_vfe47_axi_clear_wm_irq_mask,
-			.clear_irq_mask =
-				msm_vfe47_axi_clear_irq_mask,
 			.cfg_framedrop = msm_vfe47_cfg_framedrop,
 			.clear_framedrop = msm_vfe47_clear_framedrop,
 			.cfg_wm_reg = msm_vfe47_axi_cfg_wm_reg,
@@ -2803,11 +2687,9 @@ struct msm_vfe_hardware_info vfe47_hw_info = {
 			.process_error_status = msm_vfe47_process_error_status,
 			.is_module_cfg_lock_needed =
 				msm_vfe47_is_module_cfg_lock_needed,
-			.ahb_clk_cfg = msm_isp47_ahb_clk_cfg,
+			//.ahb_clk_cfg = msm_isp47_ahb_clk_cfg,
 			.set_halt_restart_mask =
 				msm_vfe47_set_halt_restart_mask,
-			.start_fetch_eng_multi_pass =
-				msm_vfe47_start_fetch_engine_multi_pass,
 		},
 		.stats_ops = {
 			.get_stats_idx = msm_vfe47_get_stats_idx,

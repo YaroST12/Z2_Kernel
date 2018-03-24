@@ -108,6 +108,10 @@ int msm_cpp_set_micro_clk(struct cpp_device *cpp_dev)
 
 	msm_micro_iface_idx = msm_cpp_get_clock_index(cpp_dev,
 		"micro_iface_clk");
+	if (msm_micro_iface_idx < 0)  {
+		pr_err("Fail to get clock index\n");
+		return -EINVAL;
+	}
 
 	rc = clk_reset(cpp_dev->cpp_clk[msm_micro_iface_idx],
 		CLK_RESET_ASSERT);
@@ -148,6 +152,11 @@ int msm_update_freq_tbl(struct cpp_device *cpp_dev)
 	int rc = 0;
 
 	msm_cpp_core_clk_idx = msm_cpp_get_clock_index(cpp_dev, "cpp_core_clk");
+	if (msm_cpp_core_clk_idx < 0)  {
+		pr_err("%s: fail to get clock index\n", __func__);
+		rc = msm_cpp_core_clk_idx;
+		return rc;
+	}
 	rc = cpp_get_clk_freq_tbl(cpp_dev->cpp_clk[msm_cpp_core_clk_idx],
 		&cpp_dev->hw_info, cpp_dev->min_clk_rate);
 	if (rc < 0)  {

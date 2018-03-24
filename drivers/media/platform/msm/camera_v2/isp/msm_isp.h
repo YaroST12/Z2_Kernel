@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,7 +26,6 @@
 #include <linux/msm-bus-board.h>
 
 #include "msm_buf_mgr.h"
-#include "cam_hw_ops.h"
 
 #define VFE40_8974V1_VERSION 0x10000018
 #define VFE40_8974V2_VERSION 0x1001001A
@@ -134,8 +133,6 @@ struct msm_isp_timestamp {
 };
 
 struct msm_vfe_irq_ops {
-	void (*read_irq_status_and_clear)(struct vfe_device *vfe_dev,
-		uint32_t *irq_status0, uint32_t *irq_status1);
 	void (*read_irq_status)(struct vfe_device *vfe_dev,
 		uint32_t *irq_status0, uint32_t *irq_status1);
 	void (*process_reg_update)(struct vfe_device *vfe_dev,
@@ -187,7 +184,6 @@ struct msm_vfe_axi_ops {
 		struct msm_vfe_axi_stream *stream_info);
 	void (*clear_wm_irq_mask)(struct vfe_device *vfe_dev,
 		struct msm_vfe_axi_stream *stream_info);
-	void (*clear_irq_mask)(struct vfe_device *vfe_dev);
 
 	void (*cfg_wm_reg)(struct vfe_device *vfe_dev,
 		struct msm_vfe_axi_stream *stream_info,
@@ -249,8 +245,6 @@ struct msm_vfe_core_ops {
 	int (*ahb_clk_cfg)(struct vfe_device *vfe_dev,
 			struct msm_isp_ahb_clk_cfg *ahb_cfg);
 	void (*set_halt_restart_mask)(struct vfe_device *vfe_dev);
-	int (*start_fetch_eng_multi_pass)(struct vfe_device *vfe_dev,
-		void *arg);
 };
 struct msm_vfe_stats_ops {
 	int (*get_stats_idx)(enum msm_isp_stats_type stats_type);
@@ -448,10 +442,9 @@ struct msm_vfe_axi_stream {
 
 	uint32_t runtime_num_burst_capture;
 	uint32_t runtime_output_format;
-	enum msm_stream_rdi_input_type  rdi_input_type;
+	enum msm_stream_memory_input_t  memory_input;
 	struct msm_isp_sw_framskip sw_skip;
 	uint8_t sw_ping_pong_bit;
-	uint8_t sw_sof_ping_pong_bit;
 };
 
 struct msm_vfe_axi_composite_info {
@@ -468,7 +461,6 @@ enum msm_vfe_camif_state {
 
 struct msm_vfe_src_info {
 	uint32_t frame_id;
-	uint32_t session_id;
 	uint32_t reg_update_frame_id;
 	uint8_t active;
 	uint8_t flag;
@@ -729,7 +721,6 @@ struct vfe_device {
 	uint32_t **vfe_clk_rates;
 	size_t num_clk;
 	size_t num_rates;
-	enum cam_ahb_clk_vote ahb_vote;
 
 	/* Sync variables*/
 	struct completion reset_complete;
@@ -741,6 +732,7 @@ struct vfe_device {
 	spinlock_t shared_data_lock;
 	spinlock_t reg_update_lock;
 	spinlock_t tasklet_lock;
+	spinlock_t completion_lock;
 
 	/* Tasklet info */
 	atomic_t irq_cnt;
@@ -790,8 +782,6 @@ struct vfe_device {
 	/* before halt irq info */
 	uint32_t recovery_irq0_mask;
 	uint32_t recovery_irq1_mask;
-	/* Store the buf_idx for pd stats RDI stream */
-	uint8_t pd_buf_idx;
 	uint32_t ms_frame_id;
 	struct isp_proc *isp_page;
 };

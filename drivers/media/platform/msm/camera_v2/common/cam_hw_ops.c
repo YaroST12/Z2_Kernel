@@ -235,12 +235,18 @@ int cam_consolidate_ahb_vote(enum cam_ahb_clk_client id,
 	}
 
 	CDBG("dbg: max vote : %u\n", max);
-	if (max != data.ahb_clk_state) {
-		msm_bus_scale_client_update_request(data.ahb_client,
-			max);
-		data.ahb_clk_state = max;
-		CDBG("dbg: state : %u, vector : %d\n",
-			data.ahb_clk_state, max);
+	if (max >= 0) {
+		if (max != data.ahb_clk_state) {
+			msm_bus_scale_client_update_request(data.ahb_client,
+				max);
+			data.ahb_clk_state = max;
+			CDBG("dbg: state : %u, vector : %d\n",
+				data.ahb_clk_state, max);
+		}
+	} else {
+		pr_err("err: no bus vector found\n");
+		mutex_unlock(&data.lock);
+		return -EINVAL;
 	}
 	mutex_unlock(&data.lock);
 	return 0;
@@ -307,6 +313,11 @@ int cam_config_ahb_clk(struct device *dev, unsigned long freq,
 		corner = dev_pm_opp_get_voltage(opp);
 		if (corner == 0) {
 			pr_err("Bad voltage corner for OPP freq :%ld\n", freq);
+			return -EINVAL;
+		}
+		dyn_vote = cam_ahb_get_voltage_level(corner);
+		if (dyn_vote < 0) {
+			pr_err("Bad vote requested\n");
 			return -EINVAL;
 		}
 		break;

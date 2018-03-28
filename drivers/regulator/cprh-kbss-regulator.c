@@ -1125,8 +1125,7 @@ static int cprh_kbss_init_thread(struct cpr3_thread *thread)
  */
 static int cprh_kbss_init_regulator(struct cpr3_regulator *vreg)
 {
-	struct cprh_msmcobalt_kbss_fuses *fuse = NULL;
-	struct cpr3_regulator *vreg = NULL;
+	struct cprh_msmcobalt_kbss_fuses *fuse;
 	int rc;
 
 	rc = cprh_msmcobalt_kbss_read_fuse_data(vreg);
@@ -1214,7 +1213,7 @@ static int cprh_kbss_init_regulator(struct cpr3_regulator *vreg)
 	return 0;
 }
 
-/*
+/**
  * cprh_kbss_init_controller() - perform KBSS CPRh controller specific
  *		initializations
  * @ctrl:		Pointer to the CPR3 controller

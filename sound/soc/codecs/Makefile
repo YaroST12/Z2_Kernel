@@ -382,3 +382,5 @@ obj-$(CONFIG_SND_SOC_MSM_STUB)  += snd-soc-msm-stub.o
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
 obj-$(CONFIG_SND_SOC_TPA6130A2)	+= snd-soc-tpa6130a2.o
 obj-$(CONFIG_NXP_TFA98xx)       += snd-soc-tfa98xx.o
+
+CFLAGS_wcd_cpe_core.o := $(call cc-disable-warning,maybe-uninitialized)

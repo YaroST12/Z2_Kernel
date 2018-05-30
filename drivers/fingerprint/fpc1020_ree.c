@@ -296,7 +296,7 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 
 	retval = devm_request_threaded_irq(fpc1020->dev,
 			fpc1020->irq, NULL, fpc1020_irq_handler,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_PERF_CRITICAL,
 			dev_name(fpc1020->dev), fpc1020);
 	if (retval) {
 		pr_err("request irq %i failed.\n", fpc1020->irq);

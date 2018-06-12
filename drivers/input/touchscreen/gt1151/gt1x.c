@@ -31,6 +31,7 @@ static const char *input_dev_phys = "input/ts";
 #ifdef GTP_CONFIG_OF
 int gt1x_rst_gpio;
 int gt1x_int_gpio;
+struct regulator *gt1x_supply;
 #endif
 #ifdef TOUCH_SYS
 static atomic_t gt_device_count;
@@ -334,7 +335,6 @@ static struct regulator *vcc_i2c;
 static int gt1x_parse_dt(struct device *dev)
 {
 	struct device_node *np;
-	int ret = 0;
 
 	if (!dev)
 		return -ENODEV;
@@ -349,27 +349,24 @@ static int gt1x_parse_dt(struct device *dev)
 		return -EINVAL;
 	}
 
-	vdd_ana = regulator_get(dev, "vdd_ana");
+	gt1x_supply = devm_regulator_get(dev, "power");
+	if (IS_ERR(gt1x_supply)) {
+		GTP_ERROR("regulator get of power-supply failed");
+		return PTR_ERR(gt1x_supply);
+	}
+
+	vdd_ana = devm_regulator_get(dev, "vdd_ana");
 	if (IS_ERR(vdd_ana)) {
 		GTP_ERROR("regulator get of vdd_ana failed");
-		ret = PTR_ERR(vdd_ana);
 		vdd_ana = NULL;
-		return ret;
 	}
 
 	vcc_i2c = regulator_get(dev, "vcc_i2c");
 	if (IS_ERR(vcc_i2c)) {
 		GTP_ERROR("regulator get of vcc_i2c failed");
-		ret = PTR_ERR(vcc_i2c);
 		vcc_i2c = NULL;
-		goto ERR_GET_VCC;
 	}
 	return 0;
-ERR_GET_VCC:
-	regulator_put(vdd_ana);
-	vdd_ana = NULL;
-	return ret;
-
 }
 
 /**
@@ -614,7 +611,9 @@ static int gt1x_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 
 #ifdef GTP_CONFIG_OF	/* device tree support */
 	if (client->dev.of_node) {
-		gt1x_parse_dt(&client->dev);
+		ret = gt1x_parse_dt(&client->dev);
+		if (ret)
+			return ret;
 	}
 #endif
 

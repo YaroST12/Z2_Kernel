@@ -987,11 +987,12 @@ static s32 gt1x_wakeup_sleep(void)
 		GTP_ERROR("enable power-supply error: %d\n", ret);
 
 #if GTP_POWER_CTRL_SLEEP	/* power manager unit control the procedure */
-		if(!gesture_enabled){
-		gt1x_resume_reset();
-		GTP_INFO("Wakeup by poweron");
-		return 0;
-		}else 
+		if (!gesture_enabled) {
+			gt1x_power_switch(SWITCH_ON);
+			gt1x_resume_reset();
+			GTP_INFO("Wakeup by poweron");
+			return 0;
+		} else
 			printk("gesture wake enabled\n");
 			
 #endif /* END GTP_POWER_CTRL_SLEEP */

@@ -502,35 +502,6 @@ s32 gt1x_i2c_read_dbl_check(u16 addr, u8 * buffer, s32 len)
 }
 
 /**
-* gt1x_get_info - Get information from ic, such as resolution and 
-* int trigger type
-* Return    <0: i2c failed, 0: i2c ok
-*/
-s32 gt1x_get_info(void)
-{
-	u8 opr_buf[4] = { 0 };
-	s32 ret = 0;
-
-	ret = gt1x_i2c_read(GTP_REG_CONFIG_DATA + 1, opr_buf, 4);
-	if (ret < 0) {
-		return ret;
-	}
-
-	gt1x_abs_x_max = (opr_buf[1] << 8) + opr_buf[0];
-	gt1x_abs_y_max = (opr_buf[3] << 8) + opr_buf[2];
-
-	ret = gt1x_i2c_read(GTP_REG_CONFIG_DATA + 6, opr_buf, 1);
-	if (ret < 0) {
-		return ret;
-	}
-	gt1x_int_type = opr_buf[0] & 0x03;
-
-	GTP_INFO("X_MAX = %d, Y_MAX = %d, TRIGGER = 0x%02x", gt1x_abs_x_max, gt1x_abs_y_max, gt1x_int_type);
-
-	return 0;
-}
-
-/**
 * gt1x_send_cfg - Send gt1x_config Function.
 * @config: pointer of the configuration array.
 * @cfg_len: length of configuration array.
@@ -945,6 +916,7 @@ static s32 gt1x_enter_sleep(void)
 	return 0;
 #else
 	{
+		int ret;
 		s32 retry = 0;
 		if (gt1x_wakeup_level == 1) {	/* high level wakeup */
 			GTP_GPIO_OUTPUT(GTP_INT_PORT, 0);

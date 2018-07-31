@@ -101,3 +101,4 @@ all.config
 /out
 /build
 build.sh
+build_gcc.sh

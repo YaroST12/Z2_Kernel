@@ -438,6 +438,10 @@ LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-835769)
 LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-843419)
 endif
 
+ifneq ($(cc-name),clang)
+KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning, attribute-alias)
+endif
+
 KBUILD_CPPFLAGS	:= -D__KERNEL__ $(CLANG_FLAGS)
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=

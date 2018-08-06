@@ -10231,7 +10231,8 @@ static void task_move_group_fair(struct task_struct *p, int queued)
 	 * To prevent boost or penalty in the new cfs_rq caused by delta
 	 * min_vruntime between the two cfs_rqs, we skip vruntime adjustment.
 	 */
-	if (!queued && (!se->sum_exec_runtime || p->state == TASK_WAKING))
+	if (!queued && (!se->sum_exec_runtime ||
+		(p->state == TASK_WAKING && p->sched_class == &fair_sched_class)))
 		queued = 1;
 
 	if (!queued)

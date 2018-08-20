@@ -361,3 +361,15 @@
 &i2c_8 {
 	/delete-node/ nq@28;
 };
+
+&uartblsp2dm1 {
+	status = "disabled";
+	clocks = <>;
+	pinctrl-0 = <>;
+};
+
+&uartblsp1dm1 {
+	status = "disabled";
+	clocks = <>;
+	pinctrl-0 = <>;
+};

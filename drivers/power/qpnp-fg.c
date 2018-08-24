@@ -2318,7 +2318,7 @@ static int soc_show_op(struct fg_chip *chip, int msoc)
 
 static int get_prop_capacity(struct fg_chip *chip)
 {
-	int msoc, rc;
+	int msoc = 0, rc;
 	bool vbatt_low_sts;
 
 	if (chip->use_last_soc && chip->last_soc) {

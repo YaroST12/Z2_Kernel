@@ -53,6 +53,7 @@ struct fpc1020_data {
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
 	int __read_mostly screen_on;
+	int proximity_state; /* 0:far 1:near */
 };
 
 /* From drivers/input/keyboard/gpio_keys.c */
@@ -137,9 +138,24 @@ static ssize_t set_key(struct device *device,
 
 static DEVICE_ATTR(key, S_IRUSR | S_IWUSR, get_key, set_key);
 
+static ssize_t proximity_state_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
+	int rc, val;
+	rc = kstrtoint(buf, 10, &val);
+	if (rc)
+		return -EINVAL;
+	fpc1020->proximity_state = !!val;
+
+	return count;
+}
+static DEVICE_ATTR(proximity_state, S_IWUSR, NULL, proximity_state_set);
+
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
+	&dev_attr_proximity_state.attr,
 	NULL
 };
 
@@ -214,6 +230,8 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	pr_info("fpc1020 IRQ interrupt\n");
 	smp_rmb();
 	if (fpc1020->screen_on == 0) {
+		if (fpc1020->proximity_state == 1)
+			return IRQ_HANDLED;
 		pm_wakeup_event(fpc1020->dev, 5000);
 	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);

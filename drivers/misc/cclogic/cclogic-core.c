@@ -634,7 +634,7 @@ static ssize_t cclogic_reg_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct cclogic_dev *cclogic_dev = dev_get_drvdata(dev);
-	int size;
+	int size = 0;
 	int reg, value;
 
 	if(cclogic_dev->ops && cclogic_dev->ops->read){
@@ -658,9 +658,10 @@ static ssize_t cclogic_reg_show(struct device *dev,
 		value = cclogic_dev->ops->read(cclogic_dev->i2c_client,reg);
 		size+=sprintf(&buf[size],"[0x%02x] register = 0x%02x\n",reg,value);
 		pr_debug("[0x%x] = [0x%x]\n", reg, value);
+		return size;
 	}
 
-	return size;
+	return 0;
 }
 
  static ssize_t cclogic_reg_store(struct device *dev,

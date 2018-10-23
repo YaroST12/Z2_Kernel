@@ -2252,6 +2252,16 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 #define MISSING_CAPACITY	100
 #define FULL_CAPACITY		100
 #define FULL_SOC_RAW		0xFF
+
+static int soc_optimize(struct fg_chip *chip, int soc_raw)
+{
+	int soc = DIV_ROUND_CLOSEST((soc_raw - 1) * (FULL_CAPACITY - 2),
+                        FULL_SOC_RAW - 2) + 1;
+	soc = min(soc, 100);
+	soc = max(soc, 0);
+	return soc;
+}
+
 static int get_prop_capacity(struct fg_chip *chip)
 {
 	int msoc = 0, rc;
@@ -2260,9 +2270,7 @@ static int get_prop_capacity(struct fg_chip *chip)
 	if (chip->use_last_soc && chip->last_soc) {
 		if (chip->last_soc == FULL_SOC_RAW)
 			return FULL_CAPACITY;
-		return DIV_ROUND_CLOSEST((chip->last_soc - 1) *
-				(FULL_CAPACITY - 2),
-				FULL_SOC_RAW - 2) + 1;
+		return soc_optimize(chip, chip->last_soc);
 	}
 
 	if (chip->battery_missing)
@@ -2292,9 +2300,7 @@ static int get_prop_capacity(struct fg_chip *chip)
 			}
 
 			if (!vbatt_low_sts)
-				return DIV_ROUND_CLOSEST((chip->last_soc - 1) *
-						(FULL_CAPACITY - 2),
-						FULL_SOC_RAW - 2) + 1;
+				return soc_optimize(chip, chip->last_soc);
 			else
 				return EMPTY_CAPACITY;
 		} else {
@@ -2304,8 +2310,7 @@ static int get_prop_capacity(struct fg_chip *chip)
 		return FULL_CAPACITY;
 	}
 
-	return DIV_ROUND_CLOSEST((msoc - 1) * (FULL_CAPACITY - 2),
-			FULL_SOC_RAW - 2) + 1;
+	return soc_optimize(chip, msoc);
 }
 
 #define HIGH_BIAS	3
@@ -4507,8 +4512,7 @@ static bool fg_validate_battery_info(struct fg_chip *chip)
 	batt_volt_mv = get_sram_prop_now(chip, FG_DATA_VOLTAGE) / 1000;
 	batt_soc = get_monotonic_soc_raw(chip);
 	if (batt_soc != 0 && batt_soc != FULL_SOC_RAW)
-		batt_soc = DIV_ROUND_CLOSEST((batt_soc - 1) *
-				(FULL_CAPACITY - 2), FULL_SOC_RAW - 2) + 1;
+		batt_soc = soc_optimize(chip, batt_soc);
 
 	if (*chip->batt_range_ocv && chip->batt_max_voltage_uv > 1000)
 		delta_pct =  DIV_ROUND_CLOSEST(abs(batt_volt_mv -

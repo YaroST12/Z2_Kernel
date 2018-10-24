@@ -577,6 +577,7 @@ struct fg_chip {
 	int			status;
 	int			prev_status;
 	int			health;
+	int			prev_soc;
 	enum fg_batt_aging_mode	batt_aging_mode;
 	struct alarm		hard_jeita_alarm;
 	/* capacity learning */
@@ -2256,9 +2257,24 @@ static int soc_optimize(struct fg_chip *chip, int soc_raw)
 {
 	int soc = DIV_ROUND_CLOSEST((soc_raw - 1) * (FULL_CAPACITY),
                         FULL_SOC_RAW - 2) + 1;
+	bool charging = (chip->status == POWER_SUPPLY_STATUS_CHARGING);
+
+	/* There is a risk of soc_raw going > 252 and giving soc == 101 */
 	soc = min(soc, 100);
+
 	if (soc_raw < 1)
 		soc = 0;
+	else {
+		if (chip->prev_soc) {
+			int delta_soc = soc - chip->prev_soc;
+			if (delta_soc < -1 || (delta_soc > 1 && charging)) {
+				/* Schedule re-change if diff is > 2 */
+				schedule_work(&chip->status_change_work);
+				return chip->prev_soc;
+			}
+		}
+		chip->prev_soc = soc;
+	}
 	return soc;
 }
 

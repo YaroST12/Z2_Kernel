@@ -32,6 +32,7 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+#include <linux/pm_qos.h>
 
 #define IIC_MAX_TRANSFER_SIZE       250
 
@@ -59,5 +60,7 @@ extern struct regulator *gt1x_supply;
 #define GTP_GPIO_GET_VALUE(pin)         gpio_get_value(pin)
 #define GTP_GPIO_OUTPUT(pin,level)      gpio_direction_output(pin,level)
 #define GTP_IRQ_TAB                     {IRQ_TYPE_EDGE_RISING, IRQ_TYPE_EDGE_FALLING, IRQ_TYPE_LEVEL_LOW, IRQ_TYPE_LEVEL_HIGH}
+
+static struct pm_qos_request pm_qos_req;
 
 #endif /* _GOODIX_GT1X_H_ */

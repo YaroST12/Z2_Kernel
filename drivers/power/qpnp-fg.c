@@ -482,7 +482,6 @@ struct fg_chip {
 	struct device		*dev;
 	struct spmi_device	*spmi;
 	u8			pmic_subtype;
-	u8			zero_count;
 	u8			pmic_revision[4];
 	u8			revision[4];
 	u16			soc_base;
@@ -4616,7 +4615,7 @@ static int fg_power_get_property(struct power_supply *psy,
 		/* These props don't require a fg query; don't ratelimit them */
 		break;
 	default:
-	if (!sd->last_req_expires)
+		if (!sd->last_req_expires)
 			break;
 		if (usb_psy_initialized(chip))
 			power_supply_get_property(chip->usb_psy,

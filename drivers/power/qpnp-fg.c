@@ -2267,8 +2267,9 @@ static int soc_optimize(struct fg_chip *chip, int soc_raw)
 	else {
 		if (chip->prev_soc) {
 			int delta_soc = soc - chip->prev_soc;
-			if (delta_soc < -1 || (delta_soc > 1 && charging)) {
-				/* Schedule re-change if diff is > 2 */
+			if ((delta_soc < -1 && !charging) ||
+				(delta_soc > 1 && charging)) {
+				/* Schedule re-change if anything goes bad */
 				schedule_work(&chip->status_change_work);
 				return chip->prev_soc;
 			}

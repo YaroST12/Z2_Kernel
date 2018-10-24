@@ -3389,6 +3389,9 @@ static int dwc3_msm_remove(struct platform_device *pdev)
 		clk_prepare_enable(mdwc->xo_clk);
 	}
 
+	/* Just relax already */
+	pm_relax(mdwc->dev);
+
 	cancel_delayed_work_sync(&mdwc->sm_work);
 
 	if (mdwc->usb_psy.dev)

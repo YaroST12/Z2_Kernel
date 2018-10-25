@@ -114,14 +114,14 @@ static ssize_t set_key(struct device *device,
 	bool home_pressed;
 
 	retval = kstrtou64(buffer, 0, &val);
-	if (!retval && !utouch_disable) {
+	if (!retval) {
 		if (val == KEY_HOME)
 			/* Convert to U-touch long press keyValue */
 			val = KEY_NAVI_LONG;
 
 		home_pressed = home_button_pressed();
 
-		if (val && home_pressed)
+		if ((val && home_pressed) || utouch_disable)
 			val = 0;
 
 		pr_info("home key pressed = %d\n", (int)home_pressed);
@@ -132,7 +132,7 @@ static ssize_t set_key(struct device *device,
 			pr_info("calling home key reset");
 			reset_home_button();
 		}
-	} else if (retval)
+	} else
 		return -ENOENT;
 	return strnlen(buffer, count);
 }

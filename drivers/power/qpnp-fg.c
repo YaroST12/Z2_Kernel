@@ -261,7 +261,7 @@ static struct fg_mem_setting settings[FG_MEM_SETTING_MAX] = {
 	SETTING(IRQ_VOLT_EMPTY,	 0x458,   3,      3000),
 	SETTING(CUTOFF_VOLTAGE,	 0x40C,   0,      3400),
 	SETTING(VBAT_EST_DIFF,	 0x000,   0,      200),
-	SETTING(DELTA_SOC,	 0x450,   3,      1),
+	SETTING(DELTA_SOC,	 0x450,   3,      2),
 	SETTING(BATT_LOW,	 0x458,   0,      4200),
 	SETTING(THERM_DELAY,	 0x4AC,   3,      0),
 };

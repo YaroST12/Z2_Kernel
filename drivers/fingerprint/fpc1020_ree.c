@@ -260,7 +260,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	smp_rmb();
 	if (fpc1020->screen_on == 0) {
 		if (fpc1020->proximity_state == 1)
-			return IRQ_HANDLED;
+			return 0;
 		pm_wakeup_event(fpc1020->dev, 5000);
 	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);

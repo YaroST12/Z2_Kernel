@@ -2254,11 +2254,10 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 
 static int soc_optimize(struct fg_chip *chip, int soc_raw)
 {
-	int soc = DIV_ROUND_CLOSEST((soc_raw - 1) * (FULL_CAPACITY),
+	int soc = DIV_ROUND_CLOSEST((soc_raw - 1) * (FULL_CAPACITY - 2),
                         FULL_SOC_RAW - 2) + 1;
 	soc = min(soc, 100);
-	if (soc_raw < 1)
-		soc = 0;
+	soc = max(soc, 0);
 	return soc;
 }
 

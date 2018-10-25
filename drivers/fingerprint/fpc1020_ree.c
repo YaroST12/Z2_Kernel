@@ -81,10 +81,10 @@ static ssize_t irq_set(struct device *device,
 		const char *buffer, size_t count)
 {
 	int retval = 0;
-	u64 val;
+	unsigned int val;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
 
-	retval = kstrtou64(buffer, 0, &val);
+	retval = kstrtouint(buffer, 0, &val);
 	if (val == 1)
 		enable_irq(fpc1020->irq);
 	else if (val == 0)
@@ -109,11 +109,11 @@ static ssize_t set_key(struct device *device,
 		const char *buffer, size_t count)
 {
 	int retval = 0;
-	u64 val;
+	unsigned int val;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
 	bool home_pressed;
 
-	retval = kstrtou64(buffer, 0, &val);
+	retval = kstrtouint(buffer, 0, &val);
 	if (!retval) {
 		if (val == KEY_HOME)
 			/* Convert to U-touch long press keyValue */

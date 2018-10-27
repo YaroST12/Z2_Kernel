@@ -2261,8 +2261,8 @@ static int soc_optimize(struct fg_chip *chip, int soc_raw)
 	if (!(soc_raw == chip->last_soc)) {
 		int soc_diff = DRC_SOC(chip->last_soc) - soc;
 		if (soc_diff > 1)
-			pr_info("soc diff == %i", soc_diff);
-		pr_info("soc_raw: %i", soc_raw);
+			pr_info("soc diff == %i\n", soc_diff);
+		pr_info("soc_raw: %i\n", soc_raw);
 	}
 	return soc;
 }

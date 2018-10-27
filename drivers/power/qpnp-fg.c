@@ -2250,14 +2250,20 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 #define DEFAULT_CAPACITY	65
 #define MISSING_CAPACITY	100
 #define FULL_CAPACITY		100
-#define FULL_SOC_RAW		0xFF
-
+#define FULL_SOC_RAW		0xFD
+#define DRC_SOC(n) DIV_ROUND_CLOSEST((n - 1) * (FULL_CAPACITY - 2), \
+                        FULL_SOC_RAW - 2) + 1
 static int soc_optimize(struct fg_chip *chip, int soc_raw)
 {
-	int soc = DIV_ROUND_CLOSEST((soc_raw - 1) * (FULL_CAPACITY - 2),
-                        FULL_SOC_RAW - 2) + 1;
+	int soc = DRC_SOC(soc_raw);
 	soc = min(soc, 100);
 	soc = max(soc, 0);
+	if (!(soc_raw == chip->last_soc)) {
+		int soc_diff = DRC_SOC(chip->last_soc) - soc;
+		if (soc_diff > 1)
+			pr_info("soc diff == %i", soc_diff);
+		pr_info("soc_raw: %i", soc_raw);
+	}
 	return soc;
 }
 
@@ -2267,7 +2273,7 @@ static int get_prop_capacity(struct fg_chip *chip)
 	bool vbatt_low_sts;
 
 	if (chip->use_last_soc && chip->last_soc) {
-		if (chip->last_soc == FULL_SOC_RAW)
+		if (chip->last_soc >= FULL_SOC_RAW)
 			return FULL_CAPACITY;
 		return soc_optimize(chip, chip->last_soc);
 	}

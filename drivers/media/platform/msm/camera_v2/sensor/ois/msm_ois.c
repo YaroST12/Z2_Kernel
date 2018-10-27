@@ -164,17 +164,18 @@ static int32_t msm_ois_write_settings(struct msm_ois_ctrl_t *o_ctrl,
 		case MSM_OIS_WRITE: {
 			switch (settings[i].data_type) {
 			case MSM_CAMERA_I2C_BYTE_DATA:
-			case MSM_CAMERA_I2C_WORD_DATA:
+			case MSM_CAMERA_I2C_WORD_DATA: {
 				rc = o_ctrl->i2c_client.i2c_func_tbl->i2c_write(
 					&o_ctrl->i2c_client,
 					settings[i].reg_addr,
 					settings[i].reg_data,
 					settings[i].data_type);
 				break;
-			case MSM_CAMERA_I2C_DWORD_DATA:
-			reg_setting =
-			kzalloc(sizeof(struct msm_camera_i2c_seq_reg_array),
-				GFP_KERNEL);
+			}
+			case MSM_CAMERA_I2C_DWORD_DATA: {
+				reg_setting =
+				kzalloc(sizeof(struct msm_camera_i2c_seq_reg_array),
+					GFP_KERNEL);
 				if (!reg_setting)
 					return -ENOMEM;
 
@@ -201,7 +202,7 @@ static int32_t msm_ois_write_settings(struct msm_ois_ctrl_t *o_ctrl,
 				if (rc < 0)
 					return rc;
 				break;
-
+			}
 			default:
 				pr_err("Unsupport data type: %d\n",
 					settings[i].data_type);
@@ -212,8 +213,8 @@ static int32_t msm_ois_write_settings(struct msm_ois_ctrl_t *o_ctrl,
 			else if (0 != settings[i].delay)
 				usleep_range(settings[i].delay * 1000,
 					(settings[i].delay * 1000) + 1000);
-		}
 			break;
+		}
 
 		case MSM_OIS_POLL: {
 			switch (settings[i].data_type) {
@@ -231,8 +232,8 @@ static int32_t msm_ois_write_settings(struct msm_ois_ctrl_t *o_ctrl,
 				pr_err("Unsupport data type: %d\n",
 					settings[i].data_type);
 				break;
+				}
 			}
-		}
 		}
 
 		if (rc < 0)

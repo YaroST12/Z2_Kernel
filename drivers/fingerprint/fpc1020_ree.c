@@ -463,8 +463,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_unregister_client;
 	}
 
-	/* Disable IRQ */
-	disable_irq(fpc1020->irq);
 	/* Enable irq wake */
 	enable_irq_wake(fpc1020->irq);
 	return 0;

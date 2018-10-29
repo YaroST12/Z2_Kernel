@@ -74,7 +74,7 @@
 		qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 		qcom,mdss-dsi-panel-status-value = <0x9c>;
-		//qcom,esd-check-enabled;
+		qcom,esd-check-enabled;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <115>;
 		qcom,mdss-dsi-panel-orientation = "180";
@@ -83,5 +83,7 @@
 		22 1e 07 08 04 03 04 a0
 		22 1e 07 08 04 03 04 a0
 		22 17 07 08 04 03 04 a0];
+		qcom,ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 	};
 };

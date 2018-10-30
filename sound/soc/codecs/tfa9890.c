@@ -42,6 +42,8 @@
 #define GPIO_SLEEP_LOW_US 10
 #define RESET_DELAY 500
 
+static struct work_struct boot_work;
+
 struct tfa9890_dev	{
 	wait_queue_head_t	read_wq;
 	struct mutex		read_mutex;
@@ -439,20 +441,32 @@ static struct i2c_driver nxp_tfa9890_driver = {
 };
 
  /**
- * nxp_tfa9890_init()
- *
- * Called by the kernel during do_initcalls (if built-in)
- * or when the driver is loaded (if a module).
  *
  * This function registers the driver to the I2C subsystem.
  *
  */
-static int __init nxp_tfa9890_init(void)
+static void nxp_tfa9890_init_fn(struct work_struct *work)
 {
 	printk("%s\n",__func__);
-	return i2c_add_driver(&nxp_tfa9890_driver);
+	i2c_add_driver(&nxp_tfa9890_driver);
 }
 
+ /**
+ * nxp_tfa9890_init()
+ *
+ * Called by the kernel during do_initcalls.
+ * Schedules nxp_tfa9890_init_fn() that actually inits i2c.
+ *
+ */
+static int __init nxp_tfa9890_init(void)
+{
+	INIT_WORK(&boot_work, nxp_tfa9890_init_fn);
+	schedule_work(&boot_work);
+	return 0;
+}
+
+
+#ifdef CONFIG_MODULES
  /**
  * nxp_tfa9890_exit()
  *
@@ -471,6 +485,9 @@ static void __exit nxp_tfa9890_exit(void)
 module_init(nxp_tfa9890_init);
 module_exit(nxp_tfa9890_exit);
 
+#else
+device_initcall(nxp_tfa9890_init);
+#endif
 MODULE_AUTHOR("NXP, Inc.");
 MODULE_DESCRIPTION("NXP TFA9885 I2C Touch Driver");
 MODULE_LICENSE("GPL v2");

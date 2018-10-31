@@ -128,6 +128,18 @@
 		/delete-property/ pinctrl-0;
 		/delete-property/ pinctrl-1;
 	};
+
+	snd_934x: sound-tavil {
+		status = "disabled";
+	};
+
+	smp2pgpio_rdbg_5_out: qcom,smp2pgpio-rdbg-5-out {
+		status = "disabled";
+	};
+
+	smp2pgpio_rdbg_5_in: qcom,smp2pgpio-rdbg-5-in {
+		status = "disabled";
+	};
 };
 
 &tlmm {

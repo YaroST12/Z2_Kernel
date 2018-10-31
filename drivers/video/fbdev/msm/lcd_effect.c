@@ -662,7 +662,7 @@ int handle_lcd_effect_data(
 {
 	struct lcd_effect_data *effect_data = panel_data->effect_data;
 	struct lcd_mode_data *mode_data = panel_data->mode_data;
-	int mode_index = mode_data->current_mode; 
+	int mode_index;
 	int ret = 0;
 
 	switch(ctrl_data->id) {
@@ -686,7 +686,7 @@ int handle_lcd_effect_data(
 			pr_info("%s:SET_EFFECT,index=%d,level=%d\n",__func__,ctrl_data->index,ctrl_data->level);
 				ret = lcd_set_effect(mfd, panel_data, ctrl_data->index, ctrl_data->level);
 			} else {
-				mode_index=mode_index;
+				mode_index = mode_data->current_mode;
 				lcd_effect_info("(%s) can't support change effect\n", mode_data->mode[mode_index].name);
 				ret = -EINVAL;
 			}

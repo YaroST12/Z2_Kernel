@@ -2910,7 +2910,7 @@ int msm_vfe47_get_platform_data(struct vfe_device *vfe_dev)
 
 	rc = msm_camera_register_irq(vfe_dev->pdev, vfe_dev->vfe_irq,
 		msm_isp_process_irq,
-		IRQF_TRIGGER_RISING, "vfe", vfe_dev);
+		IRQF_TRIGGER_RISING | IRQF_PERF_CRITICAL, "vfe", vfe_dev);
 	if (rc < 0)
 		goto irq_register_fail;
 

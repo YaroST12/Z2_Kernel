@@ -2199,7 +2199,7 @@ static int msm_cci_probe(struct platform_device *pdev)
 		goto cci_release_mem;
 	}
 	rc = request_irq(new_cci_dev->irq->start, msm_cci_irq,
-		IRQF_TRIGGER_RISING, "cci", new_cci_dev);
+		IRQF_TRIGGER_RISING | IRQF_PERF_CRITICAL, "cci", new_cci_dev);
 	if (rc < 0) {
 		pr_err("%s: irq request fail\n", __func__);
 		rc = -EBUSY;

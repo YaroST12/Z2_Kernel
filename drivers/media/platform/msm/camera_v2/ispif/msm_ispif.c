@@ -2061,7 +2061,7 @@ static int ispif_probe(struct platform_device *pdev)
 		goto get_irq_fail;
 	}
 	rc = msm_camera_register_irq(pdev, ispif->irq, msm_io_ispif_irq,
-			IRQF_TRIGGER_RISING, "ispif", ispif);
+			IRQF_TRIGGER_RISING | IRQF_PERF_CRITICAL, "ispif", ispif);
 	if (rc) {
 		rc = -ENODEV;
 		goto get_irq_fail;

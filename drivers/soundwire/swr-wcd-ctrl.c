@@ -1319,7 +1319,11 @@ static int swrm_get_logical_dev_num(struct swr_master *mstr, u64 dev_id,
 found:
 	pm_runtime_mark_last_busy(&swrm->pdev->dev);
 	pm_runtime_put_autosuspend(&swrm->pdev->dev);
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 	return 0;
+#else
+	return ret;
+#endif
 }
 static int swrm_master_init(struct swr_mstr_ctrl *swrm)
 {

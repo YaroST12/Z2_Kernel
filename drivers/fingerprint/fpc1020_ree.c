@@ -124,12 +124,12 @@ static ssize_t set_key(struct device *device,
 		if ((val && home_pressed) || utouch_disable)
 			val = 0;
 
-		pr_info("home key pressed = %d\n", (int)home_pressed);
+		pr_debug("home key pressed = %d\n", (int)home_pressed);
 		fpc1020->report_key = (int)val;
 		queue_work(fpc1020->fpc1020_wq, &fpc1020->input_report_work);
 
 		if (!val) {
-			pr_info("calling home key reset");
+			pr_debug("calling home key reset");
 			reset_home_button();
 		}
 	} else
@@ -149,10 +149,10 @@ static ssize_t utouch_store_disable(struct device *dev,
 	}
 	if (value == 1) {
 		utouch_disable = true;
-		pr_info("utouch disabled\n");
+		pr_debug("utouch disabled\n");
 	} else {
 		utouch_disable = false;
-		pr_info("utouch enabled\n");
+		pr_debug("utouch enabled\n");
 	}
 	return count;
 }
@@ -198,7 +198,7 @@ static void fpc1020_report_work_func(struct work_struct *work)
 
 	fpc1020 = container_of(work, struct fpc1020_data, input_report_work);
 	if (fpc1020->screen_on == 1) {
-		pr_info("Report key value = %d\n", (int)fpc1020->report_key);
+		pr_debug("Report key value = %d\n", (int)fpc1020->report_key);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
 		msleep(30);
@@ -256,7 +256,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
-	pr_info("fpc1020 IRQ interrupt\n");
+	pr_debug("fpc1020 IRQ interrupt\n");
 	smp_rmb();
 	if (fpc1020->screen_on == 0) {
 		if (fpc1020->proximity_state == 1)
@@ -325,7 +325,7 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 
 	fpc1020->input_dev = input_allocate_device();
 	if (!fpc1020->input_dev) {
-		pr_info("Input allocate device failed\n");
+		pr_debug("Input allocate device failed\n");
 		retval = -ENOMEM;
 		return retval;
 	}

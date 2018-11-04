@@ -119,3 +119,7 @@
 	qcom,ilim-ma = <105>;
 	qcom,int-pwm-freq-khz = <253>;//lowest:253Khz
 };
+
+&wsa881x_213 {
+	qcom,spkr-sd-n-gpio = <&pmi8994_gpios 3 0>;
+};

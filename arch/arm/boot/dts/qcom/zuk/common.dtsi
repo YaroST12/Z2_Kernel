@@ -257,10 +257,6 @@
 	};
 };
 
-&wsa881x_213 {
-	qcom,spkr-sd-n-gpio = <&pmi8994_gpios 3 0>;
-};
-
 &pm8994_gpios {
 	/delete-node/ gpio@cd00;
 	

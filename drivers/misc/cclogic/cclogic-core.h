@@ -119,8 +119,6 @@ struct cclogic_dev	{
 	struct delayed_work	work;
 	struct delayed_work	plug_work;
 	struct cclogic_platform *platform_data;
-	struct wakeup_source	wakeup;
-	struct wakeup_source	wakeup_plug;
 	bool			vbus_on;
 	struct cclogic_chip *ops;
 	struct cclogic_state state;

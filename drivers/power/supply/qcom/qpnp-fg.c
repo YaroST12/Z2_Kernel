@@ -3113,11 +3113,8 @@ static void fg_cap_learning_load_data(struct fg_chip *chip)
 		pr_err("Failed to load aged capacity: %d\n", rc);
 	} else {
 		chip->learning_data.learned_cc_uah = cc_mah * 1000;
-		if (fg_debug_mask & FG_AGING)
-			pr_info("learned capacity %lld-> %lld/%x uah\n",
-					old_cap,
-					chip->learning_data.learned_cc_uah,
-					cc_mah);
+		pr_info("learned capacity %lld-> %lld/%x uah\n", old_cap,
+				chip->learning_data.learned_cc_uah, cc_mah);
 	}
 }
 

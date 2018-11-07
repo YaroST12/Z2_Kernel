@@ -893,7 +893,7 @@ work_end:
 	if(ret || !gpio_get_value(cclogic_priv->platform_data->irq_working)){
 		retries++;
 		if(retries <= CCLOGIC_MAX_RETRIES){
-			schedule_delayed_work(&pdata->work, msecs_to_jiffies(100));
+			schedule_delayed_work(&pdata->work, msecs_to_jiffies(20 * retries));
 			return;
 		}else
 			pr_err("[%s][%d] still in error,more than %d retries\n", __func__, __LINE__,CCLOGIC_MAX_RETRIES);
@@ -922,7 +922,8 @@ static void cclogic_do_plug_work(struct work_struct *w)
 		if(gpio_get_value(pdata->platform_data->irq_plug)){
 			if(retries<10){
 				retries++;
-				schedule_delayed_work(&pdata->plug_work, msecs_to_jiffies(100));
+				schedule_delayed_work(&pdata->plug_work,
+									  msecs_to_jiffies(20 * retries));
 			}else{
 				m_plug_state = 0;
 				cancel_delayed_work(&cclogic_priv->work);

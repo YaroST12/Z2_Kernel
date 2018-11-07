@@ -19,7 +19,6 @@
 #include <linux/miscdevice.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of_gpio.h>
-#include <linux/wakelock.h>
 #include "cclogic-core.h"
 
 

@@ -167,6 +167,7 @@ static struct cpufreq_interactive_tunables *common_tunables;
 static struct cpufreq_interactive_tunables *cached_common_tunables;
 
 static struct attribute_group *get_sysfs_attr(void);
+static bool is_sh(struct task_struct *p);
 
 /* Round to starting jiffy of next evaluation window */
 static u64 round_to_nw_start(u64 jif,
@@ -1028,7 +1029,12 @@ static ssize_t store_hispeed_freq(struct cpufreq_interactive_tunables *tunables,
 	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
-	tunables->hispeed_freq = val;
+
+	if (is_sh(current))
+		tunables->hispeed_freq = val;
+	else
+		tunables->hispeed_freq = CONFIG_INPUT_BOOST_FREQ_LP;
+
 	return count;
 }
 
@@ -1645,6 +1651,11 @@ static struct cpufreq_interactive_tunables *get_tunables(
 		return ppol->cached_tunables;
 	else
 		return cached_common_tunables;
+}
+
+static bool is_sh(struct task_struct *p)
+{
+	return !strncmp(p->comm, "sh", sizeof("sh"));
 }
 
 static int cpufreq_governor_interactive(struct cpufreq_policy *policy,

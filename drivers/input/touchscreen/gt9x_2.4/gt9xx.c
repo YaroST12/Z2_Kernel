@@ -189,7 +189,14 @@ s32 gtp_i2c_read_dbl_check(struct i2c_client *client, u16 addr, u8 *rxbuf, int l
 	u8 buf[16] = {0};
 	u8 confirm_buf[16] = {0};
 	u8 retry = 0;
-	
+
+	if (len + 2 > sizeof(buf)) {
+		dev_warn(&client->dev,
+			 "%s, only support length less then %zu\n",
+			 __func__, sizeof(buf) - 2);
+		return FAIL;
+	}
+
 	while (retry++ < 3)
 	{
 		memset(buf, 0xAA, 16);
@@ -1170,19 +1177,6 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
 		cfg_info_len[4], cfg_info_len[5]);
 #endif
 
-	{	/* check firmware */
-		ret = gtp_i2c_read_dbl_check(ts->client, 0x41E4, opr_buf, 1);
-		if (SUCCESS == ret)
-		{
-			if (opr_buf[0] != 0xBE)
-			{
-				ts->fw_error = 1;
-				GTP_ERROR("Firmware error, no config sent!");
-				return -1;
-			}
-		}
-	}
-
 	/* read sensor id */
 	ret = gtp_i2c_read_dbl_check(ts->client, GTP_REG_SENSOR_ID, &sensor_id, 1);
 	if (SUCCESS == ret)
@@ -1226,6 +1220,18 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
 
 	GTP_INFO("Config group%d used,length: %d", sensor_id, ts->gtp_cfg_len);
 	
+	/* check firmware */
+	ret = gtp_i2c_read_dbl_check(ts->client, 0x41E4, opr_buf, 1);
+	if (SUCCESS == ret)
+	{
+		if (opr_buf[0] != 0xBE)
+		{
+			ts->fw_error = 1;
+			GTP_ERROR("Firmware error, no config sent!");
+			return -1;
+		}
+	}
+
 	if (ts->gtp_cfg_len < GTP_CONFIG_MIN_LENGTH)
 	{
 		GTP_ERROR("Config Group%d is INVALID CONFIG GROUP(Len: %d)! NO Config Sent! You need to check you header file CFG_GROUP section!", sensor_id, ts->gtp_cfg_len);
@@ -1297,11 +1303,6 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
 
 	{
 #if GTP_DRIVER_SEND_CFG
-		ret = gtp_send_cfg(ts->client);
-		if (ret < 0)
-		{
-			GTP_ERROR("Send config error.");
-		}
 	{
 		if (flash_cfg_version < 90 && flash_cfg_version > drv_cfg_version) {
 			check_sum = 0;
@@ -1312,12 +1313,15 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
 			config[ts->gtp_cfg_len] = (~check_sum) + 1;
 		}
 	}
-
+	ret = gtp_send_cfg(ts->client);
+	if (ret < 0)
+		GTP_ERROR("Send config error.");
+	else
+		usleep_range(10000, 11000); /* 10 ms */
 #endif
 		GTP_INFO("X_MAX: %d, Y_MAX: %d, TRIGGER: 0x%02x", ts->abs_x_max,ts->abs_y_max,ts->int_trigger_type);
 	}
 
-	msleep(10);
 	return 0;
 
 }

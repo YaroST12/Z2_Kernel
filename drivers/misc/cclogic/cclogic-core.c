@@ -1261,6 +1261,29 @@ static struct attribute_group cclogic_attr_group = {
 	.attrs = cclogic_attrs,
 };
 
+static int cclogic_alloc_input_dev(struct cclogic_dev *cclogic)
+{
+	int retval = 0;
+
+	cclogic->input_dev = input_allocate_device();
+	if (!cclogic->input_dev) {
+		pr_debug("Input allocate device failed\n");
+		retval = -ENOMEM;
+		return retval;
+	}
+
+	cclogic->input_dev->name = "cclogic";
+
+	/* Register the input device */
+	retval = input_register_device(cclogic->input_dev);
+	if (retval) {
+		pr_err("Input_register_device failed.\n");
+		input_free_device(cclogic->input_dev);
+		cclogic->input_dev = NULL;
+	}
+	return retval;
+}
+
 /* cclogic_probe() */
 static int cclogic_probe(struct i2c_client *client,
 				   const struct i2c_device_id *dev_id)
@@ -1411,6 +1434,12 @@ static int cclogic_probe(struct i2c_client *client,
 		dev_err(&client->dev,
 				"%s-->Unable to create sysfs for cclogic, errors: %d\n",
 				__func__, ret);
+		goto err_chip_check;
+	}
+
+	ret = cclogic_alloc_input_dev(cclogic_dev);
+	if (ret != 0) {
+		pr_err("Allocate input device failed\n");
 		goto err_chip_check;
 	}
 

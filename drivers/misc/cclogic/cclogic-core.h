@@ -111,6 +111,7 @@ struct cclogic_chip;
 struct cclogic_dev	{
 	struct device		*dev;
 	struct i2c_client	*i2c_client;
+	struct input_dev	*input_dev;
 	unsigned int		irq_working;
 	unsigned int		irq_plug;
 	bool			irq_enabled;

@@ -754,6 +754,9 @@ static int cclogic_do_real_work(struct cclogic_state *state,
 		cclogic_notifier_call_chain(CCLOGIC_EVENT_ATTACHED, NULL);
 		pr_debug("%s-->cable attached\n", __func__);
 		break;
+	default:
+		pr_debug("%s-->Event unknown: %i\n", __func__, state->evt);
+		break;
 	}
 
 	if (state->device == CCLOGIC_USB_DEVICE) {/* in order to disable usb3.0 when in host mode */

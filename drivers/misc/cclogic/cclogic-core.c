@@ -165,6 +165,18 @@ error_reg_opt_i2c:
 	return ret;
 }
 
+static void cclogic_wakeup(struct work_struct *w)
+{
+	struct cclogic_dev *pdata = container_of(w,
+					struct cclogic_dev, wake_work.work);
+
+	pr_info("%s: waking up screen\n", __func__);
+	input_report_key(pdata->input_dev, KEY_WAKEUP, 0);
+	input_sync(pdata->input_dev);
+	input_report_key(pdata->input_dev, KEY_WAKEUP, 1);
+	input_sync(pdata->input_dev);
+}
+
 static int cclogic_regulator_configure(struct cclogic_dev *cclogic_dev, bool on)
 {
 	int ret = 0;
@@ -317,6 +329,8 @@ static irqreturn_t cclogic_irq(int irq, void *data)
 
 	pm_wakeup_event(cclogic_dev->dev, msecs_to_jiffies(1000));
 
+	cancel_delayed_work(&cclogic_dev->wake_work);
+	schedule_delayed_work(&cclogic_dev->wake_work, 30);
 	cancel_delayed_work(&cclogic_dev->work);
 	schedule_delayed_work(&cclogic_dev->work, 0);
 
@@ -841,6 +855,7 @@ out:
 		cclogic_last_status == CCLOGIC_EVENT_DETACHED)) {
 		msleep(20);
 		pr_debug("cclogic: reset driver ic, try again\n");
+		cancel_delayed_work(&pdata->wake_work);
 		ret = pdata->ops->chip_reset(pdata->i2c_client);
 	}
 	cclogic_last_status = state->evt;
@@ -1273,6 +1288,8 @@ static int cclogic_alloc_input_dev(struct cclogic_dev *cclogic)
 	}
 
 	cclogic->input_dev->name = "cclogic";
+	set_bit(KEY_WAKEUP, cclogic->input_dev->keybit);
+	input_set_capability(cclogic->input_dev, EV_KEY, KEY_WAKEUP);
 
 	/* Register the input device */
 	retval = input_register_device(cclogic->input_dev);
@@ -1429,6 +1446,7 @@ static int cclogic_probe(struct i2c_client *client,
 
 	INIT_DELAYED_WORK(&cclogic_dev->work, cclogic_do_work);
 	INIT_DELAYED_WORK(&cclogic_dev->plug_work, cclogic_do_plug_work);
+	INIT_DELAYED_WORK(&cclogic_dev->wake_work, cclogic_wakeup);
 
 	ret = sysfs_create_group(&client->dev.kobj, &cclogic_attr_group);
 	if (ret) {

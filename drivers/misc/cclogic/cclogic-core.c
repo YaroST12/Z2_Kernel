@@ -902,7 +902,6 @@ work_end:
 			pr_err("[%s][%d] still in error,more than %d retries\n", __func__, __LINE__, CCLOGIC_MAX_RETRIES);
 	}
 
-	pm_relax(pdata->dev);
 	retries = 0;
 }
 
@@ -929,16 +928,13 @@ static void cclogic_do_plug_work(struct work_struct *w)
 				cclogic_func_set(p, CCLOGIC_FUNC_UART);
 				retries = 0;
 				pm_runtime_put(pdata->dev);
-				pm_relax(cclogic_priv->dev);
 			}
 		} else{
 			retries = 0;
-			pm_relax(cclogic_priv->dev);
 		}
 	} else{
 		retries = 0;
 		pm_runtime_put(pdata->dev);
-		pm_relax(cclogic_priv->dev);
 	}
 }
 
@@ -1245,7 +1241,6 @@ void cclogic_unregister(struct cclogic_chip *c)
 
 	cclogic_irq_enable(cclogic_priv, false);
 
-	pm_relax(cclogic_priv->dev);
 	pm_runtime_put(cclogic_priv->dev);
 
 	mutex_lock(&cclogic_ops_lock);

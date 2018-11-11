@@ -40,6 +40,7 @@
 
 #ifdef CONFIG_MACH_ZUK
 #define SUPPORT_BATT_ID_RECHECK
+#define SUPPORT_BATT_SOC_CMDLINE
 #define LENUK_FIX_WARM_CAP_LEARNING_PROCESS
 #endif
 
@@ -2250,6 +2251,19 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 	return cap[0];
 }
 
+#ifdef SUPPORT_BATT_SOC_CMDLINE
+static int cmdline_battery_soc;
+static int __init set_battery_soc(char *str)
+{
+	get_option(&str, &cmdline_battery_soc);
+	pr_info("cmdline battery soc is %d\n", cmdline_battery_soc);
+
+	return 0;
+}
+
+early_param("battery_soc", set_battery_soc);
+#endif
+
 #define EMPTY_CAPACITY		0
 #define DEFAULT_CAPACITY	65
 #define MISSING_CAPACITY	100
@@ -2278,7 +2292,11 @@ static int get_prop_capacity(struct fg_chip *chip)
 	if (chip->battery_missing)
 		return MISSING_CAPACITY;
 	if (!chip->profile_loaded && !chip->use_otp_profile)
+#ifdef SUPPORT_BATT_SOC_CMDLINE
+		return cmdline_battery_soc;
+#else
 		return DEFAULT_CAPACITY;
+#endif
 	if (chip->charge_full)
 		return FULL_CAPACITY;
 	if (chip->soc_empty) {

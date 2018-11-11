@@ -1425,6 +1425,7 @@ static int cclogic_probe(struct i2c_client *client,
 		goto err_irq_working_dir;
 	}
 	device_init_wakeup(cclogic_dev->dev, 1);
+	device_set_wakeup_capable(cclogic_dev->dev, 1);
 
 	INIT_DELAYED_WORK(&cclogic_dev->work, cclogic_do_work);
 	INIT_DELAYED_WORK(&cclogic_dev->plug_work, cclogic_do_plug_work);
@@ -1485,6 +1486,7 @@ err_irq_req:
 	sysfs_remove_group(&client->dev.kobj, &cclogic_attr_group);
 err_chip_check:
 	device_init_wakeup(cclogic_dev->dev, 0);
+	device_set_wakeup_capable(cclogic_dev->dev, 0);
 err_irq_plug_dir:
 	if (gpio_is_valid(platform_data->irq_plug))
 		gpio_free(platform_data->irq_plug);

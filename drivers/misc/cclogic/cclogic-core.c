@@ -325,7 +325,7 @@ static irqreturn_t cclogic_irq(int irq, void *data)
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
 	if (!cclogic_dev || !cclogic_dev->i2c_client)
-		return IRQ_HANDLED;
+		return 0;
 
 	pm_wakeup_event(cclogic_dev->dev, msecs_to_jiffies(1000));
 
@@ -342,7 +342,7 @@ static irqreturn_t cclogic_plug_irq(int irq, void *data)
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
 	if (!cclogic_dev || !cclogic_dev->i2c_client)
-		return IRQ_HANDLED;
+		return 0;
 
 	pm_runtime_get(cclogic_dev->dev);
 	pm_wakeup_event(cclogic_dev->dev, msecs_to_jiffies(1000));
@@ -1450,7 +1450,7 @@ static int cclogic_probe(struct i2c_client *client,
 		dev_err(&client->dev,
 				"%s-->Unable to create sysfs for cclogic, errors: %d\n",
 				__func__, ret);
-		goto err_chip_check;
+		goto err_irq_req;
 	}
 
 	ret = cclogic_alloc_input_dev(cclogic_dev);
@@ -1466,7 +1466,7 @@ static int cclogic_probe(struct i2c_client *client,
 	if (ret) {
 		dev_err(&client->dev,
 				"%s: Failed to create working-irq thread\n", __func__);
-		goto err_irq_req;
+		goto err_irq_enable_working;
 	}
 
 	if (gpio_is_valid(platform_data->irq_plug)) {
@@ -1484,18 +1484,17 @@ static int cclogic_probe(struct i2c_client *client,
 	if (gpio_is_valid(cclogic_dev->platform_data->irq_plug))
 		disable_irq(cclogic_dev->irq_plug);
 
-	pr_info("%s Success\n", __func__);
-
-	return 0;
-
 	cancel_delayed_work_sync(&cclogic_dev->work);
 	cancel_delayed_work_sync(&cclogic_dev->plug_work);
 	cclogic_irq_enable(cclogic_dev, false);
 
-	if (gpio_is_valid(platform_data->irq_plug))
-		free_irq(cclogic_dev->irq_plug, cclogic_dev);
+	pr_info("%s Success\n", __func__);
+	return 0;
 
 err_irq_enable:
+	if (gpio_is_valid(platform_data->irq_plug))
+		free_irq(cclogic_dev->irq_plug, cclogic_dev);
+err_irq_enable_working:
 	free_irq(cclogic_dev->irq_working, cclogic_dev);
 err_irq_req:
 	sysfs_remove_group(&client->dev.kobj, &cclogic_attr_group);

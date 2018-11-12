@@ -329,8 +329,6 @@ static irqreturn_t cclogic_irq(int irq, void *data)
 
 	pm_wakeup_event(cclogic_dev->dev, msecs_to_jiffies(1000));
 
-	cancel_delayed_work(&cclogic_dev->wake_work);
-	schedule_delayed_work(&cclogic_dev->wake_work, 30);
 	cancel_delayed_work(&cclogic_dev->work);
 	schedule_delayed_work(&cclogic_dev->work, 0);
 
@@ -930,9 +928,13 @@ static void cclogic_do_plug_work(struct work_struct *w)
 				pm_runtime_put(pdata->dev);
 			}
 		} else{
+			schedule_delayed_work(&cclogic_priv->wake_work,
+									msecs_to_jiffies(50));
 			retries = 0;
 		}
 	} else{
+		schedule_delayed_work(&cclogic_priv->wake_work,
+									msecs_to_jiffies(50));
 		retries = 0;
 		pm_runtime_put(pdata->dev);
 	}

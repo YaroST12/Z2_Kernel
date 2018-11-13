@@ -165,18 +165,6 @@ error_reg_opt_i2c:
 	return ret;
 }
 
-static void cclogic_wakeup(struct work_struct *w)
-{
-	struct cclogic_dev *pdata = container_of(w,
-					struct cclogic_dev, wake_work.work);
-
-	pr_info("%s: waking up screen\n", __func__);
-	input_report_key(pdata->input_dev, KEY_WAKEUP, 0);
-	input_sync(pdata->input_dev);
-	input_report_key(pdata->input_dev, KEY_WAKEUP, 1);
-	input_sync(pdata->input_dev);
-}
-
 static int cclogic_regulator_configure(struct cclogic_dev *cclogic_dev, bool on)
 {
 	int ret = 0;
@@ -853,7 +841,6 @@ out:
 		cclogic_last_status == CCLOGIC_EVENT_DETACHED)) {
 		msleep(20);
 		pr_debug("cclogic: reset driver ic, try again\n");
-		cancel_delayed_work(&pdata->wake_work);
 		ret = pdata->ops->chip_reset(pdata->i2c_client);
 	}
 	cclogic_last_status = state->evt;
@@ -928,13 +915,9 @@ static void cclogic_do_plug_work(struct work_struct *w)
 				pm_runtime_put(pdata->dev);
 			}
 		} else{
-			schedule_delayed_work(&cclogic_priv->wake_work,
-									msecs_to_jiffies(50));
 			retries = 0;
 		}
 	} else{
-		schedule_delayed_work(&cclogic_priv->wake_work,
-									msecs_to_jiffies(50));
 		retries = 0;
 		pm_runtime_put(pdata->dev);
 	}
@@ -1273,31 +1256,6 @@ static struct attribute_group cclogic_attr_group = {
 	.attrs = cclogic_attrs,
 };
 
-static int cclogic_alloc_input_dev(struct cclogic_dev *cclogic)
-{
-	int retval = 0;
-
-	cclogic->input_dev = input_allocate_device();
-	if (!cclogic->input_dev) {
-		pr_debug("Input allocate device failed\n");
-		retval = -ENOMEM;
-		return retval;
-	}
-
-	cclogic->input_dev->name = "cclogic";
-	set_bit(KEY_WAKEUP, cclogic->input_dev->keybit);
-	input_set_capability(cclogic->input_dev, EV_KEY, KEY_WAKEUP);
-
-	/* Register the input device */
-	retval = input_register_device(cclogic->input_dev);
-	if (retval) {
-		pr_err("Input_register_device failed.\n");
-		input_free_device(cclogic->input_dev);
-		cclogic->input_dev = NULL;
-	}
-	return retval;
-}
-
 /* cclogic_probe() */
 static int cclogic_probe(struct i2c_client *client,
 				   const struct i2c_device_id *dev_id)
@@ -1439,11 +1397,9 @@ static int cclogic_probe(struct i2c_client *client,
 		goto err_irq_working_dir;
 	}
 	device_init_wakeup(cclogic_dev->dev, 1);
-	device_set_wakeup_capable(cclogic_dev->dev, 1);
 
 	INIT_DELAYED_WORK(&cclogic_dev->work, cclogic_do_work);
 	INIT_DELAYED_WORK(&cclogic_dev->plug_work, cclogic_do_plug_work);
-	INIT_DELAYED_WORK(&cclogic_dev->wake_work, cclogic_wakeup);
 
 	ret = sysfs_create_group(&client->dev.kobj, &cclogic_attr_group);
 	if (ret) {
@@ -1453,15 +1409,8 @@ static int cclogic_probe(struct i2c_client *client,
 		goto err_irq_req;
 	}
 
-	ret = cclogic_alloc_input_dev(cclogic_dev);
-	if (ret != 0) {
-		pr_err("Allocate input device failed\n");
-		goto err_chip_check;
-	}
-
 	ret = request_threaded_irq(cclogic_dev->irq_working, NULL, cclogic_irq,
-			cclogic_dev->platform_data->irq_working_flags |
-					IRQF_TRIGGER_RISING | IRQF_ONESHOT, DRIVER_NAME,
+			cclogic_dev->platform_data->irq_working_flags | IRQF_ONESHOT, DRIVER_NAME,
 			cclogic_dev);
 	if (ret) {
 		dev_err(&client->dev,
@@ -1471,8 +1420,7 @@ static int cclogic_probe(struct i2c_client *client,
 
 	if (gpio_is_valid(platform_data->irq_plug)) {
 		ret = request_threaded_irq(cclogic_dev->irq_plug, NULL, cclogic_plug_irq,
-				cclogic_dev->platform_data->irq_plug_flags |
-					IRQF_TRIGGER_RISING | IRQF_ONESHOT, DRIVER_NAME,
+				cclogic_dev->platform_data->irq_plug_flags | IRQF_ONESHOT, DRIVER_NAME,
 				cclogic_dev);
 		if (ret) {
 			dev_err(&client->dev,
@@ -1498,9 +1446,6 @@ err_irq_enable_working:
 	free_irq(cclogic_dev->irq_working, cclogic_dev);
 err_irq_req:
 	sysfs_remove_group(&client->dev.kobj, &cclogic_attr_group);
-err_chip_check:
-	device_init_wakeup(cclogic_dev->dev, 0);
-	device_set_wakeup_capable(cclogic_dev->dev, 0);
 err_irq_plug_dir:
 	if (gpio_is_valid(platform_data->irq_plug))
 		gpio_free(platform_data->irq_plug);

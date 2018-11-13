@@ -111,7 +111,6 @@ struct cclogic_chip;
 struct cclogic_dev	{
 	struct device		*dev;
 	struct i2c_client	*i2c_client;
-	struct input_dev	*input_dev;
 	unsigned int		irq_working;
 	unsigned int		irq_plug;
 	bool			irq_enabled;
@@ -119,7 +118,6 @@ struct cclogic_dev	{
 	bool			regulator_en;
 	struct delayed_work	work;
 	struct delayed_work	plug_work;
-	struct delayed_work	wake_work;
 	struct cclogic_platform *platform_data;
 	bool			vbus_on;
 	struct cclogic_chip *ops;

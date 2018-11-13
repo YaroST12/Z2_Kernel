@@ -3749,6 +3749,9 @@ static void fg_cap_learning_post_process(struct fg_chip *chip)
 {
 	int64_t max_inc_val, min_dec_val, old_cap;
 	bool batt_missing = is_battery_missing(chip);
+#ifdef LENUK_FIX_WARM_CAP_LEARNING_PROCESS
+	int capacity = 0;
+#endif
 
 	if (batt_missing) {
 		pr_err("Battery is missing!\n");
@@ -3756,7 +3759,7 @@ static void fg_cap_learning_post_process(struct fg_chip *chip)
 	}
 
 #ifdef LENUK_FIX_WARM_CAP_LEARNING_PROCESS
-	int capacity = get_prop_capacity(chip);
+	capacity = get_prop_capacity(chip);
 	if (capacity < 99) {
 		pr_err("( soc %d < 99) Stop capacity learning process!\n", capacity);
 		return;

@@ -66,7 +66,6 @@
 		.intr_polarity_bit = 1,		\
 		.intr_detection_bit = 2,	\
 		.intr_detection_width = 2,	\
-		.dir_conn_en_bit = 8,		\
 	}
 
 #define SDC_QDSD_PINGROUP(pg_name, ctl, pull, drv)	\
@@ -92,7 +91,6 @@
 		.intr_polarity_bit = -1,		\
 		.intr_detection_bit = -1,		\
 		.intr_detection_width = -1,		\
-		.dir_conn_en_bit = -1,		\
 	}
 
 #define UFS_RESET(pg_name, offset)				\
@@ -118,7 +116,6 @@
 		.intr_polarity_bit = -1,		\
 		.intr_detection_bit = -1,		\
 		.intr_detection_width = -1,		\
-		.dir_conn_en_bit = -1,		\
 	}
 static const struct pinctrl_pin_desc msm8998_pins[] = {
 	PINCTRL_PIN(0, "GPIO_0"),
@@ -1897,8 +1894,6 @@ static const struct msm_pinctrl_soc_data msm8998_pinctrl = {
 	.groups = msm8998_groups,
 	.ngroups = ARRAY_SIZE(msm8998_groups),
 	.ngpios = 153,
-	.dir_connect_offset = 0x9a1000,
-	.dir_connect_num_irqs = 8,
 };
 
 static int msm8998_pinctrl_probe(struct platform_device *pdev)

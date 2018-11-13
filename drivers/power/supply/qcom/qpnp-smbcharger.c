@@ -43,12 +43,6 @@
 #include <linux/ktime.h>
 #include <linux/extcon.h>
 #include <linux/pmic-voter.h>
-#include <linux/cclogic-core.h>
-
-#ifdef CONFIG_MACH_ZUK_Z2_PLUS
-#define SUPPORT_ONLY_5V_CHARGER
-#endif
-#define SUPPORT_CCLOGIC_EVENT_TYPE
 
 /* Mask/Bit helpers */
 #define _SMB_MASK(BITS, POS) \
@@ -295,26 +289,12 @@ struct smbchg_chip {
 
 	/* extcon for VBUS / ID notification to USB */
 	struct extcon_dev		*extcon;
-
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-	struct notifier_block 	cclogic_notif;
-	int				cclogic_attached;
-	wait_queue_head_t		cclogic_wait_queue;
-#endif
 };
 
 enum qpnp_schg {
 	QPNP_SCHG,
 	QPNP_SCHG_LITE,
 };
-
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-enum cclogic_event {
-	USB_DETACHED,
-	USB_ATTACHED,
-	USB_REMOVE,
-};
-#endif
 
 static char *version_str[] = {
 	[QPNP_SCHG]		= "SCHG",
@@ -678,14 +658,6 @@ static enum pwr_path_type smbchg_get_pwr_path(struct smbchg_chip *chip)
 #define USBIN_SRC_DET_BIT		BIT(2)
 #define FMB_STS_MASK			SMB_MASK(3, 0)
 #define USBID_GND_THRESHOLD		0x495
-
-static int id_state = 0;
-int get_usb_id_state(void)
-{
-	return id_state;
-}
-EXPORT_SYMBOL(get_usb_id_state);
-
 static bool is_otg_present_schg(struct smbchg_chip *chip)
 {
 	int rc;
@@ -767,7 +739,7 @@ static bool is_otg_present(struct smbchg_chip *chip)
 	if (chip->schg_version == QPNP_SCHG_LITE)
 		return is_otg_present_schg_lite(chip);
 
-	return is_otg_present_schg(chip) || cclogic_get_otg_state();
+	return is_otg_present_schg(chip);
 }
 
 #define USBIN_9V			BIT(5)
@@ -3794,7 +3766,6 @@ struct regulator_ops smbchg_otg_reg_ops = {
 #define USBIN_ADAPTER_9V		0x3
 #define USBIN_ADAPTER_5V_9V_CONT	0x2
 #define USBIN_ADAPTER_5V_UNREGULATED_9V	0x5
-#define USBIN_ADAPTER_5V	0x0
 #define HVDCP_EN_BIT			BIT(3)
 static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 {
@@ -3827,15 +3798,9 @@ static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 		return rc;
 	}
 
-#ifdef SUPPORT_ONLY_5V_CHARGER
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + USBIN_CHGR_CFG,
-				0xFF, USBIN_ADAPTER_5V);
-#else
 	rc = smbchg_sec_masked_write(chip,
 				chip->usb_chgpth_base + USBIN_CHGR_CFG,
 				0xFF, USBIN_ADAPTER_9V);
-#endif
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't write usb allowance rc=%d\n", rc);
 		return rc;
@@ -3861,18 +3826,6 @@ static int smbchg_external_otg_regulator_disable(struct regulator_dev *rdev)
 	 * value in order to allow normal USBs to be recognized as a valid
 	 * input.
 	 */
-#ifdef SUPPORT_ONLY_5V_CHARGER
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, 0);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't disable HVDCP rc=%d\n", rc);
-		return rc;
-	}
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + USBIN_CHGR_CFG,
-				0xFF, USBIN_ADAPTER_5V);
-#else
 	rc = smbchg_sec_masked_write(chip,
 				chip->usb_chgpth_base + CHGPTH_CFG,
 				HVDCP_EN_BIT, HVDCP_EN_BIT);
@@ -3884,7 +3837,6 @@ static int smbchg_external_otg_regulator_disable(struct regulator_dev *rdev)
 	rc = smbchg_sec_masked_write(chip,
 				chip->usb_chgpth_base + USBIN_CHGR_CFG,
 				0xFF, chip->original_usbin_allowance);
-#endif
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't write usb allowance rc=%d\n", rc);
 		return rc;
@@ -4582,21 +4534,12 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 	if (rc < 0)
 		pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
 
-#ifdef SUPPORT_ONLY_5V_CHARGER
-	/* disable HVDCP */
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, 0);
-	if (rc < 0)
-		pr_err("Couldn't disable HVDCP rc=%d\n", rc);
-#else
 	/* enable HVDCP */
 	rc = smbchg_sec_masked_write(chip,
 				chip->usb_chgpth_base + CHGPTH_CFG,
 				HVDCP_EN_BIT, HVDCP_EN_BIT);
 	if (rc < 0)
 		pr_err("Couldn't enable HVDCP rc=%d\n", rc);
-#endif
 
 	/* enable APSD */
 	rc = smbchg_sec_masked_write(chip,
@@ -4606,15 +4549,9 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 		pr_err("Couldn't enable APSD rc=%d\n", rc);
 
 	/* Reset back to 5V unregulated */
-#ifdef SUPPORT_ONLY_5V_CHARGER
-	rc = smbchg_sec_masked_write(chip,
-		chip->usb_chgpth_base + USBIN_CHGR_CFG,
-		ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V);
-#else
 	rc = smbchg_sec_masked_write(chip,
 		chip->usb_chgpth_base + USBIN_CHGR_CFG,
 		ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V_UNREGULATED_9V);
-#endif
 	if (rc < 0)
 		pr_err("Couldn't write usb allowance rc=%d\n", rc);
 
@@ -4871,7 +4808,7 @@ close_time:
 }
 
 #define AICL_IRQ_LIMIT_SECONDS	60
-#define AICL_IRQ_LIMIT_COUNT	35
+#define AICL_IRQ_LIMIT_COUNT	25
 static void increment_aicl_count(struct smbchg_chip *chip)
 {
 	bool bad_charger = false;
@@ -5057,18 +4994,11 @@ static int fake_insertion_removal(struct smbchg_chip *chip, bool insertion)
 
 	pr_smb(PR_MISC, "Allow only %s charger\n",
 			insertion ? "5-9V" : "9V only");
-#ifdef SUPPORT_ONLY_5V_CHARGER
-	rc = smbchg_sec_masked_write(chip,
-			chip->usb_chgpth_base + USBIN_CHGR_CFG,
-			ADAPTER_ALLOWANCE_MASK,
-			USBIN_ADAPTER_5V);
-#else
 	rc = smbchg_sec_masked_write(chip,
 			chip->usb_chgpth_base + USBIN_CHGR_CFG,
 			ADAPTER_ALLOWANCE_MASK,
 			insertion ?
 			USBIN_ADAPTER_5V_9V_CONT : USBIN_ADAPTER_9V);
-#endif
 	if (rc < 0) {
 		pr_err("Couldn't write usb allowance rc=%d\n", rc);
 		return rc;
@@ -5228,17 +5158,6 @@ static int smbchg_unprepare_for_pulsing(struct smbchg_chip *chip)
 		return rc;
 	}
 
-#ifdef SUPPORT_ONLY_5V_CHARGER
-	/* disable HVDCP */
-	pr_smb(PR_MISC, "Disable HVDCP\n");
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, 0);
-	if (rc < 0) {
-		pr_err("Couldn't disable HVDCP rc=%d\n", rc);
-		return rc;
-	}
-#else
 	/* enable HVDCP */
 	pr_smb(PR_MISC, "Enable HVDCP\n");
 	rc = smbchg_sec_masked_write(chip,
@@ -5248,7 +5167,6 @@ static int smbchg_unprepare_for_pulsing(struct smbchg_chip *chip)
 		pr_err("Couldn't enable HVDCP rc=%d\n", rc);
 		return rc;
 	}
-#endif
 
 	/* enable APSD */
 	pr_smb(PR_MISC, "Enabling APSD\n");
@@ -5674,7 +5592,6 @@ static int smbchg_usb_get_property(struct power_supply *psy,
 	struct smbchg_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (psp) {
-	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		val->intval = chip->usb_current_max;
 		break;
@@ -5684,7 +5601,6 @@ static int smbchg_usb_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = chip->usb_online;
 		break;
-	case POWER_SUPPLY_PROP_REAL_TYPE:
 	case POWER_SUPPLY_PROP_TYPE:
 		val->intval = chip->usb_supply_type;
 		break;
@@ -5704,7 +5620,6 @@ static int smbchg_usb_set_property(struct power_supply *psy,
 	struct smbchg_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (psp) {
-	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		chip->usb_current_max = val->intval;
 		break;
@@ -5723,7 +5638,6 @@ static int
 smbchg_usb_is_writeable(struct power_supply *psy, enum power_supply_property psp)
 {
 	switch (psp) {
-	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		return 1;
 	default:
@@ -5742,9 +5656,7 @@ static char *smbchg_usb_supplicants[] = {
 static enum power_supply_property smbchg_usb_properties[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_ONLINE,
-	POWER_SUPPLY_PROP_SDP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
-	POWER_SUPPLY_PROP_REAL_TYPE,
 	POWER_SUPPLY_PROP_TYPE,
 	POWER_SUPPLY_PROP_HEALTH,
 };
@@ -6465,14 +6377,6 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 		schedule_work(&chip->usb_set_online_work);
 	}
 
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-	/* usb pull out, wakeup wq if wq waiting cclogic attached event */
-	if (reg & USBIN_UV_BIT) {
-		chip->cclogic_attached = USB_REMOVE;
-		wake_up_interruptible(&chip->cclogic_wait_queue);
-	}
-#endif
-
 	smbchg_wipower_check(chip);
 out:
 	return IRQ_HANDLED;
@@ -6492,9 +6396,6 @@ static irqreturn_t src_detect_handler(int irq, void *_chip)
 	bool usb_present = is_usb_present(chip);
 	bool src_detect = is_src_detect_high(chip);
 	int rc;
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-	int ret;
-#endif
 
 	pr_smb(PR_STATUS,
 		"%s chip->usb_present = %d usb_present = %d src_detect = %d hvdcp_3_det_ignore_uv=%d\n",
@@ -6535,15 +6436,6 @@ static irqreturn_t src_detect_handler(int irq, void *_chip)
 
 	if (src_detect) {
 		update_usb_status(chip, usb_present, 0);
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-		ret = wait_event_interruptible_timeout(chip->cclogic_wait_queue,
-			(chip->cclogic_attached == USB_ATTACHED) ||
-			(chip->cclogic_attached == USB_REMOVE),
-			msecs_to_jiffies(2500));
-		pr_info("Waiting cclogic state ret = %d\n", ret);
-		if (ret == 0)
-			pr_err("Waiting cclogic state timeout\n");
-#endif
 	} else {
 		update_usb_status(chip, 0, false);
 		chip->aicl_irq_count = 0;
@@ -8059,31 +7951,12 @@ static void rerun_hvdcp_det_if_necessary(struct smbchg_chip *chip)
 	}
 }
 
-/*
- * cclogic callback, notify cclogic event status: detached or attached
- */
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-static int cclogic_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
-{
-	struct smbchg_chip *chip = container_of(self, struct smbchg_chip, cclogic_notif);
- 	if (event == 1) { /* usb detached */
-		chip->cclogic_attached = USB_DETACHED;
-	} else if (event == 2) { /* usb attached */
-		chip->cclogic_attached = USB_ATTACHED;
-		wake_up_interruptible(&chip->cclogic_wait_queue);
-	}
-	pr_smb(PR_MISC, "setting cclogic_attached = %d\n",
-			chip->cclogic_attached);
- 	return 0;
-}
-#endif
-
 static int smbchg_probe(struct platform_device *pdev)
 {
 	int rc;
 	struct smbchg_chip *chip;
 	struct power_supply *typec_psy = NULL;
-	struct qpnp_vadc_chip *vadc_dev = NULL, *vchg_vadc_dev = NULL;
+	struct qpnp_vadc_chip *vadc_dev, *vchg_vadc_dev;
 	const char *typec_psy_name;
 	struct power_supply_config usb_psy_cfg = {};
 	struct power_supply_config batt_psy_cfg = {};
@@ -8271,10 +8144,6 @@ static int smbchg_probe(struct platform_device *pdev)
 		goto votables_cleanup;
 	}
 
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-	init_waitqueue_head(&chip->cclogic_wait_queue);
-#endif
-
 	chip->extcon = devm_extcon_dev_allocate(chip->dev, smbchg_extcon_cable);
 	if (IS_ERR(chip->extcon)) {
 		dev_err(chip->dev, "failed to allocate extcon device\n");
@@ -8379,15 +8248,6 @@ static int smbchg_probe(struct platform_device *pdev)
 		}
 	}
 
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-	chip->cclogic_notif.notifier_call = cclogic_notifier_callback;
-	rc = cclogic_register_client(&chip->cclogic_notif);
-	if (rc) {
-		pr_err("Unable to register cclogic_notifier : %d\n", rc);
-		goto unregister_dc_psy1;
-	}
-#endif
-
 	if (chip->cfg_chg_led_support &&
 			chip->schg_version == QPNP_SCHG_LITE) {
 		rc = smbchg_register_chg_led(chip);
@@ -8429,10 +8289,6 @@ static int smbchg_probe(struct platform_device *pdev)
 unregister_led_class:
 	if (chip->cfg_chg_led_support && chip->schg_version == QPNP_SCHG_LITE)
 		led_classdev_unregister(&chip->led_cdev);
-#ifdef SUPPORT_CCLOGIC_EVENT_TYPE
-unregister_dc_psy1:
-	cclogic_unregister_client(&chip->cclogic_notif);
-#endif
 out:
 	handle_usb_removal(chip);
 votables_cleanup:
@@ -8462,10 +8318,6 @@ static int smbchg_remove(struct platform_device *pdev)
 	struct smbchg_chip *chip = dev_get_drvdata(&pdev->dev);
 
 	debugfs_remove_recursive(chip->debug_root);
-
-#ifdef SUPPORT_SCREEN_ON_FCC_OP
-	fb_unregister_client(&chip->fb_notif);
-#endif
 
 	destroy_votable(chip->aicl_deglitch_short_votable);
 	destroy_votable(chip->hw_aicl_rerun_enable_indirect_votable);

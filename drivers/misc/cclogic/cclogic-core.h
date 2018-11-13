@@ -3,7 +3,7 @@
 
 #include "cclogic-class.h"
 
-#define DEBUG
+#define DEBUG 0
 
 #define DEV_STAGE_DEBUG
 #define CCLOGIC_UPDATE_REAL_STATUS

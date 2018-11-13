@@ -112,22 +112,6 @@
 	};
 };
 
-&msm_gpu {
-	qcom,gpu-pwrlevel-bins {
-		qcom,gpu-pwrlevels-0 {
-			/delete-property/ qcom,gpu-pwrlevel@6;
-			/delete-property/ qcom,gpu-pwrlevel@7;
-			qcom,gpu-pwrlevel@6 {
-				reg = <6>;
-				qcom,gpu-freq = <27000000>;
-				qcom,bus-freq = <0>;
-				qcom,bus-min = <0>;
-				qcom,bus-max = <0>;
-			};
-		};
-	};
-};
-
 &wdog {
 	qcom,bark-time = <15000>;
 };

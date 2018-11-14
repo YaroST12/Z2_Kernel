@@ -34,6 +34,8 @@
 #include <linux/spinlock.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/syscore_ops.h>
+#include <linux/cpu_input_boost.h>
+#include <linux/devfreq_boost.h>
 
 #define HOME_KEY_CODE 102
 
@@ -403,6 +405,8 @@ void reset_home_button(void)
  */
 bool home_button_pressed(void)
 {
+	cpu_input_boost_kick_max(50);
+	devfreq_boost_kick_max(DEVFREQ_MSM_CPUBW, 125);
 	return home_button_status;
 }
 

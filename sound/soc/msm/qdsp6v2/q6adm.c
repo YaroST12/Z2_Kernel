@@ -50,6 +50,8 @@
 #define DS2_ADM_COPP_TOPOLOGY_ID 0xFFFFFFFF
 #endif
 
+extern int gis_24bits;
+
 struct adm_copp {
 
 	atomic_t id[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
@@ -2845,6 +2847,11 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	int copp_idx = -1;
 	int tmp_port = q6audio_get_port_id(port_id);
 
+	if (gis_24bits) {
+		bit_width = 24;
+		pr_err("Open adm sepcially for offload\n");
+	}
+
 	pr_debug("%s:port %#x path:%d rate:%d mode:%d perf_mode:%d,topo_id %d\n",
 		 __func__, port_id, path, rate, channel_mode, perf_mode,
 		 topology);
@@ -3378,6 +3385,7 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 	int ret = 0, port_idx;
 	int copp_id = RESET_COPP_ID;
 
+	gis_24bits = 0;
 	pr_debug("%s: port_id=0x%x perf_mode: %d copp_idx: %d\n", __func__,
 		 port_id, perf_mode, copp_idx);
 

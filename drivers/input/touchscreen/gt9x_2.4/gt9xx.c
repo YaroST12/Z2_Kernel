@@ -31,6 +31,7 @@ static const char *goodix_ts_name = "goodix-ts";
 static const char *goodix_input_phys = "input/ts";
 static struct workqueue_struct *goodix_wq;
 struct i2c_client * i2c_connect_client = NULL; 
+struct mutex reset_mutex;
 int gtp_rst_gpio;
 int gtp_int_gpio;
 static int gesture_enabled = 0;
@@ -117,25 +118,24 @@ Output:
 *********************************************************/
 s32 gtp_i2c_read(struct i2c_client *client, u8 *buf, s32 len)
 {
-	int ret = -EIO;
+	int ret = 0;
 	u8 retries;
-	struct i2c_msg msgs[2] = {
-		{
-			.flags	= !I2C_M_RD,
-			.addr	= client->addr,
-			.len	= GTP_ADDR_LENGTH,
-			.buf	= &buf[0],
-		},
-		{
-			.flags	= I2C_M_RD,
-			.addr	= client->addr,
-			.len	= len - GTP_ADDR_LENGTH,
-			.buf	= &buf[GTP_ADDR_LENGTH],
-		},
-	};
+	struct i2c_msg msgs[2];
+
+	msgs[0].flags = !I2C_M_RD;
+	msgs[0].addr  = client->addr;
+	msgs[0].len   = GTP_ADDR_LENGTH;
+	msgs[0].buf   = &buf[0];
+
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].addr  = client->addr;
+	msgs[1].len   = len - GTP_ADDR_LENGTH;
+	msgs[1].buf   = &buf[GTP_ADDR_LENGTH];
 
 	while (retries < RETRY_MAX_TIMES) {
+		mutex_lock(&reset_mutex);
 		ret = i2c_transfer(client->adapter, msgs, 2);
+		mutex_unlock(&reset_mutex);
 		if (ret == 2)
 			break;
 		retries++;
@@ -170,18 +170,19 @@ Output:
 *********************************************************/
 s32 gtp_i2c_write(struct i2c_client *client,u8 *buf,s32 len)
 {
-	int ret = -EIO;
-	u8 retries = 0;
+	int ret = 0;
+	int retries = 0;
+	struct i2c_msg msg;
 
-	struct i2c_msg msg = {
-		.flags = !I2C_M_RD,
-		.addr = client->addr,
-		.len = len,
-		.buf = buf,
-	};
+	msg.flags = !I2C_M_RD;
+	msg.addr  = client->addr;
+	msg.len   = len;
+	msg.buf   = buf;
 
 	while (retries < RETRY_MAX_TIMES) {
+		mutex_lock(&reset_mutex);
 		ret = i2c_transfer(client->adapter, &msg, 1);
+		mutex_unlock(&reset_mutex);
 		if (ret == 1)
 			break;
 		retries++;
@@ -260,27 +261,33 @@ Output:
 s32 gtp_send_cfg(struct i2c_client *client)
 {
 	s32 ret = 2;
+	static DEFINE_MUTEX(mutex_cfg);
 
 #if GTP_DRIVER_SEND_CFG
 	s32 retry = 0;
-	struct goodix_ts_data *ts = i2c_get_clientdata(client);
+	struct goodix_ts_data *ts;
 
+	mutex_lock(&mutex_cfg);
+	ts = i2c_get_clientdata(client);
 	if (ts->pnl_init_error)
 	{
 		GTP_INFO("Error occured in init_panel, no config sent");
+		mutex_unlock(&mutex_cfg);
 		return 0;
 	}
-	
+
 	GTP_INFO("Driver send config.");
 	for (retry = 0; retry < 5; retry++)
 	{
 		ret = gtp_i2c_write(client, config , GTP_CONFIG_MAX_LENGTH + GTP_ADDR_LENGTH);
 		if (ret > 0)
 		{
+			mutex_unlock(&mutex_cfg);
 			break;
 		}
 	}
 #endif
+	mutex_unlock(&mutex_cfg);
 	return ret;
 }
 /*******************************************************
@@ -979,7 +986,6 @@ Output:
 *******************************************************/
 void gtp_reset_guitar(struct i2c_client *client, s32 ms)
 {
-
 	GTP_DEBUG_FUNC();
 	GTP_INFO("Guitar reset");
 	GTP_GPIO_OUTPUT(gtp_rst_gpio, 0);   // begin select I2C slave addr
@@ -1800,7 +1806,9 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	GTP_INFO("GTP I2C Address: 0x%02x", client->addr);
 
 	i2c_connect_client = client;
-	
+
+	mutex_init(&reset_mutex);
+
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) 
 	{
 		GTP_ERROR("I2C check functionality failed.");
@@ -2272,7 +2280,9 @@ s32 gtp_i2c_read_no_rst(struct i2c_client *client, u8 *buf, s32 len)
 
 	while(retries < 5)
 	{
+		mutex_lock(&reset_mutex);
 		ret = i2c_transfer(client->adapter, msgs, 2);
+		mutex_unlock(&reset_mutex);
 		if(ret == 2)break;
 		retries++;
 	}
@@ -2299,7 +2309,9 @@ s32 gtp_i2c_write_no_rst(struct i2c_client *client,u8 *buf,s32 len)
 
 	while(retries < 5)
 	{
+		mutex_lock(&reset_mutex);
 		ret = i2c_transfer(client->adapter, &msg, 1);
+		mutex_unlock(&reset_mutex);
 		if (ret == 1)break;
 		retries++;
 	}
@@ -2537,6 +2549,7 @@ static void __exit goodix_ts_exit(void)
 {
 	GTP_DEBUG_FUNC();
 	GTP_INFO("GTP driver exited.");
+	mutex_destroy(&reset_mutex);
 	i2c_del_driver(&goodix_ts_driver);
 	if (goodix_wq)
 	{

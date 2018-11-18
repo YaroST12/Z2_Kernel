@@ -384,7 +384,6 @@ static int fb_notifier_callback(struct notifier_block *self,
 	struct fb_event *evdata = data;
 
 	struct fpc1020_data *fpc1020 = container_of(self, struct fpc1020_data, fb_notif);
-	blank = evdata->data;
 	if (evdata && evdata->data && event == FB_EVENT_BLANK && fpc1020) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {

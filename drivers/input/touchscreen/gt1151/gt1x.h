@@ -61,6 +61,4 @@ extern struct regulator *gt1x_supply;
 #define GTP_GPIO_OUTPUT(pin,level)      gpio_direction_output(pin,level)
 #define GTP_IRQ_TAB                     {IRQ_TYPE_EDGE_RISING, IRQ_TYPE_EDGE_FALLING, IRQ_TYPE_LEVEL_LOW, IRQ_TYPE_LEVEL_HIGH}
 
-static struct pm_qos_request pm_qos_req;
-
 #endif /* _GOODIX_GT1X_H_ */

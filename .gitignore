@@ -120,4 +120,5 @@ android/configs/android-*.cfg
 # Build folder
 /build
 /out
+/out_gcc
 build.sh

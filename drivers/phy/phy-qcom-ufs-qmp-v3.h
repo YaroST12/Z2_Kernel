@@ -292,6 +292,7 @@ static struct ufs_qcom_phy_calibration phy_cal_table_rate_B[] = {
 	UFS_QCOM_PHY_CAL_ENTRY(QSERDES_COM_VCO_TUNE_MAP, 0x44),
 };
 
+#if 0
 static struct ufs_qcom_phy_calibration phy_cal_table_svs2_enable[] = {
 	UFS_QCOM_PHY_CAL_ENTRY(QSERDES_COM_CORECLK_DIV_MODE0, 0x14),
 	UFS_QCOM_PHY_CAL_ENTRY(QSERDES_COM_CORECLK_DIV_MODE1, 0x14),
@@ -323,5 +324,5 @@ static struct ufs_qcom_phy_calibration phy_cal_table_svs2_disable[] = {
 	UFS_QCOM_PHY_CAL_ENTRY(UFS_PHY_TIMER_20US_CORECLK_STEPS_MSB, 0x16),
 	UFS_QCOM_PHY_CAL_ENTRY(UFS_PHY_TIMER_20US_CORECLK_STEPS_LSB, 0xcc),
 };
-
+#endif
 #endif

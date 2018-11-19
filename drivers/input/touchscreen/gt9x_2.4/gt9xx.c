@@ -1727,15 +1727,16 @@ static ssize_t gtp_gesture_wakeup_show(struct device *dev,
 static ssize_t gtp_gesture_wakeup_store(struct device *dev,
 				struct device_attribute *attr, const char *buf, size_t count)
 {
-		int val;
+	int val;
 
-		sscanf(buf, "%d", &val);
+	sscanf(buf, "%d", &val);
+
 	if(!!val)
 		gesture_enabled = 1;
 	else 
 		gesture_enabled = 0;
-		return count;
 
+	return count;
 }
 #endif
 static struct device_attribute attrs[] = {

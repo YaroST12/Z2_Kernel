@@ -47,6 +47,7 @@ struct fpc1020_data {
 	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
+	struct work_struct irq_work;
 	struct work_struct input_report_work;
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
@@ -250,18 +251,29 @@ err:
 	return retval;
 }
 
+static void fpc1020_irq_work(struct work_struct *work)
+{
+	struct fpc1020_data *fpc1020 = NULL;
+
+	fpc1020 = container_of(work, struct fpc1020_data, irq_work);
+
+	smp_rmb();
+	if (fpc1020->screen_on == 0) {
+		if (fpc1020->proximity_state == 1)
+			return;
+		pm_wakeup_event(fpc1020->dev, 5000);
+	}
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+}
+
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
 	pr_debug("fpc1020 IRQ interrupt\n");
-	smp_rmb();
-	if (fpc1020->screen_on == 0) {
-		if (fpc1020->proximity_state == 1)
-			return IRQ_HANDLED;
-		pm_wakeup_event(fpc1020->dev, 5000);
-	}
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+
+	queue_work(fpc1020->fpc1020_wq, &fpc1020->irq_work);
+
 	return IRQ_HANDLED;
 }
 
@@ -428,6 +440,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_unregister_device;
 	}
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
+	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
 	fpc1020_hw_reset(fpc1020);

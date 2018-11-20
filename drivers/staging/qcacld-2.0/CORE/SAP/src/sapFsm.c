@@ -1833,8 +1833,9 @@ void sapMarkDfsChannels(ptSapContext sapContext, v_U8_t* channels,
     psapDfsChannelNolList = pMac->sap.SapDfsInfo.sapDfsChannelNolList;
     nRegDomainDfsChannels = pMac->sap.SapDfsInfo.numCurrentRegDomainDfsChannels;
 
-	for (i = 0, j = 0; i < numChannels &&
-		j <= nRegDomainDfsChannels; i++, j++) {
+    for (i = 0; i < numChannels; i++) {
+        for (j = 0; j <= nRegDomainDfsChannels; j++)
+        {
             if (psapDfsChannelNolList[j].dfs_channel_number ==
                     channels[i])
             {
@@ -1869,6 +1870,7 @@ void sapMarkDfsChannels(ptSapContext sapContext, v_U8_t* channels,
                     VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
                             FL("Channel=%d Added to NOL LIST"),
                             channels[i]);
+                }
             }
         }
     }

@@ -356,6 +356,7 @@ struct device_node *of_batterydata_get_best_profile(
 				continue;
 			for (i = 0; i < batt_ids.num; i++) {
 #ifdef SUPPORT_LENUK_BATTERY_ID_ALGO
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 				if (((batt_id_kohm >= 1) && (batt_id_kohm < 20) && (batt_ids.kohm[i] == 9))
 						||  ((batt_id_kohm >= 20) && (batt_id_kohm < 80) && (batt_ids.kohm[i] == 50))
 						||  ((batt_id_kohm >= 80) && (batt_id_kohm < 120) && (batt_ids.kohm[i] == 100))) {
@@ -367,6 +368,20 @@ struct device_node *of_batterydata_get_best_profile(
 					delta = 0;
 					break;
 				}
+#else
+				if (((batt_id_kohm >= 1) && (batt_id_kohm < 20) && (batt_ids.kohm[i] == 50))
+						||	((batt_id_kohm >= 20) && (batt_id_kohm < 38) && (batt_ids.kohm[i] == 32))
+						||	((batt_id_kohm >= 38) && (batt_id_kohm < 120) && (batt_ids.kohm[i] == 50))
+						||	((batt_id_kohm >= 120) && (batt_ids.kohm[i] == 100))) {
+					best_node = node;
+					best_id_kohm = batt_ids.kohm[i];
+					in_range = false;
+					limit = 0;
+					best_delta = 0;
+					delta = 0;
+					break;
+				}
+#endif
 #else
 				delta = abs(batt_ids.kohm[i] - batt_id_kohm);
 				limit = (batt_ids.kohm[i] * id_range_pct) / 100;
@@ -448,6 +463,7 @@ int of_batterydata_read_data(struct device_node *batterydata_container_node,
 			continue;
 		for (i = 0; i < batt_ids.num; i++) {
 #ifdef SUPPORT_LENUK_BATTERY_ID_ALGO
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 			if (((batt_id_kohm >= 1) && (batt_id_kohm < 20) && (batt_ids.kohm[i] == 9))
 					||  ((batt_id_kohm >= 20) && (batt_id_kohm < 80) && (batt_ids.kohm[i] == 50))
 					||  ((batt_id_kohm >= 80) && (batt_id_kohm < 120) && (batt_ids.kohm[i] == 100))) {
@@ -456,6 +472,17 @@ int of_batterydata_read_data(struct device_node *batterydata_container_node,
 				delta = 0;
 				break;
 			}
+#else
+			if (((batt_id_kohm >= 1) && (batt_id_kohm < 20) && (batt_ids.kohm[i] == 50))
+					||	((batt_id_kohm >= 20) && (batt_id_kohm < 38) && (batt_ids.kohm[i] == 32))
+					||	((batt_id_kohm >= 38) && (batt_id_kohm < 120) && (batt_ids.kohm[i] == 50))
+					||	((batt_id_kohm > 120) && (batt_ids.kohm[i] == 100))) {
+				best_node = node;
+				best_id_kohm = batt_ids.kohm[i];
+				delta = 0;
+				break;
+			}
+#endif
 #else
 			delta = abs(batt_ids.kohm[i] - batt_id_kohm);
 			if (delta < best_delta || !best_node) {

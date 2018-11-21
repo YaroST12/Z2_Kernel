@@ -1381,7 +1381,7 @@ static int msm_proxy_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	if (channels->max < 2)
 		channels->min = channels->max = 2;
 	channels->min = channels->max = msm_proxy_rx_ch;
-	rate->min = rate->max = SAMPLING_RATE_192KHZ;
+	rate->min = rate->max = SAMPLING_RATE_48KHZ;
 	return 0;
 }
 
@@ -1391,7 +1391,7 @@ static int msm_proxy_tx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_interval *rate = hw_param_interval(params,
 					SNDRV_PCM_HW_PARAM_RATE);
 
-	rate->min = rate->max = SAMPLING_RATE_192KHZ;
+	rate->min = rate->max = SAMPLING_RATE_48KHZ;
 	return 0;
 }
 

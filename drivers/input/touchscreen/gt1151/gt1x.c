@@ -900,7 +900,7 @@ static void __exit gt1x_ts_exit(void)
 	}
 }
 
-module_init(gt1x_ts_init);
+device_initcall(gt1x_ts_init);
 module_exit(gt1x_ts_exit);
 
 MODULE_DESCRIPTION("GTP Series Driver");

@@ -72,9 +72,8 @@ void ufs_advertise_fixup_device(struct ufs_hba *hba)
 
 	for (f = ufs_fixups; f->quirk; f++) {
 		/* if same wmanufacturerid */
-		if (((f->w_manufacturer_id ==
+		if ((f->w_manufacturer_id ==
 			hba->dev_info.w_manufacturer_id) ||
-		     (f->w_manufacturer_id == UFS_ANY_VENDOR)) &&
 		    /* and same model */
 		    (STR_PRFX_EQUAL(f->model, model) ||
 		     !strcmp(f->model, UFS_ANY_MODEL)))

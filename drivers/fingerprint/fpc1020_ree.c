@@ -258,11 +258,9 @@ static void fpc1020_irq_work(struct work_struct *work)
 	fpc1020 = container_of(work, struct fpc1020_data, irq_work);
 
 	smp_rmb();
-	if (fpc1020->screen_on == 0) {
-		if (fpc1020->proximity_state == 1)
-			return;
+	if (fpc1020->screen_on == 0)
 		pm_wakeup_event(fpc1020->dev, 5000);
-	}
+
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 }
 
@@ -271,6 +269,9 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
 	pr_debug("fpc1020 IRQ interrupt\n");
+
+	if (fpc1020->proximity_state == 1)
+		return 0;
 
 	queue_work(fpc1020->fpc1020_wq, &fpc1020->irq_work);
 

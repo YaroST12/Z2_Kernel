@@ -383,8 +383,6 @@ static int nxp_tfa9890_remove(struct i2c_client *client)
  */
 static int nxp_tfa9890_suspend(struct device *dev)
 {
-	pr_info(KERN_ALERT "----------------suspend");
-
 	return 0;
 }
 

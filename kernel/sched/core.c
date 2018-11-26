@@ -2230,16 +2230,9 @@ void __dl_clear_params(struct task_struct *p)
  */
 bool load_on_big_cores(void)
 {
-	int i = 0, boost = false;
-	for (i = NR_CPUS / 2; i < NR_CPUS; ++i) {
-		if (cpu_util(i) < 250)
-		/* Skip to next core */
-			continue;
-
-		boost = true;
-		break;
-	}
-	return boost;
+	if (!cpu_rq(NR_CPUS / 2)->nr_running)
+		return false;
+	return true;
 }
 
 /*

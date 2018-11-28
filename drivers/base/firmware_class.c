@@ -806,7 +806,7 @@ static ssize_t firmware_direct_read(struct file *filp, struct kobject *kobj,
 	struct firmware *fw;
 	ssize_t ret_count;
 
-	if (!fw_priv->fw)
+	if (!fw_priv->fw || !fw_priv->buf)
 		return -ENODEV;
 
 	mutex_lock(&fw_lock);

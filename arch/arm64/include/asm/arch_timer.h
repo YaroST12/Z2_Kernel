@@ -61,7 +61,7 @@ void arch_timer_reg_write_cp15(int access, enum arch_timer_reg reg, u32 val)
 static __always_inline
 u32 arch_timer_reg_read_cp15(int access, enum arch_timer_reg reg)
 {
-	u32 val = 0;
+	u32 val;
 
 	if (access == ARCH_TIMER_PHYS_ACCESS) {
 		switch (reg) {
@@ -88,14 +88,14 @@ u32 arch_timer_reg_read_cp15(int access, enum arch_timer_reg reg)
 
 static inline u32 arch_timer_get_cntfrq(void)
 {
-	u32 val = 0;
+	u32 val;
 	asm volatile("mrs %0,   cntfrq_el0" : "=r" (val));
 	return val;
 }
 
 static inline u32 arch_timer_get_cntkctl(void)
 {
-	u32 cntkctl = 0;
+	u32 cntkctl;
 	asm volatile("mrs	%0, cntkctl_el1" : "=r" (cntkctl));
 	return cntkctl;
 }
@@ -116,7 +116,7 @@ static inline u64 arch_counter_get_cntpct(void)
 
 static inline u64 arch_counter_get_cntvct(void)
 {
-	u64 cval = 0;
+	u64 cval;
 
 	isb();
 #if IS_ENABLED(CONFIG_MSM_TIMER_LEAP)

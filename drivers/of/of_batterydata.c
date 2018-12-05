@@ -392,7 +392,7 @@ struct device_node *of_batterydata_get_best_profile(
 		return best_node;
 	}
 
-#ifdef SUPPORT_LENUK_BATTERY_ID_ALGO
+#if defined(SUPPORT_LENUK_BATTERY_ID_ALGO) && defined (CONFIG_MACH_ZUK_Z2_ROW)
 	pr_info("profile id %d batt id %d",
 		best_id_kohm, batt_id_kohm);
 #else

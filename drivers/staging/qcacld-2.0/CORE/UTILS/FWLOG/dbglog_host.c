@@ -26,7 +26,9 @@
  */
 
 /* Host Debug log implementation */
-
+#if defined(CONFIG_ANDROID) && !defined(CONFIG_DEBUG_FS)
+#define CONFIG_DEBUG_FS
+#endif
 
 #include "athdefs.h"
 #include "a_types.h"

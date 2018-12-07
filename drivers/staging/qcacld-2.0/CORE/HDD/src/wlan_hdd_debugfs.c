@@ -24,7 +24,9 @@
  * under proprietary terms before Copyright ownership was assigned
  * to the Linux Foundation.
  */
-
+#if defined(CONFIG_ANDROID) && !defined(CONFIG_DEBUG_FS)
+#define CONFIG_DEBUG_FS
+#endif
 #ifdef WLAN_OPEN_SOURCE
 #include <wlan_hdd_includes.h>
 #include <wlan_hdd_wowl.h>

@@ -80,8 +80,6 @@ const DECLARE_TLV_DB_LINEAR(msm_compr_vol_gain, 0,
 
 #define MAX_NUMBER_OF_STREAMS 2
 
-int gis_24bits = 0;
-
 #define COMPRESS_DECODER_OUTPUT_BIT_WIDTH 24
 
 /*
@@ -1314,11 +1312,6 @@ static int msm_compr_configure_dsp_for_playback
 	else if (prtd->codec == FORMAT_FLAC && codec_options &&
 		(codec_options->flac_dec.sample_size != 0))
 		bits_per_sample = codec_options->flac_dec.sample_size;
-
-	if (prtd->codec_param.codec.bit_rate == 24) {
-		bits_per_sample = 24;
-		gis_24bits = 1;
-	}
 
 	if (prtd->compr_passthr != LEGACY_PCM) {
 		ret = q6asm_open_write_compressed(ac, prtd->codec,

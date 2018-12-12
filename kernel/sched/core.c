@@ -2228,18 +2228,6 @@ void __dl_clear_params(struct task_struct *p)
 	dl_se->dl_yielded = 0;
 }
 
-/**
- * Function for checking if we have "heavy" tasks
- * on big cores. Can be rather handy for rejecting
- * boost events if cpu load isn't really that high.
- */
-bool load_on_big_cores(void)
-{
-	if (!cpu_rq(NR_CPUS / 2)->nr_running)
-		return false;
-	return true;
-}
-
 /*
  * Perform scheduler related setup for a newly forked process p.
  * p is forked by current.

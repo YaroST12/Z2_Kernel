@@ -355,8 +355,6 @@ struct cfs_bandwidth { };
 
 #endif	/* CONFIG_CGROUP_SCHED */
 
-bool load_on_big_cores(void);
-
 /* CFS-related fields in a runqueue */
 struct cfs_rq {
 	struct load_weight load;

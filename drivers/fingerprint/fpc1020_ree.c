@@ -455,9 +455,6 @@ static int fpc_suspend_notifier(struct notifier_block *nb,
 {
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
-		fingerprintd_nice_thaw(1);
-		break;
-
 	case PM_POST_SUSPEND:
 		fingerprintd_nice_thaw(1);
 		break;

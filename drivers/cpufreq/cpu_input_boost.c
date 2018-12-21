@@ -16,6 +16,7 @@
 static unsigned int input_boost_freq_lp = CONFIG_INPUT_BOOST_FREQ_LP;
 static unsigned int input_boost_freq_hp = CONFIG_INPUT_BOOST_FREQ_PERF;
 static unsigned short input_boost_duration = CONFIG_INPUT_BOOST_DURATION_MS;
+static unsigned long last_max_boost_time;
 
 module_param(input_boost_freq_lp, uint, 0644);
 module_param(input_boost_freq_hp, uint, 0644);
@@ -104,6 +105,9 @@ static void __cpu_input_boost_kick_max(struct boost_drv *b,
 {
 	unsigned long curr_expires, new_expires;
 
+	if (!time_before(jiffies, last_max_boost_time + msecs_to_jiffies(5000)))
+		return;
+
 	do {
 		curr_expires = atomic64_read(&b->max_boost_expires);
 		new_expires = jiffies + msecs_to_jiffies(duration_ms);
@@ -115,6 +119,7 @@ static void __cpu_input_boost_kick_max(struct boost_drv *b,
 		new_expires) != curr_expires);
 
 	atomic_set(&b->max_boost_dur, duration_ms);
+	last_max_boost_time = jiffies;
 	queue_work(b->wq, &b->max_boost);
 }
 

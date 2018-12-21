@@ -478,10 +478,13 @@ static int fb_notifier_callback(struct notifier_block *self,
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_debug("ScreenOn\n");
 			fpc1020->screen_on = 1;
+			config_irq(fpc1020, true);
 			fingerprintd_nice_thaw(0);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_debug("ScreenOff\n");
 			fpc1020->screen_on = 0;
+			if (!fpc1020->wakeup_enabled)
+				config_irq(fpc1020, false);
 			fingerprintd_nice_thaw(-1);
 		}
 	}

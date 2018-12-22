@@ -56,7 +56,7 @@
 //Ms to Micro Sec
 #define MS_TO_MUS(x)   ((x)*1000)
 
-static tANI_U8* hdd_getActionString(tANI_U16 MsgType)
+__maybe_unused static tANI_U8* hdd_getActionString(tANI_U16 MsgType)
 {
     switch (MsgType)
     {

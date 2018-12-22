@@ -24867,7 +24867,7 @@ disconnected:
  * Return: string conversion of reason code, if match found;
  *         "Unknown" otherwise.
  */
-static const char *hdd_ieee80211_reason_code_to_str(uint16_t reason)
+const char *hdd_ieee80211_reason_code_to_str(uint16_t reason)
 {
 	switch (reason) {
 	CASE_RETURN_STRING(WLAN_REASON_UNSPECIFIED);

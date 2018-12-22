@@ -37,7 +37,7 @@
 #include "wlan_hdd_trace.h"
 #include "wlan_hdd_main.h"
 
-static tANI_U8 *hddTraceGetEventString(tANI_U32 code)
+__maybe_unused static tANI_U8 *hddTraceGetEventString(tANI_U32 code)
 {
 	switch (code) {
 		CASE_RETURN_STRING(TRACE_CODE_HDD_OPEN_REQUEST);

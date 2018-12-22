@@ -23387,7 +23387,7 @@ static inline void wma_free_wow_ptrn(tp_wma_handle wma, u_int8_t ptrn_id)
 }
 
 /* Converts wow wakeup reason code to text format */
-static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason, tp_wma_handle wma)
+__maybe_unused static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason, tp_wma_handle wma)
 {
 	switch (wake_reason) {
 	case WOW_REASON_UNSPECIFIED:
@@ -25070,7 +25070,7 @@ static inline int wma_get_wow_bus_suspend(tp_wma_handle wma) {
 	return adf_os_atomic_read(&wma->is_wow_bus_suspended);
 }
 
-static const u8 *wma_wow_wakeup_event_str(WOW_WAKE_EVENT_TYPE event)
+__maybe_unused static const u8 *wma_wow_wakeup_event_str(WOW_WAKE_EVENT_TYPE event)
 {
 	switch (event) {
 	case WOW_BMISS_EVENT:

@@ -55,7 +55,7 @@ __read_mostly unsigned int walt_ravg_window =
 
 static unsigned int sync_cpu;
 static ktime_t ktime_last;
-static bool walt_ktime_suspended;
+static __read_mostly bool walt_ktime_suspended;
 
 static unsigned int task_load(struct task_struct *p)
 {
@@ -219,6 +219,7 @@ update_window_start(struct rq *rq, u64 wallclock)
 	rq->window_start += (u64)nr_windows * (u64)walt_ravg_window;
 
 	rq->cum_window_demand = rq->cumulative_runnable_avg;
+	cpufreq_update_util(rq, 0);
 }
 
 /*

@@ -16,6 +16,7 @@
 #include <linux/slab.h>
 #include <linux/bsearch.h>
 #include <linux/delay.h>
+#include <linux/cpu_input_boost.h>
 #include <media/msm_vidc.h>
 #include "msm_vidc_internal.h"
 #include "msm_vidc_debug.h"
@@ -1317,6 +1318,12 @@ static bool msm_vidc_check_for_inst_overload(struct msm_vidc_core *core)
 	return overload;
 }
 
+static bool vidc_open;
+bool is_vidc_open(void)
+{
+	return vidc_open;
+}
+
 void *msm_vidc_open(int core_id, int session_type)
 {
 	struct msm_vidc_inst *inst = NULL;
@@ -1426,6 +1433,8 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->debugfs_root =
 		msm_vidc_debugfs_init_inst(inst, core->debugfs_root);
 
+	pr_info("vidc_open = true\n");
+	vidc_open = true;
 	return inst;
 fail_init:
 	v4l2_fh_del(&inst->event_handler);
@@ -1588,6 +1597,8 @@ int msm_vidc_close(void *instance)
 		mutex_unlock(&inst->bufq[i].lock);
 	}
 
+	pr_info("vidc_open = false\n");
+	vidc_open = false;
 	kref_put(&inst->kref, close_helper);
 	return 0;
 }

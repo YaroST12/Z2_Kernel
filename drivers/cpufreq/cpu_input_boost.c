@@ -11,6 +11,7 @@
 #include <linux/input.h>
 #include <linux/moduleparam.h>
 #include <linux/slab.h>
+#include <linux/cpu_input_boost.h>
 #include "../../kernel/sched/sched.h"
 
 static unsigned int input_boost_freq_lp = CONFIG_INPUT_BOOST_FREQ_LP;
@@ -97,7 +98,8 @@ void cpu_input_boost_kick(void)
 	if (!b)
 		return;
 
-	queue_work(b->wq, &b->input_boost);
+	if (!is_vidc_open())
+		queue_work(b->wq, &b->input_boost);
 }
 
 static void __cpu_input_boost_kick_max(struct boost_drv *b,

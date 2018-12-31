@@ -405,7 +405,7 @@ eHalStatus csrSetRegInfo(tHalHandle hHal,  tANI_U8 *apCntryCode)
         smsLog( pMac, LOGE, FL("  fail to get regId for country Code %.2s"), apCntryCode );
         return status;
     }
-    status = WDA_SetRegDomain(hHal, regId, true);
+    status = WDA_SetRegDomain(hHal, regId, eSIR_TRUE);
     if (status != eHAL_STATUS_SUCCESS)
     {
         smsLog( pMac, LOGE, FL("  fail to get regId for country Code %.2s"), apCntryCode );
@@ -9205,7 +9205,7 @@ static void csrRoamRoamingStateReassocRspProcessor( tpAniSirGlobal pMac, tpSirSm
                     vos_mem_zero(&roamInfo, sizeof(tCsrRoamInfo));
                     csrRoamCallCallback(pMac, pSmeJoinRsp->sessionId, &roamInfo,
                                         roamId, eCSR_ROAM_FT_REASSOC_FAILED,
-                                        eCSR_ROAM_RESULT_SUCCESS);
+                                        eSIR_SME_SUCCESS);
                     /*
                      * Since the above callback sends a disconnect
                      * to HDD, we should clean-up our state
@@ -9468,7 +9468,7 @@ POST_ROAM_FAILURE:
         /* Inform the upper layers that the reassoc failed */
         vos_mem_zero(roam_info, sizeof(*roam_info));
         csrRoamCallCallback(pMac, sessionId,
-                roam_info, 0, eCSR_ROAM_FT_REASSOC_FAILED, eCSR_ROAM_RESULT_SUCCESS);
+                roam_info, 0, eCSR_ROAM_FT_REASSOC_FAILED, eSIR_SME_SUCCESS);
 
         /*
          * Issue a disassoc request so that PE/LIM uses this to clean-up the FT session.
@@ -14377,7 +14377,7 @@ csrPrepareJoinReassocReqBuffer(tpAniSirGlobal pMac,
 {
     tCsrChannelSet channelGroup;
     tSirMacCapabilityInfo *pAP_capabilityInfo;
-    bool fTmp;
+    tAniBool fTmp;
     tANI_BOOLEAN found = FALSE;
     tANI_U32 size = 0;
     tANI_S8 pwrLimit = 0;
@@ -14390,14 +14390,14 @@ csrPrepareJoinReassocReqBuffer(tpAniSirGlobal pMac,
     //tell the target AP my 11H capability only if both AP and STA support 11H and the channel being used is 11a
     if ( csrIs11hSupported( pMac ) && pAP_capabilityInfo->spectrumMgt && eSIR_11A_NW_TYPE == pBssDescription->nwType )
     {
-        fTmp = (bool)pal_cpu_to_be32(1);
+        fTmp = (tAniBool)pal_cpu_to_be32(1);
     }
     else
-        fTmp = (bool)0;
+        fTmp = (tAniBool)0;
 
     // corresponds to --- pMsg->spectrumMgtIndicator = ON;
-    vos_mem_copy(pBuf, (tANI_U8 *)&fTmp, sizeof(bool));
-    pBuf += sizeof(bool);
+    vos_mem_copy(pBuf, (tANI_U8 *)&fTmp, sizeof(tAniBool));
+    pBuf += sizeof(tAniBool);
     *pBuf++ = MIN_TX_PWR_CAP; // it is for pMsg->powerCap.minTxPower = 0;
     found = csrSearchChannelListForTxPower(pMac, pBssDescription, &channelGroup);
     // This is required for 11k test VoWiFi Ent: Test 2.
@@ -14935,15 +14935,15 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         {
             // is11Rconnection;
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool)) ;
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool)) ;
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             // is11Rconnection;
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
 #endif
 #ifdef FEATURE_WLAN_ESE
@@ -14952,14 +14952,14 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         if (TRUE == pMac->roam.configParam.isEseIniFeatureEnabled)
         {
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
 
         /* A profile can not be both ESE and 11R. But an 802.11R AP
@@ -14975,15 +14975,15 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         {
             // isESEconnection;
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             //isESEconnection;
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
 
         if (eWNI_SME_JOIN_REQ == messageType)
@@ -15035,14 +15035,14 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
          )
         {
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
 #endif
 #ifdef FEATURE_WLAN_LFR
@@ -15050,14 +15050,14 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         {
             //legacy fast roaming enabled
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
 #endif
 
@@ -15132,14 +15132,14 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         {
            //WME  enabled
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
 
         // QOS
@@ -15147,28 +15147,28 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         {
             //QOS  enabled
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         // OSEN
         if(pProfile->bOSENAssociation)
         {
             //OSEN connection
             dwTmp = pal_cpu_to_be32(TRUE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         else
         {
             dwTmp = pal_cpu_to_be32(FALSE);
-            vos_mem_copy(pBuf, &dwTmp, sizeof(bool));
-            pBuf += sizeof(bool);
+            vos_mem_copy(pBuf, &dwTmp, sizeof(tAniBool));
+            pBuf += sizeof(tAniBool);
         }
         /* Fill rrm config parameters */
         vos_mem_copy(pBuf, &pMac->rrm.rrmSmeContext.rrmConfig,

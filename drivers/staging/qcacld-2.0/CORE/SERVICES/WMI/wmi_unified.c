@@ -156,7 +156,7 @@ wmi_buf_alloc(wmi_unified_t wmi_handle, uint32_t len)
 	return wmi_buf;
 }
 
-__maybe_unused static u_int8_t* get_wmi_cmd_string(WMI_CMD_ID wmi_command)
+static u_int8_t* get_wmi_cmd_string(WMI_CMD_ID wmi_command)
 {
 	switch(wmi_command)
 	{

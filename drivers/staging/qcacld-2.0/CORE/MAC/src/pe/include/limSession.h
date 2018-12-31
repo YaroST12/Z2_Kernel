@@ -66,7 +66,7 @@ typedef struct tagComebackTimerInfo
     tpAniSirGlobal   pMac;
     tANI_U8          sessionID;
     tLimMlmStates    limPrevMlmState;   /* Previous MLM State */
-    tLimMlmStates    limMlmState;       /* MLM State */
+    tLimSmeStates    limMlmState;       /* MLM State */
 } tComebackTimerInfo;
 #endif /* WLAN_FEATURE_11W */
 
@@ -300,18 +300,18 @@ typedef struct sPESession           // Added to Support BT-AMP
 #endif
 
 #ifdef WLAN_FEATURE_VOWIFI_11R
-    bool            is11Rconnection;
+    tAniBool            is11Rconnection;
 #endif
 
 #ifdef FEATURE_WLAN_ESE
-    bool            isESEconnection;
+    tAniBool            isESEconnection;
     tEsePEContext       eseContext;
 #endif
 #if defined WLAN_FEATURE_VOWIFI_11R || defined FEATURE_WLAN_ESE || defined(FEATURE_WLAN_LFR)
-    bool            isFastTransitionEnabled;
+    tAniBool            isFastTransitionEnabled;
 #endif
 #ifdef FEATURE_WLAN_LFR
-    bool            isFastRoamIniFeatureEnabled;
+    tAniBool            isFastRoamIniFeatureEnabled;
 #endif
     tSirNoAParam p2pNoA;
     tSirP2PNoaAttr p2pGoPsUpdate;

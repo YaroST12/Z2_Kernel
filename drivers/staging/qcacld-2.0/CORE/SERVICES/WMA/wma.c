@@ -12336,7 +12336,7 @@ error1:
                         return VOS_STATUS_E_NOMEM;
                 }
                 memset(scan_event, 0x00, sizeof(*scan_event));
-                scan_event->event = SIR_SCAN_EVENT_COMPLETED;
+                scan_event->event = WMI_SCAN_EVENT_COMPLETED;
                 scan_event->reasonCode = eSIR_SME_SCAN_FAILED;
                 scan_event->p2pScanType = scan_req->p2pScanType;
                 scan_event->sessionId = scan_req->sessionId;
@@ -23387,7 +23387,7 @@ static inline void wma_free_wow_ptrn(tp_wma_handle wma, u_int8_t ptrn_id)
 }
 
 /* Converts wow wakeup reason code to text format */
-__maybe_unused static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason, tp_wma_handle wma)
+static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason, tp_wma_handle wma)
 {
 	switch (wake_reason) {
 	case WOW_REASON_UNSPECIFIED:
@@ -25070,7 +25070,7 @@ static inline int wma_get_wow_bus_suspend(tp_wma_handle wma) {
 	return adf_os_atomic_read(&wma->is_wow_bus_suspended);
 }
 
-__maybe_unused static const u8 *wma_wow_wakeup_event_str(WOW_WAKE_EVENT_TYPE event)
+static const u8 *wma_wow_wakeup_event_str(WOW_WAKE_EVENT_TYPE event)
 {
 	switch (event) {
 	case WOW_BMISS_EVENT:
@@ -35701,11 +35701,11 @@ static int wma_scan_event_callback(WMA_HANDLE handle, u_int8_t *data,
 		 * results is available in scan cache(due to partial or
 		 * aborted scan)
 		 */
-		scan_event->event = SIR_SCAN_EVENT_COMPLETED;
+		scan_event->event = WMI_SCAN_EVENT_COMPLETED;
 		scan_event->reasonCode = eSIR_SME_SUCCESS;
 		break;
 	case WMI_SCAN_EVENT_START_FAILED:
-		scan_event->event = SIR_SCAN_EVENT_COMPLETED;
+		scan_event->event = WMI_SCAN_EVENT_COMPLETED;
 		scan_event->reasonCode = eSIR_SME_SCAN_FAILED;
 		break;
 	case WMI_SCAN_EVENT_PREEMPTED:
@@ -40155,7 +40155,7 @@ eHalStatus wma_set_htconfig(tANI_U8 vdev_id, tANI_U16 ht_capab, int value)
 }
 
 eHalStatus WMA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId,
-		bool sendRegHint)
+		tAniBool sendRegHint)
 {
 	if(VOS_STATUS_SUCCESS != vos_nv_setRegDomain(clientCtxt, regId, sendRegHint))
 		return eHAL_STATUS_INVALID_PARAMETER;

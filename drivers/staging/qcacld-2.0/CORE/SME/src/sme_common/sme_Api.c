@@ -6755,8 +6755,8 @@ eHalStatus sme_ChangeCountryCode( tHalHandle hHal,
                                           tANI_U8 *pCountry,
                                           void *pContext,
                                           void* pVosContext,
-                                          bool countryFromUserSpace,
-                                          bool sendRegHint )
+                                          tAniBool countryFromUserSpace,
+                                          tAniBool sendRegHint )
 {
    eHalStatus                status = eHAL_STATUS_FAILURE;
    tpAniSirGlobal            pMac = PMAC_STRUCT( hHal );
@@ -9193,7 +9193,7 @@ eHalStatus sme_HandleChangeCountryCodeByUser(tpAniSirGlobal pMac,
     vos_mem_copy(pMac->scan.countryCodeCurrent, pMsg->countryCode,
                   WNI_CFG_COUNTRY_CODE_LEN);
 
-    status = WDA_SetRegDomain(pMac, reg_domain_id, true);
+    status = WDA_SetRegDomain(pMac, reg_domain_id, eSIR_TRUE);
 
     if (VOS_FALSE == is11dCountry )
     {
@@ -9285,7 +9285,7 @@ eHalStatus sme_HandleChangeCountryCodeByCore(tpAniSirGlobal pMac, tAniGenericCha
                       WNI_CFG_COUNTRY_CODE_LEN);
     }
 
-    status = WDA_SetRegDomain(pMac, REGDOMAIN_WORLD, true);
+    status = WDA_SetRegDomain(pMac, REGDOMAIN_WORLD, eSIR_TRUE);
 
     if ( status != eHAL_STATUS_SUCCESS )
     {
@@ -12899,7 +12899,7 @@ void sme_UpdateEnableSSR(tHalHandle hHal, tANI_BOOLEAN enableSSR)
  * SME API to stringify bonding mode. (hostapd convention)
  */
 
-__maybe_unused static const char* sme_CBMode2String( tANI_U32 mode)
+static const char* sme_CBMode2String( tANI_U32 mode)
 {
    switch (mode)
    {

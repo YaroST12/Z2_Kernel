@@ -19859,7 +19859,7 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
                                       wlan_hdd_change_country_code_cb,
                                       pConfig->apCntryCode, pAdapter,
                                       pHddCtx->pvosContext,
-                                      false, true);
+                                      eSIR_FALSE, eSIR_TRUE);
                 if (eHAL_STATUS_SUCCESS == hstatus) {
                     /* Wait for completion */
                     rc = wait_for_completion_timeout(
@@ -24867,7 +24867,7 @@ disconnected:
  * Return: string conversion of reason code, if match found;
  *         "Unknown" otherwise.
  */
-const char *hdd_ieee80211_reason_code_to_str(uint16_t reason)
+static const char *hdd_ieee80211_reason_code_to_str(uint16_t reason)
 {
 	switch (reason) {
 	CASE_RETURN_STRING(WLAN_REASON_UNSPECIFIED);

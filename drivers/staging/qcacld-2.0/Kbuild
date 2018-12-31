@@ -1018,9 +1018,7 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DWLAN_PERF \
 		-DPTT_SOCK_SVC_ENABLE \
 		-Wall\
-		-Wno-enum-conversion \
-		-Wno-shift-count-negative \
-		-Wno-shift-count-overflow \
+		-w \
 		-D__linux__ \
 		-DHAL_SELF_STA_PER_BSS=1 \
 		-DWLAN_FEATURE_VOWIFI_11R \
@@ -1045,7 +1043,7 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DWLAN_FEATURE_GTK_OFFLOAD \
 		-DWLAN_WAKEUP_EVENTS \
 		-DFEATURE_WLAN_RA_FILTERING\
-		-DWLAN_KD_READY_NOTIFIER \
+	        -DWLAN_KD_READY_NOTIFIER \
 		-DWLAN_NL80211_TESTMODE \
 		-DFEATURE_WLAN_LPHB \
 		-DFEATURE_WLAN_PAL_TIMER_DISABLE \
@@ -1744,6 +1742,8 @@ endif
 ifeq ($(call cc-option-yn, -Wheader-guard),y)
 EXTRA_CFLAGS += -Wheader-guard
 endif
+
+EXTRA_CFLAGS += -Wno-unused-function -Wno-unused-variable -Wno-misleading-indentation
 
 # If the module name is not "wlan", then the define MULTI_IF_NAME to be the
 # same a the QCA CHIP name. The host driver will then append MULTI_IF_NAME to

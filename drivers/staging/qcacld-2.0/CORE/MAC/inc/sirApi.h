@@ -1107,7 +1107,7 @@ typedef struct sSirBackgroundScanInfo {
 /* Definition for Join/Reassoc info */
 typedef struct sJoinReassocInfo
 {
-    bool            spectrumMgtIndicator;
+    tAniBool            spectrumMgtIndicator;
     tSirMacPowerCapInfo powerCap;
     tSirSupChnl         supportedChannels;
 } tJoinReassocInfo, *tpJoinReassocInfo;
@@ -1170,19 +1170,19 @@ typedef struct sSirSmeJoinReq
 #endif
 
 #ifdef WLAN_FEATURE_VOWIFI_11R
-    bool            is11Rconnection;
+    tAniBool            is11Rconnection;
 #endif
 #ifdef FEATURE_WLAN_ESE
-    bool            isESEFeatureIniEnabled;
-    bool            isESEconnection;
+    tAniBool            isESEFeatureIniEnabled;
+    tAniBool            isESEconnection;
     tESETspecInfo       eseTspecInfo;
 #endif
 
 #if defined WLAN_FEATURE_VOWIFI_11R || defined FEATURE_WLAN_ESE || defined(FEATURE_WLAN_LFR)
-    bool            isFastTransitionEnabled;
+    tAniBool            isFastTransitionEnabled;
 #endif
 #ifdef FEATURE_WLAN_LFR
-    bool            isFastRoamIniFeatureEnabled;
+    tAniBool            isFastRoamIniFeatureEnabled;
 #endif
 
     tANI_U8             txLdpcIniFeatureEnabled;
@@ -1199,11 +1199,11 @@ typedef struct sSirSmeJoinReq
     tANI_U8             htSmps;
 
     tANI_U8             max_amsdu_num;
-    bool            isWMEenabled;
-    bool            isQosEnabled;
-    bool            isOSENConnection;
+    tAniBool            isWMEenabled;
+    tAniBool            isQosEnabled;
+    tAniBool            isOSENConnection;
     struct rrm_config_param rrm_config;
-    bool            spectrumMgtIndicator;
+    tAniBool            spectrumMgtIndicator;
     tSirMacPowerCapInfo powerCap;
     tSirSupChnl         supportedChannels;
     bool                force_24ghz_in_ht20;
@@ -1356,11 +1356,11 @@ typedef struct sSirSmeAssocInd
 
     // powerCap & supportedChannels are present only when
     // spectrumMgtIndicator flag is set
-    bool                spectrumMgtIndicator;
+    tAniBool                spectrumMgtIndicator;
     tSirMacPowerCapInfo     powerCap;
     tSirSupChnl             supportedChannels;
-    bool             wmmEnabledSta; /* if present - STA is WMM enabled */
-    bool             reassocReq;
+    tAniBool             wmmEnabledSta; /* if present - STA is WMM enabled */
+    tAniBool             reassocReq;
     // Required for indicating the frames to upper layer
     tANI_U32             beaconLength;
     tANI_U8*             beaconPtr;
@@ -1419,7 +1419,7 @@ typedef struct sSirSmeReassocInd
 
     // powerCap & supportedChannels are present only when
     // spectrumMgtIndicator flag is set
-    bool                spectrumMgtIndicator;
+    tAniBool                spectrumMgtIndicator;
     tSirMacPowerCapInfo     powerCap;
     tSirSupChnl             supportedChannels;
     // Required for indicating the frames to upper layer
@@ -2410,8 +2410,8 @@ typedef struct sAniChangeCountryCodeReq
     tANI_U16                msgType;    // message type is same as the request type
     tANI_U16                msgLen;     // length of the entire request
     tANI_U8                 countryCode[WNI_CFG_COUNTRY_CODE_LEN];   //3 char country code
-    bool                countryFromUserSpace;
-    bool                sendRegHint;  //TRUE if we want to send hint to NL80211
+    tAniBool                countryFromUserSpace;
+    tAniBool                sendRegHint;  //TRUE if we want to send hint to NL80211
     void                    *changeCCCallback;
     void                    *pDevContext; //device context
     void                    *pVosContext; //voss context

@@ -716,7 +716,7 @@ limHandle80211Frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, tANI_U8 *pDeferMsg)
     tpSirMacMgmtHdr    pHdr=NULL;
     tpPESession         psessionEntry=NULL;
     tANI_U8             sessionId;
-    bool            isFrmFt = FALSE;
+    tAniBool            isFrmFt = FALSE;
     tANI_U16            fcOffset = WLANHAL_RX_BD_HEADER_SIZE;
 
     *pDeferMsg= false;

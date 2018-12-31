@@ -1790,13 +1790,13 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         // Fill in 802.11h related info
         if (pAssocReq->powerCapabilityPresent && pAssocReq->supportedChannelsPresent)
         {
-            pMlmAssocInd->spectrumMgtIndicator = true;
+            pMlmAssocInd->spectrumMgtIndicator = eSIR_TRUE;
             pMlmAssocInd->powerCap.minTxPower = pAssocReq->powerCapability.minTxPower;
             pMlmAssocInd->powerCap.maxTxPower = pAssocReq->powerCapability.maxTxPower;
             limConvertSupportedChannels(pMac, pMlmAssocInd, pAssocReq);
         }
         else
-            pMlmAssocInd->spectrumMgtIndicator = false;
+            pMlmAssocInd->spectrumMgtIndicator = eSIR_FALSE;
 
 
         /* This check is to avoid extra Sec IEs present incase of WPS */
@@ -2049,7 +2049,7 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         // 802.11h support
         if (pAssocReq->powerCapabilityPresent && pAssocReq->supportedChannelsPresent)
         {
-            pMlmReassocInd->spectrumMgtIndicator = true;
+            pMlmReassocInd->spectrumMgtIndicator = eSIR_TRUE;
             pMlmReassocInd->powerCap.minTxPower = pAssocReq->powerCapability.minTxPower;
             pMlmReassocInd->powerCap.maxTxPower = pAssocReq->powerCapability.maxTxPower;
             pMlmReassocInd->supportedChannels.numChnl = (tANI_U8)(pAssocReq->supportedChannels.length / 2);
@@ -2070,7 +2070,7 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
             }
         }
         else
-            pMlmReassocInd->spectrumMgtIndicator = false;
+            pMlmReassocInd->spectrumMgtIndicator = eSIR_FALSE;
 
 
         /* This check is to avoid extra Sec IEs present incase of WPS */

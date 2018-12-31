@@ -1799,8 +1799,8 @@ eHalStatus sme_ChangeCountryCode( tHalHandle hHal,
                                   tANI_U8 *pCountry,
                                   void *pContext,
                                   void* pVosContext,
-                                  bool countryFromUserSpace,
-                                  bool sendRegHint);
+                                  tAniBool countryFromUserSpace,
+                                  tAniBool sendRegHint);
 
 /* ---------------------------------------------------------------------------
 

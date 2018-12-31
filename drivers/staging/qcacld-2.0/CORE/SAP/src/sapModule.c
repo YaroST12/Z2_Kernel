@@ -414,7 +414,7 @@ WLANSAP_CleanCB
     VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH, "WLANSAP_CleanCB");
 
     hal = (tHalHandle) VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
-    if (true == pSapCtx->isSapSessionOpen && hal) {
+    if (eSAP_TRUE == pSapCtx->isSapSessionOpen && hal) {
         VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
                 "close existing SAP session");
         vos_event_reset(&pSapCtx->sap_session_closed_evt);
@@ -1337,7 +1337,7 @@ WLANSAP_ModifyACL
     eSapACLCmdType cmd
 )
 {
-    bool staInWhiteList=false, staInBlackList=false;
+    eSapBool staInWhiteList=eSAP_FALSE, staInBlackList=eSAP_FALSE;
     v_U8_t staWLIndex, staBLIndex;
     ptSapContext  pSapCtx = VOS_GET_SAP_CB(pCtx);
 
@@ -2612,7 +2612,7 @@ VOS_STATUS WLANSAP_SendAction
             return VOS_STATUS_E_FAULT;
         }
         hHal = VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
-        if( ( NULL == hHal ) || ( true != pSapCtx->isSapSessionOpen ) )
+        if( ( NULL == hHal ) || ( eSAP_TRUE != pSapCtx->isSapSessionOpen ) )
         {
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                        "%s: HAL pointer (%pK) NULL OR SME session is not open (%d)",
@@ -2687,7 +2687,7 @@ VOS_STATUS WLANSAP_RemainOnChannel
             return VOS_STATUS_E_FAULT;
         }
         hHal = VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
-        if( ( NULL == hHal ) || ( true != pSapCtx->isSapSessionOpen ) )
+        if( ( NULL == hHal ) || ( eSAP_TRUE != pSapCtx->isSapSessionOpen ) )
         {
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                        "%s: HAL pointer (%pK) NULL OR SME session is not open (%d)",
@@ -2754,7 +2754,7 @@ VOS_STATUS WLANSAP_CancelRemainOnChannel
             return VOS_STATUS_E_FAULT;
         }
         hHal = VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
-        if( ( NULL == hHal ) || ( true != pSapCtx->isSapSessionOpen ) )
+        if( ( NULL == hHal ) || ( eSAP_TRUE != pSapCtx->isSapSessionOpen ) )
         {
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                        "%s: HAL pointer (%pK) NULL OR SME session is not open (%d)",
@@ -2827,7 +2827,7 @@ VOS_STATUS WLANSAP_RegisterMgmtFrame
             return VOS_STATUS_E_FAULT;
         }
         hHal = VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
-        if( ( NULL == hHal ) || ( true != pSapCtx->isSapSessionOpen ) )
+        if( ( NULL == hHal ) || ( eSAP_TRUE != pSapCtx->isSapSessionOpen ) )
         {
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                        "%s: HAL pointer (%pK) NULL OR SME session is not open (%d)",
@@ -2900,7 +2900,7 @@ VOS_STATUS WLANSAP_DeRegisterMgmtFrame
             return VOS_STATUS_E_FAULT;
         }
         hHal = VOS_GET_HAL_CB(pSapCtx->pvosGCtx);
-        if( ( NULL == hHal ) || ( true != pSapCtx->isSapSessionOpen ) )
+        if( ( NULL == hHal ) || ( eSAP_TRUE != pSapCtx->isSapSessionOpen ) )
         {
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                        "%s: HAL pointer (%pK) NULL OR SME session is not open (%d)",
@@ -4186,7 +4186,7 @@ wlansap_set_invalid_session(v_PVOID_t pctx)
 	}
 
 	psapctx->sessionId = CSR_SESSION_ID_INVALID;
-	psapctx->isSapSessionOpen = false;
+	psapctx->isSapSessionOpen = eSAP_FALSE;
 
 	return VOS_STATUS_SUCCESS;
 }

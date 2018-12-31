@@ -685,7 +685,7 @@ v_BOOL_t sapChanSelInit(tHalHandle halHandle,
     if(pSpectCh == NULL) {
         VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                 "In %s, VOS_MALLOC_ERR", __func__);
-        return false;
+        return eSAP_FALSE;
     }
 
     vos_mem_zero(pSpectCh, (pSpectInfoParams->numSpectChans) * sizeof(*pSpectCh));
@@ -757,12 +757,12 @@ v_BOOL_t sapChanSelInit(tHalHandle halHandle,
         if (VOS_TRUE == chSafe)
         {
             pSpectCh->chNum = *pChans;
-            pSpectCh->valid = true;
+            pSpectCh->valid = eSAP_TRUE;
             pSpectCh->rssiAgr = SOFTAP_MIN_RSSI;// Initialise for all channels
             pSpectCh->channelWidth = SOFTAP_HT20_CHANNELWIDTH; // Initialise 20MHz for all the Channels
         }
     }
-    return true;
+    return eSAP_TRUE;
 }
 
 /*==========================================================================
@@ -2903,13 +2903,13 @@ void sapSortChlWeightAll(ptSapContext pSapCtx,
 v_BOOL_t sapFilterOverLapCh(ptSapContext pSapCtx, v_U16_t chNum)
 {
     if (pSapCtx->enableOverLapCh)
-        return true;
+        return eSAP_TRUE;
     else if((chNum == CHANNEL_1) ||
             (chNum == CHANNEL_6) ||
             (chNum == CHANNEL_11))
-        return true;
+        return eSAP_TRUE;
 
-    return false;
+    return eSAP_FALSE;
 }
 
 /*==========================================================================
@@ -3038,7 +3038,7 @@ v_U8_t sapSelectChannel(tHalHandle halHandle, ptSapContext pSapCtx,  tScanResult
     }
 
     // Initialize the structure pointed by pSpectInfoParams
-    if (sapChanSelInit( halHandle, pSpectInfoParams, pSapCtx ) != true ) {
+    if (sapChanSelInit( halHandle, pSpectInfoParams, pSapCtx ) != eSAP_TRUE ) {
         VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                   "In %s, Ch Select initialization failed", __func__);
         return SAP_CHANNEL_NOT_SELECTED;

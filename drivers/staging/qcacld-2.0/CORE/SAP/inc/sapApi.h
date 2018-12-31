@@ -210,6 +210,12 @@ typedef enum {
     eSAP_USR_INITATED_DISASSOC /*Disassociation was internally initated from host by invoking WLANSAP_DisassocSta call*/
  } eSapDisassocReason;
 
+/*Handle boolean over here*/
+typedef enum {
+    eSAP_FALSE,
+    eSAP_TRUE,
+}eSapBool;
+
 typedef enum {
     eSAP_DFS_NOL_CLEAR,
     eSAP_DFS_NOL_RANDOMIZE,
@@ -322,7 +328,7 @@ typedef struct sap_StationMICFailureEvent_s {
     v_MACADDR_t   srcMacAddr; //address used to compute MIC
     v_MACADDR_t   staMac; //taMacAddr transmitter address
     v_MACADDR_t   dstMacAddr;
-    bool   multicast;
+    eSapBool   multicast;
     v_U8_t     IV1;            // first byte of IV
     v_U8_t     keyId;          // second byte of IV
     v_U8_t     TSC[SIR_CIPHER_SEQ_CTR_SIZE]; // sequence number

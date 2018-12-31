@@ -1160,9 +1160,9 @@ limJoinReqSerDes(tpAniSirGlobal pMac, tpSirSmeJoinReq pJoinReq, tANI_U8 *pBuf)
 
 #ifdef WLAN_FEATURE_VOWIFI_11R
     //is11Rconnection;
-    pJoinReq->is11Rconnection = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->is11Rconnection = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
     {
         limLog(pMac, LOGE, FL("remaining len %d is too short"), len);
@@ -1172,9 +1172,9 @@ limJoinReqSerDes(tpAniSirGlobal pMac, tpSirSmeJoinReq pJoinReq, tANI_U8 *pBuf)
 
 #ifdef FEATURE_WLAN_ESE
     //ESE version IE
-    pJoinReq->isESEFeatureIniEnabled = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->isESEFeatureIniEnabled = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
     {
         limLog(pMac, LOGE, FL("remaining len %d is too short"), len);
@@ -1182,9 +1182,9 @@ limJoinReqSerDes(tpAniSirGlobal pMac, tpSirSmeJoinReq pJoinReq, tANI_U8 *pBuf)
     }
 
     //isESEconnection;
-    pJoinReq->isESEconnection = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->isESEconnection = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
     {
         limLog(pMac, LOGE, FL("remaining len %d is too short"), len);
@@ -1207,9 +1207,9 @@ limJoinReqSerDes(tpAniSirGlobal pMac, tpSirSmeJoinReq pJoinReq, tANI_U8 *pBuf)
 
 #if defined WLAN_FEATURE_VOWIFI_11R || defined FEATURE_WLAN_ESE || defined(FEATURE_WLAN_LFR)
     //isFastTransitionEnabled;
-    pJoinReq->isFastTransitionEnabled = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->isFastTransitionEnabled = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
     {
         limLog(pMac, LOGE, FL("remaining len %d is too short"), len);
@@ -1219,9 +1219,9 @@ limJoinReqSerDes(tpAniSirGlobal pMac, tpSirSmeJoinReq pJoinReq, tANI_U8 *pBuf)
 
 #ifdef FEATURE_WLAN_LFR
     //isFastRoamIniFeatureEnabled;
-    pJoinReq->isFastRoamIniFeatureEnabled = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->isFastRoamIniFeatureEnabled = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
     {
         limLog(pMac, LOGE, FL("remaining len %d is too short"), len);
@@ -1305,21 +1305,21 @@ limJoinReqSerDes(tpAniSirGlobal pMac, tpSirSmeJoinReq pJoinReq, tANI_U8 *pBuf)
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
         return eSIR_FAILURE;
 
-    pJoinReq->isWMEenabled = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->isWMEenabled = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
         return eSIR_FAILURE;
 
-    pJoinReq->isQosEnabled = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->isQosEnabled = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
         return eSIR_FAILURE;
 
-    pJoinReq->isOSENConnection = (bool)limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->isOSENConnection = (tAniBool)limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
     if (limCheckRemainingLength(pMac, len) == eSIR_FAILURE)
         return eSIR_FAILURE;
 
@@ -1331,9 +1331,9 @@ limJoinReqSerDes(tpAniSirGlobal pMac, tpSirSmeJoinReq pJoinReq, tANI_U8 *pBuf)
         return eSIR_FAILURE;
 
     // Extract Spectrum Mgt Indicator
-    pJoinReq->spectrumMgtIndicator = (bool) limGetU32(pBuf);
-    pBuf += sizeof(bool);
-    len -= sizeof(bool);
+    pJoinReq->spectrumMgtIndicator = (tAniBool) limGetU32(pBuf);
+    pBuf += sizeof(tAniBool);
+    len -= sizeof(tAniBool);
 
     pJoinReq->powerCap.minTxPower = *pBuf++;
     pJoinReq->powerCap.maxTxPower = *pBuf++;
@@ -1464,10 +1464,10 @@ limAssocIndSerDes(tpAniSirGlobal pMac, tpLimMlmAssocInd pAssocInd, tANI_U8 *pBuf
 
 
     limCopyU32(pBuf, pAssocInd->spectrumMgtIndicator);
-    pBuf += sizeof(bool);
-    mLen += sizeof(bool);
+    pBuf += sizeof(tAniBool);
+    mLen += sizeof(tAniBool);
 
-    if (pAssocInd->spectrumMgtIndicator == true)
+    if (pAssocInd->spectrumMgtIndicator == eSIR_TRUE)
     {
         *pBuf = pAssocInd->powerCap.minTxPower;
         pBuf++;
@@ -1723,10 +1723,10 @@ limReassocIndSerDes(tpAniSirGlobal pMac, tpLimMlmReassocInd pReassocInd, tANI_U8
 
 
     limCopyU32(pBuf, pReassocInd->spectrumMgtIndicator);
-    pBuf += sizeof(bool);
-    mLen += sizeof(bool);
+    pBuf += sizeof(tAniBool);
+    mLen += sizeof(tAniBool);
 
-    if (pReassocInd->spectrumMgtIndicator == true)
+    if (pReassocInd->spectrumMgtIndicator == eSIR_TRUE)
     {
         *pBuf = pReassocInd->powerCap.minTxPower;
         pBuf++;

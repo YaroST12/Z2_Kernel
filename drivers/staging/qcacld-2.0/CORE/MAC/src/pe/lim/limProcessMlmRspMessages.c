@@ -1234,7 +1234,7 @@ limFillAssocIndParams(tpAniSirGlobal pMac, tpLimMlmAssocInd pAssocInd,
                  pAssocInd->addIE.length);
 
     pSirSmeAssocInd->spectrumMgtIndicator = pAssocInd->spectrumMgtIndicator;
-    if (pAssocInd->spectrumMgtIndicator == true)
+    if (pAssocInd->spectrumMgtIndicator == eSIR_TRUE)
     {
         pSirSmeAssocInd->powerCap.minTxPower = pAssocInd->powerCap.minTxPower;
         pSirSmeAssocInd->powerCap.maxTxPower = pAssocInd->powerCap.maxTxPower;
@@ -4873,7 +4873,7 @@ void limProcessRxScanEvent(tpAniSirGlobal pMac, void *buf)
             if (P2P_SCAN_TYPE_LISTEN == pScanEvent->p2pScanType)
             {
                 limSendSmeRsp(pMac, eWNI_SME_REMAIN_ON_CHN_RSP,
-                        eSIR_SME_SUCCESS,
+                        eHAL_STATUS_SUCCESS,
                         pScanEvent->sessionId, 0);
                 vos_mem_free(pMac->lim.gpLimRemainOnChanReq);
                 pMac->lim.gpLimRemainOnChanReq = NULL;
@@ -4899,7 +4899,7 @@ void limProcessRxScanEvent(tpAniSirGlobal pMac, void *buf)
                 if (pMac->lim.gpLimRemainOnChanReq)
                 {
                     limSendSmeRsp(pMac, eWNI_SME_REMAIN_ON_CHN_RDY_IND,
-                            eSIR_SME_SUCCESS,
+                            eHAL_STATUS_SUCCESS,
                             pScanEvent->sessionId, 0);
                 }
                 else

@@ -1046,7 +1046,8 @@ typedef __ani_attr_pre_packed struct sSirMacWapiInfo
 {
     tANI_U8        length;
     tANI_U8        info[SIR_MAC_MAX_IE_LENGTH];
-} __ani_attr_packed tSirMacWapiInfo, *tpSirMacWapiInfo;
+} __ani_attr_packed tSirMacWapiInfo, *tpSirMacWapiInfo,
+    tSirMacWapiInfo, *tpSirMacWapiInfo;
 
 typedef __ani_attr_pre_packed struct sSirMacFHParamSet
 {

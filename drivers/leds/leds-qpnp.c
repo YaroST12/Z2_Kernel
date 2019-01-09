@@ -3735,7 +3735,7 @@ static int qpnp_get_config_kpdbl(struct qpnp_led_data *led,
 {
 	int rc;
 	u32 val;
-	u8 led_mode;
+	int led_mode = 0;
 	const char *mode;
 
 	led->kpdbl_cfg = devm_kzalloc(&led->pdev->dev,

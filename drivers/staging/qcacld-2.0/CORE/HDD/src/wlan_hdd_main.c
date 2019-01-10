@@ -18047,10 +18047,18 @@ static int __init hdd_module_init ( void)
    return hdd_driver_init();
 }
 #else /* #ifdef MODULE */
-static int __init hdd_module_init ( void)
+static struct work_struct boot_work;
+static void wlan_hdd_boot_fn(struct work_struct *work)
 {
-   /* Driver initialization is delayed to fwpath_changed_handler */
-   return 0;
+	kickstart_driver(true, true);
+}
+
+static int __init hdd_module_init(void)
+{
+	INIT_WORK(&boot_work, wlan_hdd_boot_fn);
+	schedule_work(&boot_work);
+
+	return 0;
 }
 #endif /* #ifdef MODULE */
 
@@ -20595,8 +20603,12 @@ void hdd_initialize_adapter_common(hdd_adapter_t *adapter)
 }
 
 //Register the module init/exit functions
+#ifdef MODULE
 module_init(hdd_module_init);
 module_exit(hdd_module_exit);
+#else
+device_initcall(hdd_module_init);
+#endif
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Qualcomm Atheros, Inc.");

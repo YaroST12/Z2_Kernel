@@ -20607,7 +20607,7 @@ void hdd_initialize_adapter_common(hdd_adapter_t *adapter)
 module_init(hdd_module_init);
 module_exit(hdd_module_exit);
 #else
-device_initcall(hdd_module_init);
+arch_initcall(hdd_module_init);
 #endif
 
 MODULE_LICENSE("Dual BSD/GPL");

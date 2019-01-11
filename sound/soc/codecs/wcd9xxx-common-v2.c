@@ -1171,9 +1171,7 @@ static void wcd_clsh_state_ear(struct snd_soc_codec *codec,
 	if (mode != CLS_H_NORMAL) {
 		dev_err(codec->dev, "%s: mode: %s cannot be used for EAR\n",
 			__func__, mode_to_str(mode));
-		dev_err(codec->dev, "%s: mode: setting to CLS_H_NORMAL\n",
-			__func__);
-		mode = CLS_H_NORMAL;
+		return;
 	}
 
 	if (is_enable) {

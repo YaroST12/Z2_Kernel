@@ -744,6 +744,10 @@ noinline int slow_avc_audit(u32 ssid, u32 tsid, u16 tclass,
 	struct common_audit_data stack_data;
 	struct selinux_audit_data sad;
 
+	/* Turn off SELinux denial logging */
+	if (denied)
+		return 0;
+
 	if (!a) {
 		a = &stack_data;
 		a->type = LSM_AUDIT_DATA_NONE;

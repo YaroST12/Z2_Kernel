@@ -48,6 +48,7 @@ struct fpc1020_data {
 	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
+	struct work_struct pm_work;
 	struct work_struct input_report_work;
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
@@ -405,6 +406,25 @@ static void set_fingerprintd_nice(int nice)
 	read_unlock(&tasklist_lock);
 }
 
+static void fpc1020_suspend_resume(struct work_struct *work)
+{
+	struct fpc1020_data *fpc1020 =
+		container_of(work, typeof(*fpc1020), pm_work);
+
+	/* Escalate fingerprintd priority when screen is off */
+	if (fpc1020->screen_on) {
+		/* Unconditionally enable IRQ when screen turns on */
+		config_irq(fpc1020, true);
+		/* Restore fingerprintd priority to defaults */
+		set_fingerprintd_nice(0);
+	} else {
+		/* Elevate fingerprintd priority when screen is off to ensure
+		 * the fingerprint sensor is responsive and that the haptic
+		 * response on successful verification always fires */
+		set_fingerprintd_nice(-1);
+	}
+}
+
 static int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data)
 {
@@ -418,11 +438,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_debug("ScreenOn\n");
 			fpc1020->screen_on = 1;
-			set_fingerprintd_nice(0);
+			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_debug("ScreenOff\n");
 			fpc1020->screen_on = 0;
-			set_fingerprintd_nice(-1);
+			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}
 	}
 	return 0;
@@ -470,6 +490,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_unregister_device;
 	}
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
+	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
 	fpc1020_hw_reset(fpc1020);

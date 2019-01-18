@@ -28,7 +28,6 @@
 #include <linux/io.h>
 #include <linux/of_gpio.h>
 #include <linux/input.h>
-#include <linux/suspend.h>
 
 #define FPC1020_TOUCH_DEV_NAME  "fpc1020tp"
 
@@ -391,37 +390,19 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	return retval;
 }
 
-static void fingerprintd_nice_thaw(int nice)
+static void set_fingerprintd_nice(int nice)
 {
 	struct task_struct *p;
 
 	read_lock(&tasklist_lock);
 	for_each_process(p) {
-		if (!memcmp(p->comm, "fingerprint@2.0", 16) ||
-			!memcmp(p->comm, "fingerprint@2.1", 16)) {
-			if (nice < 1) {
-				pr_info("fingerprint nice changed to %i\n", nice);
-				set_user_nice(p, nice);
-			} else {
-				pr_info("thawing fingerprintd");
-				__thaw_task(p);
-			}
+		if (!memcmp(p->comm, "fingerprint@2.0", 16)) {
+			pr_debug("fingerprint nice changed to %i\n", nice);
+			set_user_nice(p, nice);
 			break;
 		}
 	}
 	read_unlock(&tasklist_lock);
-}
-
-static int fpc_suspend_notifier(struct notifier_block *nb,
-				unsigned long event, void *unused)
-{
-	switch (event) {
-	case PM_SUSPEND_PREPARE:
-	case PM_POST_SUSPEND:
-		fingerprintd_nice_thaw(1);
-		break;
-	}
-	return NOTIFY_DONE;
 }
 
 static int fb_notifier_callback(struct notifier_block *self,
@@ -437,12 +418,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_debug("ScreenOn\n");
 			fpc1020->screen_on = 1;
-			config_irq(fpc1020, true);
-			fingerprintd_nice_thaw(0);
+			set_fingerprintd_nice(0);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_debug("ScreenOff\n");
 			fpc1020->screen_on = 0;
-			fingerprintd_nice_thaw(-1);
+			set_fingerprintd_nice(-1);
 		}
 	}
 	return 0;
@@ -489,7 +469,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Create input workqueue failed\n");
 		goto error_unregister_device;
 	}
-	pm_notifier(fpc_suspend_notifier, 0);
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/

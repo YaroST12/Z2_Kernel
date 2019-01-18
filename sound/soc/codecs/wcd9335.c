@@ -7933,9 +7933,9 @@ static int tasha_rx_hph_mode_put(struct snd_kcontrol *kcontrol,
 		__func__, mode_val);
 
 	if (mode_val == 0) {
-		dev_warn(codec->dev, "%s:Invalid HPH Mode, default to Cls-H HiFi\n",
+		dev_warn(codec->dev, "%s:Invalid HPH Mode, default to Cls-AB\n",
 			__func__);
-		mode_val = CLS_H_HIFI;
+		mode_val = CLS_AB;
 	}
 	tasha->hph_mode = mode_val;
 	return 0;

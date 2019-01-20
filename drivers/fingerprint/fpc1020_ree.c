@@ -64,12 +64,7 @@ static void config_irq(struct fpc1020_data *fpc1020, bool enabled)
 		else
 			disable_irq(gpio_to_irq(fpc1020->irq_gpio));
 
-		dev_info(fpc1020->dev, "%s: %s fpc irq ---\n", __func__,
-			enabled ?  "enable" : "disable");
 		fpc1020->irq_enabled = enabled;
-	} else {
-		dev_info(fpc1020->dev, "%s: dual config irq status: %s\n", __func__,
-			enabled ?  "true" : "false");
 	}
 }
 

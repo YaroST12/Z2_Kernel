@@ -3200,23 +3200,6 @@ void preempt_count_sub(int val)
 			!(preempt_count() & PREEMPT_MASK)))
 		return;
 #endif
-
-	if (preempt_count() == val) {
-		struct preempt_store *ps = &per_cpu(the_ps,
-				raw_smp_processor_id());
-		u64 delta = sched_clock() - ps->ts;
-
-		/*
-		 * Trace preempt disable stack if preemption
-		 * is disabled for more than the threshold.
-		 */
-		if (delta > sysctl_preemptoff_tracing_threshold_ns)
-			trace_sched_preempt_disable(delta, ps->irqs_disabled,
-						ps->caddr[0], ps->caddr[1],
-						ps->caddr[2], ps->caddr[3]);
-
-		trace_preempt_on(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
-	}
 	__preempt_count_sub(val);
 }
 EXPORT_SYMBOL(preempt_count_sub);

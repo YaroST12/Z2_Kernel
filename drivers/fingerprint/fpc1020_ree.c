@@ -433,11 +433,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_debug("ScreenOn\n");
 			fpc1020->screen_on = 1;
-			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
+			schedule_work(&fpc1020->pm_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_debug("ScreenOff\n");
 			fpc1020->screen_on = 0;
-			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
+			schedule_work(&fpc1020->pm_work);
 		}
 	}
 	return 0;

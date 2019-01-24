@@ -44,6 +44,7 @@ struct fpc1020_data {
 	int reset_gpio;
 	int irq_gpio;
 	int irq;
+	bool irq_enabled;
 	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
@@ -55,11 +56,24 @@ struct fpc1020_data {
 	int proximity_state; /* 0:far 1:near */
 };
 
+static void config_irq(struct fpc1020_data *fpc1020, bool enabled)
+{
+	if (enabled != fpc1020->irq_enabled) {
+		if (enabled)
+			enable_irq(gpio_to_irq(fpc1020->irq_gpio));
+		else
+			disable_irq(gpio_to_irq(fpc1020->irq_gpio));
+
+		fpc1020->irq_enabled = enabled;
+	}
+}
+
 /* From drivers/input/keyboard/gpio_keys.c */
 extern bool home_button_pressed(void);
 extern void reset_home_button(void);
 
 bool reset;
+
 static bool utouch_disable;
 
 static int fb_notifier_callback(struct notifier_block *self,
@@ -80,13 +94,13 @@ static ssize_t irq_set(struct device *device,
 		const char *buffer, size_t count)
 {
 	int retval = 0;
-	unsigned int val;
+	u64 val;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
 
-	retval = kstrtouint(buffer, 0, &val);
-	if (val == 1)
+	retval = kstrtou64(buffer, 0, &val);
+	if (val)
 		enable_irq(fpc1020->irq);
-	else if (val == 0)
+	else if (!val)
 		disable_irq(fpc1020->irq);
 	else
 		return -ENOENT;
@@ -108,30 +122,30 @@ static ssize_t set_key(struct device *device,
 		const char *buffer, size_t count)
 {
 	int retval = 0;
-	unsigned int val;
+	u64 val;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
 	bool home_pressed;
 
-	retval = kstrtouint(buffer, 0, &val);
-	if (!retval) {
+	retval = kstrtou64(buffer, 0, &val);
+	if (!retval && !utouch_disable) {
 		if (val == KEY_HOME)
 			/* Convert to U-touch long press keyValue */
 			val = KEY_NAVI_LONG;
 
 		home_pressed = home_button_pressed();
 
-		if ((val && home_pressed) || utouch_disable)
+		if (val && home_pressed)
 			val = 0;
 
-		pr_debug("home key pressed = %d\n", (int)home_pressed);
+		pr_info("home key pressed = %d\n", (int)home_pressed);
 		fpc1020->report_key = (int)val;
 		queue_work(fpc1020->fpc1020_wq, &fpc1020->input_report_work);
 
 		if (!val) {
-			pr_debug("calling home key reset");
+			pr_info("calling home key reset");
 			reset_home_button();
 		}
-	} else
+	} else if (retval)
 		return -ENOENT;
 	return strnlen(buffer, count);
 }
@@ -148,14 +162,15 @@ static ssize_t utouch_store_disable(struct device *dev,
 	}
 	if (value == 1) {
 		utouch_disable = true;
-		pr_debug("utouch disabled\n");
+		pr_info("utouch disabled\n");
 	} else {
 		utouch_disable = false;
-		pr_debug("utouch enabled\n");
+		pr_info("utouch enabled\n");
 	}
 	return count;
 }
- static ssize_t utouch_show_disable(struct device *dev,
+
+static ssize_t utouch_show_disable(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	if (utouch_disable)
@@ -174,7 +189,16 @@ static ssize_t proximity_state_set(struct device *dev,
 	if (rc)
 		return -EINVAL;
 	fpc1020->proximity_state = !!val;
-
+	if (!fpc1020->screen_on) {
+		if (fpc1020->proximity_state) {
+			/* Disable IRQ when screen is off and proximity sensor is covered */
+			config_irq(fpc1020, false);
+		} else {
+			/* Enable IRQ when screen is off and proximity sensor is uncovered,
+			 but only if fingerprint wake up is enabled */
+			 config_irq(fpc1020, true);
+		}
+	}
 	return count;
 }
 static DEVICE_ATTR(proximity_state, S_IWUSR, NULL, proximity_state_set);
@@ -196,8 +220,8 @@ static void fpc1020_report_work_func(struct work_struct *work)
 	struct fpc1020_data *fpc1020 = NULL;
 
 	fpc1020 = container_of(work, struct fpc1020_data, input_report_work);
-	if (fpc1020->screen_on == 1) {
-		pr_debug("Report key value = %d\n", (int)fpc1020->report_key);
+	if (fpc1020->screen_on) {
+		pr_info("Report key value = %d\n", (int)fpc1020->report_key);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
 		msleep(30);
@@ -255,11 +279,11 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
-	pr_debug("fpc1020 IRQ interrupt\n");
+	pr_info("fpc1020 IRQ interrupt\n");
+	/* Make sure 'scree_on' is updated before using it
+	 ** since this is interrupt context (other thread...) */
 	smp_rmb();
-	if (fpc1020->screen_on == 0) {
-		if (fpc1020->proximity_state == 1)
-			return IRQ_HANDLED;
+	if (!fpc1020->screen_on) {
 		pm_wakeup_event(fpc1020->dev, 5000);
 	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
@@ -269,6 +293,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 {
 	int retval = 0;
+	int irqf;
 
 	if (!gpio_is_valid(fpc1020->irq_gpio)) {
 		pr_err("IRQ pin(%d) is not valid\n", fpc1020->irq_gpio);
@@ -293,15 +318,26 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 		return -EINVAL;
 	}
 
-	retval = devm_request_threaded_irq(fpc1020->dev,
-			fpc1020->irq, NULL, fpc1020_irq_handler,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT,
-			dev_name(fpc1020->dev), fpc1020);
+	irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT;
+
+	if (of_property_read_bool(fpc1020->dev->of_node, "fpc,enable-wakeup")) {
+		irqf |= IRQF_NO_SUSPEND;
+		device_init_wakeup(fpc1020->dev, 1);
+	}
+
+	retval = devm_request_threaded_irq(fpc1020->dev, fpc1020->irq,
+		NULL, fpc1020_irq_handler, irqf,
+		dev_name(fpc1020->dev), fpc1020);
 	if (retval) {
 		pr_err("request irq %i failed.\n", fpc1020->irq);
 		fpc1020->irq = -EINVAL;
 		return -EINVAL;
 	}
+
+	dev_info(fpc1020->dev, "requested irq %d\n", fpc1020->irq);
+	/* Request that the interrupt should be wakeable*/
+	enable_irq_wake(fpc1020->irq);
+	fpc1020->irq_enabled = true;
 
 	return 0;
 }
@@ -324,7 +360,7 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 
 	fpc1020->input_dev = input_allocate_device();
 	if (!fpc1020->input_dev) {
-		pr_debug("Input allocate device failed\n");
+		pr_info("Input allocate device failed\n");
 		retval = -ENOMEM;
 		return retval;
 	}
@@ -371,10 +407,17 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), pm_work);
 
 	/* Escalate fingerprintd priority when screen is off */
-	if (!fpc1020->screen_on)
-		set_fingerprintd_nice(MIN_NICE);
-	else
+	if (fpc1020->screen_on) {
+		/* Unconditionally enable IRQ when screen turns on */
+		config_irq(fpc1020, true);
+		/* Restore fingerprintd priority to defaults */
 		set_fingerprintd_nice(0);
+	} else {
+		/* Elevate fingerprintd priority when screen is off to ensure
+		 * the fingerprint sensor is responsive and that the haptic
+		 * response on successful verification always fires */
+		set_fingerprintd_nice(-1);
+	}
 }
 
 static int fb_notifier_callback(struct notifier_block *self,
@@ -388,11 +431,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK && fpc1020) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
-			pr_err("ScreenOn\n");
+			pr_debug("ScreenOn\n");
 			fpc1020->screen_on = 1;
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
-			pr_err("ScreenOff\n");
+			pr_debug("ScreenOff\n");
 			fpc1020->screen_on = 0;
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}

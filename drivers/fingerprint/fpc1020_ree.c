@@ -318,12 +318,7 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 		return -EINVAL;
 	}
 
-	irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT;
-
-	if (of_property_read_bool(fpc1020->dev->of_node, "fpc,enable-wakeup")) {
-		irqf |= IRQF_NO_SUSPEND;
-		device_init_wakeup(fpc1020->dev, 1);
-	}
+	irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_NO_SUSPEND;
 
 	retval = devm_request_threaded_irq(fpc1020->dev, fpc1020->irq,
 		NULL, fpc1020_irq_handler, irqf,
@@ -335,6 +330,7 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 	}
 
 	dev_info(fpc1020->dev, "requested irq %d\n", fpc1020->irq);
+	device_init_wakeup(fpc1020->dev, 1);
 	/* Request that the interrupt should be wakeable*/
 	enable_irq_wake(fpc1020->irq);
 	fpc1020->irq_enabled = true;

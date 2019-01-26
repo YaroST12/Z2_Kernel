@@ -113,6 +113,10 @@
 		qcom,vph-low-threshold-uv = <3000000>;
 		qcom,soc-low-threshold = <0>;
 	};
+
+	qcom,ipc_router_dsps_xprt {
+		qcom,low-latency-xprt;
+	};
 };
 
 &wdog {

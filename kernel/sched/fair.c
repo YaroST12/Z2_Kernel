@@ -8882,22 +8882,7 @@ void fix_small_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
 	capa_move /= SCHED_CAPACITY_SCALE;
 
 	/* Move if we gain throughput */
-	if (capa_move > capa_now) {
-		env->imbalance = busiest->load_per_task;
-		return;
-	}
-
-	/* We can't see throughput improvement with the load-based
-	 * method, but it is possible depending upon group size and
-	 * capacity range that there might still be an underutilized
-	 * cpu available in an asymmetric capacity system. Do one last
-	 * check just in case.
-	 */
-	if (env->sd->flags & SD_ASYM_CPUCAPACITY &&
-		busiest->group_type == group_overloaded &&
-		busiest->sum_nr_running > busiest->group_weight &&
-		local->sum_nr_running < local->group_weight &&
-		local->group_capacity < busiest->group_capacity)
+	if (capa_move > capa_now)
 		env->imbalance = busiest->load_per_task;
 }
 
@@ -8980,21 +8965,11 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 		(sds->avg_load - local->avg_load) * local->group_capacity
 	) / SCHED_CAPACITY_SCALE;
 
-	/* Boost imbalance to allow misfit task to be balanced.
-	 * Always do this if we are doing a NEWLY_IDLE balance
-	 * on the assumption that any tasks we have must not be
-	 * long-running (and hence we cannot rely upon load).
-	 * However if we are not idle, we should assume the tasks
-	 * we have are longer running and not override load-based
-	 * calculations above unless we are sure that the local
-	 * group is underutilized.
-	 */
-	if (busiest->group_type == group_misfit_task &&
-		(env->idle == CPU_NEWLY_IDLE ||
-		local->sum_nr_running < local->group_weight)) {
+	/* Boost imbalance to allow misfit task to be balanced. */
+	if (busiest->group_type == group_misfit_task)
 		env->imbalance = max_t(long, env->imbalance,
 				     busiest->group_misfit_task);
-	}
+
 	/*
 	 * if *imbalance is less than the average load per runnable task
 	 * there is no guarantee that any tasks will be moved so we'll have

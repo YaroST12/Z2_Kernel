@@ -127,3 +127,13 @@
 &wsa881x_213 {
 	qcom,spkr-sd-n-gpio = <&pmi8994_gpios 3 0>;
 };
+
+&firmware {
+	android {
+		fstab {
+			vendor {
+				dev = "/dev/block/platform/soc/7464900.sdhci/by-name/factory";
+			};
+		};
+	};
+};

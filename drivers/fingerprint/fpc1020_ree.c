@@ -72,7 +72,7 @@ static void config_irq(struct fpc1020_data *fpc1020, bool enabled)
 extern bool home_button_pressed(void);
 extern void reset_home_button(void);
 
-bool reset;
+static bool reset;
 
 static bool utouch_disable;
 

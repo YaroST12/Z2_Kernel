@@ -2133,7 +2133,7 @@ static int gtp_fb_notifier_callback(struct notifier_block *noti, unsigned long e
 		blank = ev_data->data;
 		cancel_work_sync(&ts->pm_work);
 		screen_off = *blank != FB_BLANK_UNBLANK;
-		schedule_work(&ts->pm_work);
+		queue_work(goodix_wq, &ts->pm_work);
 	}
 
 	return 0;

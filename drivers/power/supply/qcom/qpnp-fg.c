@@ -195,6 +195,7 @@ struct fg_cc_soc_data {
 struct fg_saved_data {
 	union power_supply_propval val;
 	unsigned long last_req_expires;
+	unsigned long last_req_expires_crit;
 };
 
 /* FG_MEMIF setting index */
@@ -4591,6 +4592,7 @@ static enum power_supply_property fg_power_props[] = {
 };
 
 #define FG_RATE_LIM_MS (5 * MSEC_PER_SEC)
+#define FG_RATE_LIM_CRIT_MS (1 * MSEC_PER_SEC)
 
 static bool usb_psy_initialized(struct fg_chip *chip)
 {
@@ -4612,13 +4614,36 @@ static int fg_power_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-	case POWER_SUPPLY_PROP_RESISTANCE_ID:
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
 	case POWER_SUPPLY_PROP_CYCLE_COUNT_ID:
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_SOC_REPORTING_READY:
+	case POWER_SUPPLY_PROP_UPDATE_NOW:
+	case POWER_SUPPLY_PROP_HI_POWER:
+	case POWER_SUPPLY_PROP_IGNORE_FALSE_NEGATIVE_ISENSE:
+	case POWER_SUPPLY_PROP_ENABLE_JEITA_DETECTION:
+	case POWER_SUPPLY_PROP_BATTERY_INFO:
+	case POWER_SUPPLY_PROP_BATTERY_INFO_ID:
 		/* These props don't require a fg query; don't ratelimit them */
+		break;
+	case POWER_SUPPLY_PROP_CAPACITY:
+	case POWER_SUPPLY_PROP_CAPACITY_RAW:
+		/* These props control battery percentage itself, let's allow them
+		* to be queried once per second
+		*/
+		if (!sd->last_req_expires_crit)
+			break;
+
+		if (usb_psy_initialized(chip))
+			power_supply_get_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_TYPEC_MODE, &typec_sts);
+
+		if (typec_sts.intval == POWER_SUPPLY_TYPEC_NONE &&
+			time_before(jiffies, sd->last_req_expires_crit)) {
+			*val = sd->val;
+			return 0;
+		}
 		break;
 	default:
 		if (!sd->last_req_expires)
@@ -4741,6 +4766,7 @@ static int fg_power_get_property(struct power_supply *psy,
 
 	sd->val = *val;
 	sd->last_req_expires = jiffies + msecs_to_jiffies(FG_RATE_LIM_MS);
+	sd->last_req_expires_crit = jiffies + msecs_to_jiffies(FG_RATE_LIM_CRIT_MS);
 
 	return 0;
 }

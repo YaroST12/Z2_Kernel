@@ -8,6 +8,8 @@
 #include "common-sound.dtsi"
 #include "common-usb.dtsi"
 #include "common-vibration.dtsi"
+/* Disable SMP2P Remote Debug for production */
+#include "../msm-rdbg-disable.dtsi"
 
 #include <dt-bindings/input/ti-drv260x.h>
 

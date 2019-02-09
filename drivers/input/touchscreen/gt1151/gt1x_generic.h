@@ -477,13 +477,13 @@ extern void gesture_clear_wakeup_data(void);
 #endif
 
 /* Export from gt1x_tpd.c */
-extern void gt1x_touch_down(s32 x, s32 y, s32 size, s32 id);
-extern void gt1x_touch_up(s32 id);
+extern inline void gt1x_touch_down(s32 x, s32 y, s32 size, s32 id);
+extern inline void gt1x_touch_up(s32 id);
 extern int gt1x_power_switch(s32 state);
 extern void gt1x_irq_request(void);
 extern void gt1x_irq_free(void);
-extern void gt1x_irq_enable(void);
-extern void gt1x_irq_disable(void);
+extern inline void gt1x_irq_enable(void);
+extern inline void gt1x_irq_disable(void);
 extern int gt1x_debug_proc(u8 * buf, int count);
 
 struct fw_update_info {

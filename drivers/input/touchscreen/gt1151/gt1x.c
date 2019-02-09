@@ -87,7 +87,7 @@ static int irq_is_free = 0;
 * gt1x_irq_enable - enable irq function.
 *
 */
-void gt1x_irq_enable(void)
+inline void gt1x_irq_enable(void)
 {
 	unsigned long irqflags = 0;
 
@@ -105,7 +105,7 @@ void gt1x_irq_enable(void)
 * gt1x_irq_enable - disable irq function.
 *
 */
-void gt1x_irq_disable(void)
+inline void gt1x_irq_disable(void)
 {
 	unsigned long irqflags;
 
@@ -192,7 +192,7 @@ static irqreturn_t gt1x_ts_irq_handler(int irq, void *dev_id)
 * @w:  input pressure
 * Return: none.
 */
-void gt1x_touch_down(s32 x, s32 y, s32 size, s32 id)
+inline void gt1x_touch_down(s32 x, s32 y, s32 size, s32 id)
 {
 #if GTP_CHANGE_X2Y
 	GTP_SWAP(x, y);
@@ -226,7 +226,7 @@ void gt1x_touch_down(s32 x, s32 y, s32 size, s32 id)
 * @id: trackId
 * Return: none.
 */
-void gt1x_touch_up(s32 id)
+inline void gt1x_touch_up(s32 id)
 {
 #if GTP_ICS_SLOT_REPORT
 	input_mt_slot(input_dev, id);

@@ -285,6 +285,7 @@ static struct pll_clk pwrcl_pll = {
 		.always_on = true,
 		.parent = &xo_ao.c,
 		.dbg_name = "pwrcl_pll",
+		.flags = CLKFLAG_NO_RATE_CACHE,
 		.ops = &clk_ops_variable_rate_pll_hwfsm,
 		VDD_DIG_FMAX_MAP1(LOW, 3000000000),
 		CLK_INIT(pwrcl_pll.c),

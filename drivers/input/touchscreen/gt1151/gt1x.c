@@ -644,38 +644,35 @@ static int gt1x_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 	}
 
 #ifdef TOUCH_SYS
-			//add tp class to show tp info
+	//add tp class to show tp info
+	ts = kzalloc(sizeof(*ts), GFP_KERNEL);
+	ts->tp_class = class_create(THIS_MODULE, "touch");
+	if (IS_ERR(ts->tp_class)) {
+		GTP_DEBUG("create tp class err!");
+		return ret;
+	} else {
+		atomic_set(&gt_device_count, 0);
+	}
 
-		ts = kzalloc(sizeof(*ts), GFP_KERNEL);
-		memset(ts, 0, sizeof(*ts));
-				ts->tp_class = class_create(THIS_MODULE, "touch");
-				if (IS_ERR(ts->tp_class))
-				{
-						GTP_DEBUG("create tp class err!");
-						return ret;
-				}
-				else
-				atomic_set(&gt_device_count, 0);
-		ts->index = atomic_inc_return(&gt_device_count);
-		ts->dev = device_create(ts->tp_class, NULL,
+	ts->index = atomic_inc_return(&gt_device_count);
+	ts->dev = device_create(ts->tp_class, NULL,
 				MKDEV(0, ts->index), NULL, "tp_dev");
-		if (IS_ERR(ts->dev))
-		{
-				GTP_DEBUG("create device err!");
-				return ret;
+	if (IS_ERR(ts->dev)) {
+		GTP_DEBUG("create device err!");
+		return ret;
+	}
+
+	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
+		ret = sysfs_create_file(&ts->dev->kobj,
+					&attrs[attr_count].attr);
+		if (ret < 0) {
+			dev_err(&client->dev,
+			"%s: Failed to create sysfs attributes\n", __func__);
+			return ret;
 		}
-		for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
-				ret = sysfs_create_file(&ts->dev->kobj,
-								&attrs[attr_count].attr);
-				if (ret < 0) {
-						dev_err(&client->dev,
-										"%s: Failed to create sysfs attributes\n",
-										__func__);
-						return ret;
-				}
-		}
-		dev_set_drvdata(ts->dev,ts);
-		//end tp class to show tp info
+	}
+	dev_set_drvdata(ts->dev,ts);
+	//end tp class to show tp info
 #endif
 
 #if GTP_GESTURE_WAKEUP

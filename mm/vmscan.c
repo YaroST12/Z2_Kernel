@@ -146,7 +146,11 @@ struct scan_control {
 /*
  * From 0 .. 100.  Higher means more swappy.
  */
-int vm_swappiness = 60;
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+int vm_swappiness = 15;
+#else
+int vm_swappiness = 35;
+#endif
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.

@@ -20,7 +20,7 @@ static struct schedtune *getSchedtune(char *st_name);
 static void write_default_values(void);
 
 /* To indicate that stune values are set */
-static bool values_set = false;
+static atomic_t values_set = ATOMIC_INIT(0);
 #endif
 
 unsigned int sysctl_sched_cfs_boost __read_mostly;
@@ -716,10 +716,8 @@ static const bool prefer_idle_values[] = {
 static int boost_write_wrapper(struct cgroup_subsys_state *css,
 			struct cftype *cft, s64 boost)
 {
-	if (!values_set) {
+	if (!atomic_cmpxchg(&values_set, 0, 1))
 		write_default_values();
-		values_set = true;
-	}
 
 	/* We do not want init to write anything */
 	if (!strncmp(current->comm, "init", sizeof("init")))
@@ -745,7 +743,7 @@ static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
 	* After default values are set we can
 	* allow user/userspace to adjust values.
 	*/
-	if (values_set)
+	if (atomic_read(&values_set))
 		prefer_idle_write(css, NULL, prefer_idle);
 
 	return 0;

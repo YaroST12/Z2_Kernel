@@ -699,7 +699,7 @@ static char *stune_groups[] = {
 	"rt",
 };
 
-static const int stune_values[] = { 5, -5, -100, 5 };
+static const int stune_values[] = { 5, -10, -100, 0 };
 
 static const bool prefer_idle_values[] = { 1, 0, 0, 1 };
 

@@ -112,7 +112,7 @@ EXPORT_SYMBOL_GPL(wlan_get_nv_mac);
 		.read = name, \
 };
 
-DECLARE_FOPS(dump_wifi_addr)
+DECLARE_FOPS(dump_wifi_addr);
 
 static int show_nv(void)
 {

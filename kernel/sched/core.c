@@ -3212,6 +3212,7 @@ void preempt_count_sub(int val)
 		return;
 #endif
 
+#ifndef CONFIG_DEBUG_KERNEL
 	if (preempt_count() == val) {
 		struct preempt_store *ps = &per_cpu(the_ps,
 				raw_smp_processor_id());
@@ -3228,6 +3229,7 @@ void preempt_count_sub(int val)
 
 		trace_preempt_on(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
 	}
+#endif
 	__preempt_count_sub(val);
 }
 EXPORT_SYMBOL(preempt_count_sub);

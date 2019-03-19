@@ -23,7 +23,7 @@ static struct smem_nv *psmem_nv = NULL;
 
 void dump_smem(struct smem_nv *buf)
 {
-	print_hex_dump(KERN_ALERT, "wifi   : ", DUMP_PREFIX_NONE, 16, 1,
+	print_hex_dump(KERN_INFO, "wifi   : ", DUMP_PREFIX_NONE, 16, 1,
 				   buf->nv_wifi, NV_WIFI_ADDR_SIZE, false);
 }
 

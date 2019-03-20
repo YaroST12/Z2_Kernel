@@ -348,12 +348,18 @@
 #define IS_NUM_OR_CHAR(x)    (((x) >= 'A' && (x) <= 'Z') || ((x) >= '0' && (x) <= '9'))
 
 //Log define
-#define GTP_INFO(fmt,arg...)           printk("<<GTP-INF>>[%s:%d] "fmt"\n", __func__, __LINE__, ##arg)
-#define GTP_ERROR(fmt,arg...)          printk("<<GTP-ERR>>[%s:%d] "fmt"\n", __func__, __LINE__, ##arg)
-#define GTP_DEBUG(fmt,arg...)          do{\
-										if(GTP_DEBUG_ON)\
-										printk("<<GTP-DBG>>[%s:%d]"fmt"\n",__func__, __LINE__, ##arg);\
-									}while(0)
+#define GTP_INFO(fmt,arg...)	do{\
+	if(GTP_DEBUG_FUNC_ON)\
+		printk("<<GTP-INF>>[%s:%d] "fmt"\n", __func__, __LINE__, ##arg);\
+	}while(0)
+#define GTP_ERROR(fmt,arg...)	do{\
+	if(GTP_DEBUG_FUNC_ON)\
+		printk("<<GTP-ERR>>[%s:%d] "fmt"\n", __func__, __LINE__, ##arg);\
+	}while(0)
+#define GTP_DEBUG(fmt,arg...)	do{\
+	if(GTP_DEBUG_ON)\
+		printk("<<GTP-DBG>>[%s:%d]"fmt"\n",__func__, __LINE__, ##arg);\
+	}while(0)
 #define GTP_DEBUG_ARRAY(array, num)    do{\
 										s32 i;\
 										u8* a = array;\

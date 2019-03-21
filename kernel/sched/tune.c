@@ -5,6 +5,7 @@
 #include <linux/printk.h>
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
+#include <linux/moduleparam.h>
 
 #include <trace/events/sched.h>
 
@@ -699,7 +700,7 @@ static char *stune_groups[] = {
 	"rt",
 };
 
-static const int stune_values[] = { 5, -10, -100, 0 };
+static int stune_values[] = { 5, -10, -100, 0 };
 
 static const bool prefer_idle_values[] = { 1, 0, 0, 0 };
 
@@ -709,8 +710,8 @@ static int boost_write_wrapper(struct cgroup_subsys_state *css,
 	if (!atomic_cmpxchg(&values_set, 0, 1))
 		write_default_values();
 
-	/* We do not want init to write anything */
-	if (!strncmp(current->comm, "init", sizeof("init")))
+	/* Allow access only for sh (usually user) */
+	if (strncmp(current->comm, "sh", sizeof("sh")))
 		return 0;
 
 	/*
@@ -725,8 +726,8 @@ static int boost_write_wrapper(struct cgroup_subsys_state *css,
 static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
 			struct cftype *cft, u64 prefer_idle)
 {
-	/* We do not want init to write anything */
-	if (!strncmp(current->comm, "init", sizeof("init")))
+	/* Allow access only for sh (usually user) */
+	if (strncmp(current->comm, "sh", sizeof("sh")))
 		return 0;
 
 	/*
@@ -760,6 +761,8 @@ static struct schedtune *getSchedtune(char *st_name)
 	return NULL;
 }
 
+static struct schedtune *ta_st;
+
 static void write_default_values(void)
 {
 	int i = 0;
@@ -770,12 +773,64 @@ static void write_default_values(void)
 		struct schedtune *st = getSchedtune(stune_groups[i]);
 		if (!st)
 			break;
+		/* Save top-app separately */
+		if (i == 0)
+			ta_st = st;
 		pr_info("%s: setting %s to %i and %i",
 				__func__, stune_groups[i], stune_values[i], prefer_idle_values[i]);
 		boost_write(&st->css, NULL, stune_values[i]);
 		prefer_idle_write(&st->css, NULL, prefer_idle_values[i]);
 	}
 }
+
+static struct work_struct input_boost;
+static struct delayed_work input_unboost;
+static int duration = 64;
+static int boost_value = 15;
+static struct workqueue_struct *stune_workqueue;
+
+void ta_dyn_boost_kick(void)
+{
+	if (!ta_st)
+		return;
+
+	queue_work(stune_workqueue, &input_boost);
+
+	cancel_delayed_work_sync(&input_unboost);
+	queue_delayed_work(stune_workqueue, &input_unboost,
+				msecs_to_jiffies(duration));
+}
+
+void ta_dyn_boost_set(void)
+{
+	if (!ta_st)
+		return;
+
+	queue_work(stune_workqueue, &input_boost);
+}
+
+void ta_dyn_boost_reset(void)
+{
+	if (!ta_st)
+		return;
+
+	cancel_delayed_work_sync(&input_unboost);
+	queue_delayed_work(stune_workqueue, &input_unboost,
+				msecs_to_jiffies(5));
+}
+
+static void ta_dyn_boost_worker(struct work_struct *work)
+{
+	boost_write(&ta_st->css, NULL, boost_value);
+}
+
+static void ta_dyn_unboost_worker(struct work_struct *work)
+{
+	boost_write(&ta_st->css, NULL, stune_values[0]);
+}
+module_param(duration, int, 0644);
+module_param(boost_value, int, 0644);
+module_param_named(ta_default_stune, stune_values[0], int, 0644);
 #endif
 
 static struct cftype files[] = {
@@ -1110,6 +1165,12 @@ schedtune_init(void)
 	schedtune_init_cgroups();
 #else
 	pr_info("schedtune: configured to support global boosting only\n");
+#endif
+
+#ifdef CONFIG_STUNE_ASSIST
+	INIT_WORK(&input_boost, ta_dyn_boost_worker);
+	INIT_DELAYED_WORK(&input_unboost, ta_dyn_unboost_worker);
+	stune_workqueue = alloc_workqueue("stune_wq", WQ_HIGHPRI, 0);
 #endif
 
 	schedtune_spc_rdiv = reciprocal_value(100);

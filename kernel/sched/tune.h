@@ -24,6 +24,9 @@ void schedtune_exit_task(struct task_struct *tsk);
 void schedtune_enqueue_task(struct task_struct *p, int cpu);
 void schedtune_dequeue_task(struct task_struct *p, int cpu);
 
+void ta_dyn_boost_kick(void);
+void ta_dyn_boost_set(void);
+void ta_dyn_boost_reset(void);
 #else /* CONFIG_CGROUP_SCHEDTUNE */
 
 #define schedtune_cpu_boost(cpu)  get_sysctl_sched_cfs_boost()
@@ -34,6 +37,9 @@ void schedtune_dequeue_task(struct task_struct *p, int cpu);
 #define schedtune_enqueue_task(task, cpu) do { } while (0)
 #define schedtune_dequeue_task(task, cpu) do { } while (0)
 
+#define ta_dyn_boost() do { } while (0)
+#define ta_dyn_boost_set() do { } while (0)
+#define ta_dyn_boost_reset() do { } while (0)
 #endif /* CONFIG_CGROUP_SCHEDTUNE */
 
 int schedtune_normalize_energy(int energy);

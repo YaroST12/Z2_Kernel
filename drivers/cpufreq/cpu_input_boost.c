@@ -12,6 +12,7 @@
 #include <linux/moduleparam.h>
 #include <linux/slab.h>
 #include "../../kernel/sched/sched.h"
+#include "../../kernel/sched/tune.h"
 
 static unsigned int input_boost_freq_lp = CONFIG_INPUT_BOOST_FREQ_LP;
 static unsigned int input_boost_freq_hp = CONFIG_INPUT_BOOST_FREQ_PERF;
@@ -101,6 +102,7 @@ void cpu_input_boost_kick(void)
 	if (!(get_boost_state(b) & SCREEN_AWAKE))
 		return;
 
+	ta_dyn_boost_set();
 	queue_work(b->wq, &b->input_boost);
 }
 
@@ -154,6 +156,7 @@ static void input_unboost_worker(struct work_struct *work)
 	struct boost_drv *b = container_of(to_delayed_work(work),
 					   typeof(*b), input_unboost);
 
+	ta_dyn_boost_reset();
 	clear_boost_bit(b, INPUT_BOOST);
 	update_online_cpu_policy();
 }

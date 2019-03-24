@@ -699,9 +699,9 @@ static char *stune_groups[] = {
 	"rt",
 };
 
-static const int stune_values[] = { 5, -10, -100, 0 };
+static const int stune_values[] = { 5, 0, -30, 0 };
 
-static const bool prefer_idle_values[] = { 1, 0, 0, 0 };
+static const bool prefer_idle_values[] = { 1, 1, 0, 0 };
 
 static int boost_write_wrapper(struct cgroup_subsys_state *css,
 			struct cftype *cft, s64 boost)

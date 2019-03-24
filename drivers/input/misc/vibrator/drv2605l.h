@@ -436,7 +436,5 @@ struct drv2605l_data {
 	struct drv2605l_fw_header fw_header;
 };
 
-bool is_haptics_disabled(void);
-
 #endif
 

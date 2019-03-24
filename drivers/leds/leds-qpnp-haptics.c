@@ -29,9 +29,6 @@
 #include <linux/slab.h>
 #include <linux/qpnp-misc.h>
 #include <linux/qpnp/qpnp-revid.h>
-#ifdef CONFIG_MACH_ZUK_Z2_ROW
-#include "../input/misc/vibrator/drv2605l.h"
-#endif
 
 /* Register definitions */
 #define HAP_STATUS_1_REG(chip)		(chip->base + 0x0A)

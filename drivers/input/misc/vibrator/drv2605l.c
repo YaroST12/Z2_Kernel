@@ -270,7 +270,6 @@ static void vibrator_enable( struct timed_output_dev *dev, int value)
 	struct drv2605l_data *haptics = container_of(dev, struct drv2605l_data, to_dev);
 
 	//printk(KERN_DEBUG"%s:Enter\n", __FUNCTION__);
-	bool disabled = is_haptics_disabled();
 	haptics->should_stop = YES;
 	hrtimer_cancel(&haptics->timer);
 	cancel_work_sync(&haptics->vibrator_work);
@@ -279,7 +278,7 @@ static void vibrator_enable( struct timed_output_dev *dev, int value)
 
 	drv2605l_stop(haptics);
 //	printk(KERN_DEBUG"%s:value:%d\n", __FUNCTION__, value);
-	if (value > 0 && !disabled) {
+	if (value > 0) {
 		wake_lock(&haptics->wk_lock);
 
 		drv2605l_change_mode(haptics, WORK_VIBRATOR, DEV_READY);

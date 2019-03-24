@@ -367,9 +367,6 @@ struct hap_chip {
 
 struct hap_chip *gchip;
 
-static int disable_haptics_refcnt;
-static DEFINE_SPINLOCK(disable_lock);
-
 static int qpnp_haptics_parse_buffer_dt(struct hap_chip *chip);
 static int qpnp_haptics_parse_pwm_dt(struct hap_chip *chip);
 
@@ -1340,39 +1337,11 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 	return 0;
 }
 
-extern void qpnp_disable_haptics(bool disable)
-{
-	unsigned long flags;
-
-	pr_info("%s haptics\n", disable ? "disabling" : "enabling");
-	spin_lock_irqsave(&disable_lock, flags);
-	if (disable)
-		disable_haptics_refcnt++;
-	else if (disable_haptics_refcnt > 0)
-		disable_haptics_refcnt--;
-	spin_unlock_irqrestore(&disable_lock, flags);
-}
-
-bool is_haptics_disabled(void)
-{
-	unsigned long flags;
-	bool disable;
-
-	spin_lock_irqsave(&disable_lock, flags);
-	disable = disable_haptics_refcnt;
-	spin_unlock_irqrestore(&disable_lock, flags);
-
-	return disable;
-}
-
 void set_vibrate(int val)
 {
 	int rc;
 
 	if (val > gchip->max_play_time_ms)
-		return;
-
-	if (is_haptics_disabled())
 		return;
 
 	mutex_lock(&gchip->param_lock);

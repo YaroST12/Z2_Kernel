@@ -244,6 +244,14 @@ static void cpu_input_boost_input_event(struct input_handle *handle,
 
 	state = get_boost_state(b);
 
+	if (code == KEY_POWER && value == 1) {
+		if (state & SCREEN_AWAKE)
+			return;
+		pr_info("power-key boost\n");
+		__cpu_input_boost_kick_max(b, 1000);
+		return;
+	}
+
 	if (!(state & SCREEN_AWAKE))
 		return;
 

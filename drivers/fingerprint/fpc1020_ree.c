@@ -398,10 +398,10 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 	/* Escalate fingerprintd priority when screen is off */
 	if (!fpc1020->screen_on)
 		set_fingerprintd_nice(fpc1020, -1);
-	else
+	else {
+		config_irq(fpc1020, true);
 		set_fingerprintd_nice(fpc1020, 0);
-
-	config_irq(fpc1020, true);
+	}
 }
 
 static int fb_notifier_callback(struct notifier_block *self,

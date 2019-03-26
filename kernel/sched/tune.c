@@ -15,14 +15,6 @@
 bool schedtune_initialized = false;
 #endif
 
-#ifdef CONFIG_STUNE_ASSIST
-static struct schedtune *getSchedtune(char *st_name);
-static void write_default_values(void);
-
-/* To indicate that stune values are set */
-static atomic_t values_set = ATOMIC_INIT(0);
-#endif
-
 unsigned int sysctl_sched_cfs_boost __read_mostly;
 
 extern struct reciprocal_value schedtune_spc_rdiv;
@@ -691,111 +683,16 @@ boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
 	return 0;
 }
 
-#ifdef CONFIG_STUNE_ASSIST
-static char *stune_groups[] = {
-	"top-app",
-	"foreground",
-	"background",
-	"rt",
-};
-
-static const int stune_values[] = { 5, 0, -30, 0 };
-
-static const bool prefer_idle_values[] = { 1, 1, 0, 0 };
-
-static int boost_write_wrapper(struct cgroup_subsys_state *css,
-			struct cftype *cft, s64 boost)
-{
-	if (!atomic_cmpxchg(&values_set, 0, 1))
-		write_default_values();
-
-	/* We do not want init to write anything */
-	if (!strncmp(current->comm, "init", sizeof("init")))
-		return 0;
-
-	/*
-	* After default values are set we can
-	* allow user/userspace to adjust values.
-	*/
-	boost_write(css, NULL, boost);
-
-	return 0;
-}
-
-static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
-			struct cftype *cft, u64 prefer_idle)
-{
-	/* We do not want init to write anything */
-	if (!strncmp(current->comm, "init", sizeof("init")))
-		return 0;
-
-	/*
-	* After default values are set we can
-	* allow user/userspace to adjust values.
-	*/
-	if (atomic_read(&values_set))
-		prefer_idle_write(css, NULL, prefer_idle);
-
-	return 0;
-}
-
-static struct schedtune *getSchedtune(char *st_name)
-{
-	int idx;
-
-	for (idx = 1; idx < BOOSTGROUPS_COUNT; ++idx) {
-		char name_buf[NAME_MAX + 1];
-		struct schedtune *st = allocated_group[idx];
-
-		if (!st) {
-			pr_warn("SCHEDTUNE: Could not find %s\n", st_name);
-			break;
-		}
-
-		cgroup_name(st->css.cgroup, name_buf, sizeof(name_buf));
-		if (strncmp(name_buf, st_name, strlen(st_name)) == 0)
-			return st;
-	}
-
-	return NULL;
-}
-
-static void write_default_values(void)
-{
-	int i = 0;
-	if (ARRAY_SIZE(stune_groups) != ARRAY_SIZE(stune_values))
-		return;
-
-	for (i = 0; i < ARRAY_SIZE(stune_groups); i++) {
-		struct schedtune *st = getSchedtune(stune_groups[i]);
-		if (!st)
-			break;
-		pr_info("%s: setting %s to %i and %i",
-				__func__, stune_groups[i], stune_values[i], prefer_idle_values[i]);
-		boost_write(&st->css, NULL, stune_values[i]);
-		prefer_idle_write(&st->css, NULL, prefer_idle_values[i]);
-	}
-}
-#endif
-
 static struct cftype files[] = {
 	{
 		.name = "boost",
 		.read_s64 = boost_read,
-#ifdef CONFIG_STUNE_ASSIST
-		.write_s64 = boost_write_wrapper,
-#else
 		.write_s64 = boost_write,
-#endif
 	},
 	{
 		.name = "prefer_idle",
 		.read_u64 = prefer_idle_read,
-#ifdef CONFIG_STUNE_ASSIST
-		.write_u64 = prefer_idle_write_wrapper,
-#else
 		.write_u64 = prefer_idle_write,
-#endif
 	},
 	{ }	/* terminate */
 };

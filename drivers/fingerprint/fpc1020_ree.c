@@ -371,11 +371,16 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 static void set_fingerprintd_nice(struct fpc1020_data *fpc1020, int nice)
 {
 	struct task_struct *p;
+	char name[TASK_COMM_LEN];
+
+	if (!fpc1020)
+		return;
 
 	if (fpc1020->fingerprintd) {
-		pr_info("%s nice changed to %i, fast path\n",
-				fpc1020->fingerprintd->comm, nice);
-		set_user_nice(fpc1020->fingerprintd, nice);
+		get_task_comm(name, fpc1020->fingerprintd);
+		pr_info("%s nice changed to %i, fast path\n", name, nice);
+		p = fpc1020->fingerprintd;
+		set_user_nice(p, nice);
 		return;
 	}
 
@@ -383,8 +388,9 @@ static void set_fingerprintd_nice(struct fpc1020_data *fpc1020, int nice)
 	for_each_process(p) {
 		if (!memcmp(p->comm, "fingerprint", 11)) {
 			fpc1020->fingerprintd = p;
-			pr_info("%s nice changed to %i, slow path\n", p->comm, nice);
-			set_user_nice(fpc1020->fingerprintd, nice);
+			get_task_comm(name, p);
+			pr_info("%s nice changed to %i, slow path\n", name, nice);
+			set_user_nice(p, nice);
 			break;
 		}
 	}

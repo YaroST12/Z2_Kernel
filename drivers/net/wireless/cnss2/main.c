@@ -774,6 +774,18 @@ int cnss_power_down(struct device *dev)
 }
 EXPORT_SYMBOL(cnss_power_down);
 
+int cnss_idle_restart(struct device *dev)
+{
+	return 0;
+}
+EXPORT_SYMBOL(cnss_idle_restart);
+
+int cnss_idle_shutdown(struct device *dev)
+{
+	return 0;
+}
+EXPORT_SYMBOL(cnss_idle_shutdown);
+
 static int cnss_get_resources(struct cnss_plat_data *plat_priv)
 {
 	int ret = 0;
@@ -1179,6 +1191,41 @@ int cnss_force_fw_assert(struct device *dev)
 }
 EXPORT_SYMBOL(cnss_force_fw_assert);
 
+int cnss_force_collect_rddm(struct device *dev)
+{
+	struct cnss_plat_data *plat_priv = cnss_bus_dev_to_plat_priv(dev);
+	int ret = 0;
+
+	if (!plat_priv) {
+		cnss_pr_err("plat_priv is NULL\n");
+		return -ENODEV;
+	}
+
+	if (plat_priv->device_id == QCA6174_DEVICE_ID) {
+		cnss_pr_info("Force collect rddm is not supported\n");
+		return -EOPNOTSUPP;
+	}
+
+	if (test_bit(CNSS_DRIVER_RECOVERY, &plat_priv->driver_state)) {
+		cnss_pr_info("Recovery is already in progress, ignore forced collect rddm\n");
+		return 0;
+	}
+
+	cnss_driver_event_post(plat_priv,
+			       CNSS_DRIVER_EVENT_FORCE_FW_ASSERT,
+			       0, NULL);
+
+	reinit_completion(&plat_priv->rddm_complete);
+	ret = wait_for_completion_timeout
+		(&plat_priv->rddm_complete,
+		 msecs_to_jiffies(CNSS_RDDM_TIMEOUT_MS));
+	if (!ret)
+		ret = -ETIMEDOUT;
+
+	return ret;
+}
+EXPORT_SYMBOL(cnss_force_collect_rddm);
+
 static int cnss_wlfw_server_arrive_hdlr(struct cnss_plat_data *plat_priv)
 {
 	int ret;
@@ -1201,9 +1248,15 @@ out:
 static int cnss_cold_boot_cal_start_hdlr(struct cnss_plat_data *plat_priv)
 {
 	int ret = 0;
+	bool pwr_up_reqd = false;
 
 	set_bit(CNSS_COLD_BOOT_CAL, &plat_priv->driver_state);
-	ret = cnss_bus_dev_powerup(plat_priv);
+	if (test_bit(CNSS_DEV_REMOVED, &plat_priv->driver_state))
+		pwr_up_reqd = true;
+
+	if (pwr_up_reqd || plat_priv->bus_type != CNSS_BUS_USB)
+		ret = cnss_bus_dev_powerup(plat_priv);
+
 	if (ret)
 		clear_bit(CNSS_COLD_BOOT_CAL, &plat_priv->driver_state);
 
@@ -1214,7 +1267,8 @@ static int cnss_cold_boot_cal_done_hdlr(struct cnss_plat_data *plat_priv)
 {
 	plat_priv->cal_done = true;
 	cnss_wlfw_wlan_mode_send_sync(plat_priv, QMI_WLFW_OFF_V01);
-	if (plat_priv->device_id == QCN7605_DEVICE_ID)
+	if (plat_priv->device_id == QCN7605_DEVICE_ID ||
+	    plat_priv->bus_type == CNSS_BUS_USB)
 		goto skip_shutdown;
 	cnss_bus_dev_shutdown(plat_priv);
 
@@ -1357,6 +1411,8 @@ int cnss_register_subsys(struct cnss_plat_data *plat_priv)
 	case QCN7605_DEVICE_ID:
 	case QCN7605_STANDALONE_DEVICE_ID:
 	case QCN7605_COMPOSITE_DEVICE_ID:
+	case QCN7605_VER20_STANDALONE_DEVICE_ID:
+	case QCN7605_VER20_COMPOSITE_DEVICE_ID:
 		subsys_info->subsys_desc.name = "QCN7605";
 		break;
 	default:
@@ -1579,6 +1635,8 @@ int cnss_register_ramdump(struct cnss_plat_data *plat_priv)
 		break;
 	case QCN7605_COMPOSITE_DEVICE_ID:
 	case QCN7605_STANDALONE_DEVICE_ID:
+	case QCN7605_VER20_STANDALONE_DEVICE_ID:
+	case QCN7605_VER20_COMPOSITE_DEVICE_ID:
 		break;
 
 	default:
@@ -1601,6 +1659,8 @@ void cnss_unregister_ramdump(struct cnss_plat_data *plat_priv)
 		break;
 	case QCN7605_COMPOSITE_DEVICE_ID:
 	case QCN7605_STANDALONE_DEVICE_ID:
+	case QCN7605_VER20_STANDALONE_DEVICE_ID:
+	case QCN7605_VER20_COMPOSITE_DEVICE_ID:
 		break;
 	default:
 		cnss_pr_err("Unknown device ID: 0x%lx\n", plat_priv->device_id);
@@ -1671,6 +1731,8 @@ static ssize_t cnss_fs_ready_store(struct device *dev,
 	case QCA6290_EMULATION_DEVICE_ID:
 	case QCA6290_DEVICE_ID:
 	case QCN7605_DEVICE_ID:
+	case QCN7605_COMPOSITE_DEVICE_ID:
+	case QCN7605_STANDALONE_DEVICE_ID:
 		break;
 	default:
 		cnss_pr_err("Not supported for device ID 0x%lx\n",
@@ -1696,6 +1758,7 @@ static ssize_t cnss_wl_pwr_on(struct device *dev,
 {
 	int pwr_state = 0;
 	struct cnss_plat_data *plat_priv = dev_get_drvdata(dev);
+	unsigned int timeout;
 
 	if (sscanf(buf, "%du", &pwr_state) != 1)
 		return -EINVAL;
@@ -1703,11 +1766,17 @@ static ssize_t cnss_wl_pwr_on(struct device *dev,
 	cnss_pr_dbg("vreg-wlan-en state change %d, count %zu", pwr_state,
 		    count);
 
-	if (pwr_state)
+	timeout = cnss_get_qmi_timeout();
+	if (pwr_state) {
 		cnss_power_on_device(plat_priv);
-	else
+		if (timeout) {
+			mod_timer(&plat_priv->fw_boot_timer,
+				  jiffies + msecs_to_jiffies(timeout));
+		}
+	} else {
 		cnss_power_off_device(plat_priv);
-
+		del_timer(&plat_priv->fw_boot_timer);
+	}
 	return count;
 }
 
@@ -1906,6 +1975,7 @@ static int cnss_probe(struct platform_device *plat_dev)
 			    ret);
 
 	init_completion(&plat_priv->power_up_complete);
+	init_completion(&plat_priv->rddm_complete);
 	mutex_init(&plat_priv->dev_lock);
 
 	cnss_pr_info("Platform driver probed successfully.\n");
@@ -1945,6 +2015,7 @@ static int cnss_remove(struct platform_device *plat_dev)
 {
 	struct cnss_plat_data *plat_priv = platform_get_drvdata(plat_dev);
 
+	complete_all(&plat_priv->rddm_complete);
 	complete_all(&plat_priv->power_up_complete);
 	device_init_wakeup(&plat_dev->dev, false);
 	unregister_pm_notifier(&cnss_pm_notifier);

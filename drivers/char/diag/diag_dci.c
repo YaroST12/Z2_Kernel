@@ -984,7 +984,7 @@ void extract_dci_pkt_rsp(unsigned char *buf, int len, int data_source,
 	int save_req_uid = 0;
 	struct diag_dci_pkt_rsp_header_t pkt_rsp_header;
 
-	if (!buf) {
+	if (!buf || len <= 0) {
 		pr_err("diag: Invalid pointer in %s\n", __func__);
 		return;
 	}
@@ -998,6 +998,8 @@ void extract_dci_pkt_rsp(unsigned char *buf, int len, int data_source,
 								dci_cmd_code);
 		return;
 	}
+	if (len < (cmd_code_len + sizeof(int)))
+		return;
 	temp += cmd_code_len;
 	tag = *(int *)temp;
 	temp += sizeof(int);
@@ -1006,10 +1008,16 @@ void extract_dci_pkt_rsp(unsigned char *buf, int len, int data_source,
 	 * The size of the response is (total length) - (length of the command
 	 * code, the tag (int)
 	 */
-	rsp_len = len - (cmd_code_len + sizeof(int));
-	if ((rsp_len == 0) || (rsp_len > (len - 5))) {
-		pr_err("diag: Invalid length in %s, len: %d, rsp_len: %d",
-						__func__, len, rsp_len);
+	if (len >= cmd_code_len + sizeof(int)) {
+		rsp_len = len - (cmd_code_len + sizeof(int));
+		if ((rsp_len == 0) || (rsp_len > (len - 5))) {
+			pr_err("diag: Invalid length in %s, len: %d, rsp_len: %d\n",
+					__func__, len, rsp_len);
+			return;
+		}
+	} else {
+		pr_err("diag:%s: Invalid length(%d) for calculating rsp_len\n",
+			__func__, len);
 		return;
 	}
 
@@ -1537,6 +1545,7 @@ void diag_dci_notify_client(int peripheral_mask, int data, int proc)
 					DIAG_LOG(DIAG_DEBUG_PERIPHERALS,
 						"diag: dci client with pid = %d Exited..\n",
 						entry->tgid);
+					put_pid(pid_struct);
 					mutex_unlock(&driver->dci_mutex);
 					return;
 				}
@@ -1551,9 +1560,12 @@ void diag_dci_notify_client(int peripheral_mask, int data, int proc)
 					if (stat)
 						pr_err("diag: Err sending dci signal to client, signal data: 0x%x, stat: %d\n",
 							info.si_int, stat);
-				} else
+				} else {
 					pr_err("diag: client data is corrupted, signal data: 0x%x, stat: %d\n",
 						info.si_int, stat);
+				}
+				put_task_struct(dci_task);
+				put_pid(pid_struct);
 			}
 		}
 	}
@@ -1935,7 +1947,9 @@ static int diag_process_dci_pkt_rsp(unsigned char *buf, int len)
 	if (!buf)
 		return -EIO;
 
-	if (len <= sizeof(struct dci_pkt_req_t) || len > DCI_REQ_BUF_SIZE) {
+	if (len <= (sizeof(struct dci_pkt_req_t) +
+		sizeof(struct diag_pkt_header_t)) ||
+		len > DCI_REQ_BUF_SIZE) {
 		pr_err("diag: dci: Invalid length %d len in %s", len, __func__);
 		return -EIO;
 	}
@@ -2305,11 +2319,18 @@ struct diag_dci_client_tbl *dci_lookup_client_entry_pid(int tgid)
 			DIAG_LOG(DIAG_DEBUG_DCI,
 				"diag: valid task doesn't exist for pid = %d\n",
 				entry->tgid);
+			put_pid(pid_struct);
 			continue;
 		}
-		if (task_s == entry->client)
-			if (entry->client->tgid == tgid)
+		if (task_s == entry->client) {
+			if (entry->client->tgid == tgid) {
+				put_task_struct(task_s);
+				put_pid(pid_struct);
 				return entry;
+			}
+		}
+		put_task_struct(task_s);
+		put_pid(pid_struct);
 	}
 	return NULL;
 }
@@ -2939,6 +2960,7 @@ int diag_dci_register_client(struct diag_dci_reg_tbl_t *reg_entry)
 
 	mutex_lock(&driver->dci_mutex);
 
+	get_task_struct(current);
 	new_entry->client = current;
 	new_entry->tgid = current->tgid;
 	new_entry->client_info.notification_list =

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -47,6 +47,8 @@
 #define SAMPLING_RATE_96KHZ     96000
 #define SAMPLING_RATE_192KHZ    192000
 #define SAMPLING_RATE_384KHZ    384000
+
+#define ADSP_STATE_READY_TIMEOUT_MS 10000
 
 static int hdmi_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
 static int msm_auxpcm_rate = SAMPLING_RATE_8KHZ;
@@ -594,8 +596,8 @@ static const char *const tdm_slot_width_text[] = {"16", "24", "32"};
 
 static struct afe_clk_set sec_mi2s_tx_clk = {
 	AFE_API_VERSION_I2S_CONFIG,
-	Q6AFE_LPASS_CLK_ID_SEC_MI2S_EBIT,
-	Q6AFE_LPASS_IBIT_CLK_DISABLE,
+	Q6AFE_LPASS_CLK_ID_SEC_MI2S_IBIT,
+	Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ,
 	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
 	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
 	0,
@@ -3775,7 +3777,7 @@ static int apq8096_mi2s_snd_startup(struct snd_pcm_substream *substream)
 				__func__, ret);
 			goto err;
 		}
-		ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_CBM_CFM);
+		ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_CBS_CFS);
 		if (ret < 0)
 			pr_err("%s: set fmt cpu dai failed, err:%d\n",
 				__func__, ret);
@@ -7256,6 +7258,20 @@ static struct snd_soc_dai_link apq8096_auto_be_dai_links[] = {
 		.be_hw_params_fixup = msm_group_mi2s_be_hw_params_fixup,
 		.ops = &apq8096_group_mi2s_be_ops,
 		.ignore_suspend = 1,
+	},
+	{
+		.name = LPASS_BE_QUAT_MI2S_TX,
+		.stream_name = "Quaternary MI2S Capture",
+		.cpu_dai_name = "msm-dai-q6-mi2s.3",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-stub-codec.1",
+		.codec_dai_name = "msm-stub-tx",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_TX,
+		.be_hw_params_fixup = msm_mi2s_rx_be_hw_params_fixup,
+		.ops = &apq8096_mi2s_be_ops,
+		.ignore_suspend = 1,
 	}
 };
 
@@ -7664,6 +7680,33 @@ static struct platform_driver apq8096_asoc_machine_dummy_driver = {
 	.remove = dummy_machine_remove,
 };
 
+static int apq8096_is_adsp_ready(void)
+{
+	int adsp_ready = 0;
+	unsigned long timeout;
+
+	timeout = jiffies +
+	  msecs_to_jiffies(ADSP_STATE_READY_TIMEOUT_MS);
+	do {
+		if (!q6core_is_adsp_ready()) {
+			pr_err_ratelimited("%s: ADSP Audio isn't ready\n",
+					   __func__);
+			/*
+			 * ADSP will be coming up after subsystem restart and
+			 * it might not be fully up when the control reaches
+			 * here. So, wait for 50msec before checking ADSP state
+			 */
+			msleep(50);
+		} else {
+			pr_debug("%s: ADSP Audio is ready\n", __func__);
+			adsp_ready = 1;
+			break;
+		}
+	} while (time_after(timeout, jiffies));
+
+	return adsp_ready;
+}
+
 static int  apq8096_adsp_state_callback(struct notifier_block *nb,
 					unsigned long value, void *priv)
 {
@@ -7675,6 +7718,11 @@ static int  apq8096_adsp_state_callback(struct notifier_block *nb,
 	if (sndcard) {
 		switch (value) {
 		case SUBSYS_AFTER_POWERUP:
+			if (!apq8096_is_adsp_ready()) {
+				pr_err("%s: timed out waiting for ADSP\n", __func__);
+				return -ETIMEDOUT;
+			}
+
 			pr_debug("%s:SSR complete, set sndcard state as ONLINE\n",
 				__func__);
 			snd_soc_card_change_online_state(sndcard, 1);

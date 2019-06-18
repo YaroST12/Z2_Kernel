@@ -296,6 +296,13 @@
 
 	soc: soc { };
 
+	vendor: vendor {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0 0 0xffffffff>;
+		compatible = "simple-bus";
+	};
+
 	firmware: firmware {
 		android {
 			compatible = "android,firmware";
@@ -305,7 +312,7 @@
 			};
 			fstab {
 				compatible = "android,fstab";
-				vendor: vendor {
+				android_vendor: vendor {
 					compatible = "android,vendor";
 					dev = "/dev/block/platform/soc/7464900.sdhci/by-name/vendor";
 					type = "ext4";
@@ -317,7 +324,7 @@
 		};
 	};
 
-	reserved-memory {
+	reserved_memory: reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
@@ -765,14 +772,25 @@
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist =	<&CPU0 &CPU1>;
 		qcom,target-dev = <&memlat_cpu0>;
-		status = "disabled";
+		qcom,core-dev-table =
+			<  307200 1525>,
+			<  537600 3509>,
+			<  691200 4066>,
+			<  768000 5928>;
 	};
 
 	qcom,arm-memlat-mon-2 {
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist =	<&CPU2 &CPU3>;
 		qcom,target-dev = <&memlat_cpu2>;
-		status = "disabled";
+		qcom,core-dev-table =
+			<  307200 1525>,
+			<  825600 3509>,
+			<  1209600 4066>,
+			<  1440000 7904>,
+			<  1747200 9887>,
+			<  2054400 11863>,
+			<  2342400 13763>;
 	};
 
 	devfreq_cpufreq: devfreq-cpufreq {

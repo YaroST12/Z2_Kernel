@@ -144,6 +144,7 @@ static int q6lsm_callback(struct apr_client_data *data, void *priv)
 		if (client->cb)
 			client->cb(data->opcode, data->token,
 					(void *)&read_done,
+					sizeof(read_done),
 					client->priv);
 		return 0;
 	} else if (data->opcode == APR_BASIC_RSP_RESULT) {
@@ -190,7 +191,7 @@ static int q6lsm_callback(struct apr_client_data *data, void *priv)
 
 	if (client->cb)
 		client->cb(data->opcode, data->token, data->payload,
-			   client->priv);
+			   data->payload_size, client->priv);
 
 	return 0;
 }
@@ -1425,7 +1426,7 @@ static int q6lsm_mmapcallback(struct apr_client_data *data, void *priv)
 	}
 	if (client->cb)
 		client->cb(data->opcode, data->token,
-			   data->payload, client->priv);
+			   data->payload, data->payload_size, client->priv);
 	return 0;
 }
 
